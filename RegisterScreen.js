@@ -1,0 +1,424 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Dimensions,
+  SafeAreaView,
+  Image,
+  Alert,
+} from 'react-native';
+import SideMenu from './SideMenu';
+
+const { width, height } = Dimensions.get('window');
+
+const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegister, onNavigateToLogin }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    age: '',
+    school: '',
+    class: '',
+    email: '',
+    password: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Limpar erro do campo quando o usuário começar a digitar
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [field]: null
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    // Validar nome
+    if (!formData.name.trim()) {
+      errors.name = 'Nome é obrigatório';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Nome deve ter pelo menos 2 caracteres';
+    }
+    
+    // Validar idade
+    if (!formData.age.trim()) {
+      errors.age = 'Idade é obrigatória';
+    } else {
+      const age = parseInt(formData.age, 10);
+      if (isNaN(age) || age < 1 || age > 120) {
+        errors.age = 'Idade deve ser entre 1 e 120 anos';
+      }
+    }
+    
+    // Validar escola
+    if (!formData.school.trim()) {
+      errors.school = 'Escola é obrigatória';
+    } else if (formData.school.trim().length < 2) {
+      errors.school = 'Nome da escola deve ter pelo menos 2 caracteres';
+    }
+    
+    // Validar turma
+    if (!formData.class.trim()) {
+      errors.class = 'Turma é obrigatória';
+    } else if (formData.class.trim().length < 1) {
+      errors.class = 'Turma deve ter pelo menos 1 caractere';
+    }
+    
+    // Validar email
+    if (!formData.email.trim()) {
+      errors.email = 'E-mail é obrigatório';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        errors.email = 'E-mail inválido (exemplo: usuario@email.com)';
+      }
+    }
+    
+    // Validar senha
+    if (!formData.password.trim()) {
+      errors.password = 'Senha é obrigatória';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Senha deve ter pelo menos 6 caracteres';
+    } else if (formData.password.length > 50) {
+      errors.password = 'Senha deve ter no máximo 50 caracteres';
+    } else {
+      const hasLetter = /[a-zA-Z]/.test(formData.password);
+      const hasNumber = /[0-9]/.test(formData.password);
+      
+      if (!hasLetter || !hasNumber) {
+        errors.password = 'Senha deve conter pelo menos uma letra e um número';
+      }
+    }
+    
+    // Definir erros
+    setFieldErrors(errors);
+    
+    // Se há erros, mostrar o primeiro
+    if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0];
+      Alert.alert('❌ Dados inválidos', firstError);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Converter age para número
+      const userDataToSend = {
+        ...formData,
+        age: parseInt(formData.age, 10)
+      };
+      
+      const result = await onRegister(userDataToSend);
+      
+      if (result && result.success) {
+        // Usar Alert para web
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert(`Sucesso: ${result.message}`);
+        } else {
+          Alert.alert('Sucesso', result.message, [
+            {
+              text: 'OK',
+              onPress: () => {
+                onNavigateToLogin && onNavigateToLogin();
+              }
+            }
+          ]);
+        }
+        
+        // Redirecionar automaticamente após 2 segundos
+        setTimeout(() => {
+          onNavigateToLogin && onNavigateToLogin();
+        }, 2000);
+        
+      } else {
+        if (typeof window !== 'undefined' && window.alert) {
+          window.alert(`Erro: Resposta inesperada do servidor - ${JSON.stringify(result)}`);
+        } else {
+          Alert.alert('Erro', 'Resposta inesperada do servidor');
+        }
+      }
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert(`Erro: ${error.message || 'Erro ao salvar cadastro'}`);
+      } else {
+        Alert.alert('Erro', error.message || 'Erro ao salvar cadastro');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProfileImagePress = () => {
+    // Placeholder function - will be implemented later
+    alert('Selecionar foto de perfil (Funcionalidade será implementada)');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.logo}>Movz</Text>
+          <TouchableOpacity 
+            style={styles.menuIcon} 
+            onPress={() => setIsMenuVisible(true)}
+          >
+            <View style={styles.menuLine} />
+            <View style={styles.menuLine} />
+            <View style={styles.menuLine} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Title */}
+        <Text style={styles.title}>Faça seu cadastro</Text>
+
+        {/* Profile Image Section */}
+        <View style={styles.profileImageContainer}>
+          <TouchableOpacity 
+            style={styles.profileImagePlaceholder}
+            onPress={handleProfileImagePress}
+          >
+            <View style={styles.profileImageCircle}>
+              <Text style={styles.profileImageText}>+</Text>
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.profileImageLabel}>Escolher foto de perfil</Text>
+        </View>
+
+        {/* Form Fields */}
+        <View style={styles.formContainer}>
+          {/* Nome */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.name && styles.inputError]}
+              placeholder="Nome"
+              placeholderTextColor="#666"
+              value={formData.name}
+              onChangeText={(value) => handleInputChange('name', value)}
+            />
+            {fieldErrors.name && <Text style={styles.errorText}>{fieldErrors.name}</Text>}
+          </View>
+
+          {/* Idade */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.age && styles.inputError]}
+              placeholder="Idade"
+              placeholderTextColor="#666"
+              value={formData.age}
+              onChangeText={(value) => handleInputChange('age', value)}
+              keyboardType="numeric"
+            />
+            {fieldErrors.age && <Text style={styles.errorText}>{fieldErrors.age}</Text>}
+          </View>
+
+          {/* Escola */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.school && styles.inputError]}
+              placeholder="Escola"
+              placeholderTextColor="#666"
+              value={formData.school}
+              onChangeText={(value) => handleInputChange('school', value)}
+            />
+            {fieldErrors.school && <Text style={styles.errorText}>{fieldErrors.school}</Text>}
+          </View>
+
+          {/* Turma */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.class && styles.inputError]}
+              placeholder="Turma"
+              placeholderTextColor="#666"
+              value={formData.class}
+              onChangeText={(value) => handleInputChange('class', value)}
+            />
+            {fieldErrors.class && <Text style={styles.errorText}>{fieldErrors.class}</Text>}
+          </View>
+
+          {/* E-mail */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.email && styles.inputError]}
+              placeholder="E-mail"
+              placeholderTextColor="#666"
+              value={formData.email}
+              onChangeText={(value) => handleInputChange('email', value)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
+          </View>
+
+          {/* Senha */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, fieldErrors.password && styles.inputError]}
+              placeholder="Senha"
+              placeholderTextColor="#666"
+              value={formData.password}
+              onChangeText={(value) => handleInputChange('password', value)}
+              secureTextEntry
+            />
+            {fieldErrors.password && <Text style={styles.errorText}>{fieldErrors.password}</Text>}
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity 
+          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={isLoading}
+        >
+          <Text style={styles.saveButtonText}>
+            {isLoading ? 'Salvando...' : 'Salvar'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+      
+      {/* Side Menu */}
+      <SideMenu 
+        isVisible={isMenuVisible} 
+        onClose={() => setIsMenuVisible(false)}
+        onNavigate={onNavigate}
+      />
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  logo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins',
+  },
+  menuIcon: {
+    width: 39,
+    height: 18,
+    justifyContent: 'space-between',
+  },
+  menuLine: {
+    width: 39,
+    height: 6,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 3,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 30,
+    fontFamily: 'Poppins',
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  profileImagePlaceholder: {
+    marginBottom: 15,
+  },
+  profileImageCircle: {
+    width: 161,
+    height: 161,
+    borderRadius: 80.5,
+    backgroundColor: '#D9D9D9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageText: {
+    fontSize: 48,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  profileImageLabel: {
+    fontSize: 16,
+    color: '#000',
+    fontFamily: 'Poppins',
+  },
+  formContainer: {
+    marginBottom: 30,
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
+  input: {
+    backgroundColor: '#D9D9D9',
+    height: 43,
+    paddingHorizontal: 20,
+    fontSize: 16,
+    color: '#000',
+    fontFamily: 'Poppins',
+    textAlign: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#B5B5B5',
+    height: 43,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+    alignSelf: 'center',
+    width: 233,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#D9D9D9',
+  },
+  inputError: {
+    borderColor: '#FF4444',
+    borderWidth: 2,
+    backgroundColor: '#FFEEEE',
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 5,
+    fontFamily: 'Poppins',
+  },
+});
+
+export default RegisterScreen;

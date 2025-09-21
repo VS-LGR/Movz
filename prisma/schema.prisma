@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  age       Int?
+  school    String?
+  class     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  userSports     UserSport[]
+  userScores     UserScore[]
+  userProgress   UserProgress[]
+  chatMessages   ChatMessage[]
+
+  @@map("users")
+}
+
+model Sport {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  color       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  userSports   UserSport[]
+  contents     Content[]
+  userScores   UserScore[]
+
+  @@map("sports")
+}
+
+model UserSport {
+  id        String   @id @default(cuid())
+  userId    String
+  sportId   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sportId])
+  @@map("user_sports")
+}
+
+model Content {
+  id          String   @id @default(cuid())
+  sportId     String
+  title       String
+  description String?
+  type        ContentType
+  difficulty  Difficulty @default(BEGINNER)
+  duration    Int? // em minutos
+  instructions String?
+  videoUrl    String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@map("contents")
+}
+
+model UserScore {
+  id        String   @id @default(cuid())
+  userId    String
+  sportId   String
+  score     Int
+  level     Int
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@map("user_scores")
+}
+
+model UserProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  contentId   String?
+  sportId     String?
+  progress    Int      @default(0) // 0-100
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_progress")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+enum ContentType {
+  WARMUP
+  TRAINING
+  COOLDOWN
+  TUTORIAL
+  EXERCISE
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}

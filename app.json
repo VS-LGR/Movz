@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Movz App",
+    "slug": "muvz-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./img/aiAtivo 1logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./img/aiAtivo 1logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E9EEEE"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./img/aiAtivo 1logo.png",
+        "backgroundColor": "#E9EEEE"
+      }
+    },
+    "web": {
+      "favicon": "./img/aiAtivo 1logo.png"
+    }
+  }
+}
