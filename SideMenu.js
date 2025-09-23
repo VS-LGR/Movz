@@ -12,7 +12,7 @@ import {
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 
-const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout }) => {
+const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userType = 'STUDENT' }) => {
   const slideAnim = React.useRef(new Animated.Value(screenWidth)).current;
 
   React.useEffect(() => {
@@ -20,20 +20,27 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout }) => 
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     } else {
       Animated.timing(slideAnim, {
         toValue: screenWidth,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
     }
   }, [isVisible, slideAnim]);
 
   if (!isVisible) return null;
 
-  const menuItems = [
+  const menuItems = userType === 'TEACHER' ? [
+    { id: 'agenda', title: 'Agenda de Aulas', y: 200, height: 42, screen: 'schedule' },
+    { id: 'classes', title: 'Minhas Aulas', y: 269, height: 42, screen: 'classes' },
+    { id: 'perfil', title: 'Perfil', y: 339, height: 42, screen: 'home' },
+    { id: 'chat', title: 'Chat', y: 408, height: 41, screen: 'chat' },
+    { id: 'tutorial', title: 'Tutorial', y: 477, height: 42, screen: 'tutorial' },
+    { id: 'logout', title: 'Sair', y: 546, height: 42, screen: 'logout' },
+  ] : [
     { id: 'perfil', title: 'Perfil', y: 200, height: 42, screen: 'home' },
     { id: 'ranking', title: 'Ranking', y: 269, height: 42, screen: 'ranking' },
     { id: 'chat', title: 'Chat', y: 339, height: 41, screen: 'chat' },
@@ -210,13 +217,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    // Simple gradient effect using shadow
+    // Simple gradient effect using boxShadow
     backgroundColor: 'rgba(47, 212, 205, 0.8)',
-    shadowColor: '#2FD4CD',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 2,
-    elevation: 1,
+    boxShadow: '0px 0px 2px rgba(47, 212, 205, 0.6)',
   },
   menuItemTextContainer: {
     justifyContent: 'center',

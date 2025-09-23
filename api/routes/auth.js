@@ -32,7 +32,7 @@ const authenticateToken = (req, res, next) => {
 // Registrar usuário
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, age, school, class: userClass } = req.body;
+    const { name, email, password, age, school, class: userClass, userType = 'STUDENT' } = req.body;
 
     // Validações básicas
     if (!name || !email || !password) {
@@ -46,6 +46,14 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'A senha deve ter pelo menos 6 caracteres'
+      });
+    }
+
+    // Validar tipo de usuário
+    if (!['STUDENT', 'TEACHER'].includes(userType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tipo de usuário inválido'
       });
     }
 
@@ -72,7 +80,8 @@ router.post('/register', async (req, res) => {
         password: hashedPassword,
         age: age ? parseInt(age) : null,
         school: school || null,
-        class: userClass || null
+        class: userClass || null,
+        userType
       },
       select: {
         id: true,
@@ -82,13 +91,14 @@ router.post('/register', async (req, res) => {
         school: true,
         class: true,
         avatar: true,
+        userType: true,
         createdAt: true
       }
     });
 
     // Gerar token JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, userType: user.userType },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '7d' }
     );
@@ -114,7 +124,7 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, userType = 'STUDENT' } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -135,6 +145,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Verificar se o tipo de usuário corresponde
+    if (user.userType !== userType) {
+      return res.status(401).json({
+        success: false,
+        message: `Credenciais inválidas para ${userType === 'STUDENT' ? 'estudante' : 'professor'}`
+      });
+    }
+
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password);
 
@@ -147,7 +165,7 @@ router.post('/login', async (req, res) => {
 
     // Gerar token JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, userType: user.userType },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '7d' }
     );
@@ -186,6 +204,7 @@ router.get('/verify', authenticateToken, async (req, res) => {
         school: true,
         class: true,
         avatar: true,
+        userType: true,
         createdAt: true
       }
     });

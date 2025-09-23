@@ -12,9 +12,10 @@ import {
 
 const { width, height } = Dimensions.get('window');
 
-const LoginScreen = ({ onLogin, onNavigateToRegister, showSuccessMessage, onSuccessMessageShown }) => {
+const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, showSuccessMessage, onSuccessMessageShown }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState('STUDENT');
   const [isLoading, setIsLoading] = useState(false);
 
   // Mostrar mensagem de sucesso quando vier do cadastro
@@ -44,7 +45,7 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, showSuccessMessage, onSucc
     setIsLoading(true);
 
     try {
-      await onLogin({ email, password });
+      await onLogin({ email, password, userType });
     } catch (error) {
       Alert.alert('Erro', error.message || 'Erro ao fazer login');
     } finally {
@@ -63,6 +64,29 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, showSuccessMessage, onSucc
         {/* Title */}
         <Text style={styles.title}>Bem-vindo de volta!</Text>
         <Text style={styles.subtitle}>Faça login para continuar</Text>
+
+        {/* User Type Selection */}
+        <View style={styles.userTypeContainer}>
+          <Text style={styles.userTypeLabel}>Tipo de usuário:</Text>
+          <View style={styles.userTypeButtons}>
+            <TouchableOpacity
+              style={[styles.userTypeButton, userType === 'STUDENT' && styles.userTypeButtonActive]}
+              onPress={() => setUserType('STUDENT')}
+            >
+              <Text style={[styles.userTypeButtonText, userType === 'STUDENT' && styles.userTypeButtonTextActive]}>
+                Estudante
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.userTypeButton, userType === 'TEACHER' && styles.userTypeButtonActive]}
+              onPress={() => setUserType('TEACHER')}
+            >
+              <Text style={[styles.userTypeButtonText, userType === 'TEACHER' && styles.userTypeButtonTextActive]}>
+                Professor
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Form */}
         <View style={styles.formContainer}>
@@ -101,12 +125,17 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, showSuccessMessage, onSucc
           </TouchableOpacity>
         </View>
 
-        {/* Register Link */}
+        {/* Register Links */}
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>Não tem uma conta? </Text>
-          <TouchableOpacity onPress={onNavigateToRegister}>
-            <Text style={styles.registerLink}>Cadastre-se</Text>
-          </TouchableOpacity>
+          <View style={styles.registerButtons}>
+            <TouchableOpacity onPress={onNavigateToRegister}>
+              <Text style={styles.registerLink}>Cadastre-se (Estudante)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onNavigateToTeacherRegister}>
+              <Text style={styles.registerLink}>Cadastre-se (Professor)</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -183,20 +212,61 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
   },
   registerText: {
     fontSize: 16,
     color: '#666',
     fontFamily: 'Poppins',
+    marginBottom: 10,
+  },
+  registerButtons: {
+    flexDirection: 'row',
+    gap: 15,
   },
   registerLink: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#F9BB55',
     fontWeight: 'bold',
     fontFamily: 'Poppins',
+    textAlign: 'center',
+  },
+  userTypeContainer: {
+    marginBottom: 30,
+  },
+  userTypeLabel: {
+    fontSize: 16,
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 15,
+    fontFamily: 'Poppins',
+    fontWeight: 'bold',
+  },
+  userTypeButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+  },
+  userTypeButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#D9D9D9',
+    backgroundColor: '#FFFFFF',
+  },
+  userTypeButtonActive: {
+    backgroundColor: '#F9BB55',
+    borderColor: '#F9BB55',
+  },
+  userTypeButtonText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+    fontWeight: 'bold',
+  },
+  userTypeButtonTextActive: {
+    color: '#000',
   },
 });
 

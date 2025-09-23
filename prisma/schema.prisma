@@ -19,6 +19,7 @@ model User {
   school    String?
   class     String?
   avatar    String?
+  userType  UserType @default(STUDENT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -27,6 +28,7 @@ model User {
   userScores     UserScore[]
   userProgress   UserProgress[]
   chatMessages   ChatMessage[]
+  teacherClasses TeacherClass[]
 
   @@map("users")
 }
@@ -129,6 +131,25 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+model TeacherClass {
+  id          String   @id @default(cuid())
+  teacherId   String
+  date        DateTime
+  school      String
+  grade       String
+  subject     String?
+  time        String?
+  isCompleted Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_classes")
+}
+
 enum ContentType {
   WARMUP
   TRAINING
@@ -142,4 +163,9 @@ enum Difficulty {
   INTERMEDIATE
   ADVANCED
   EXPERT
+}
+
+enum UserType {
+  STUDENT
+  TEACHER
 }

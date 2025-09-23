@@ -62,10 +62,10 @@ class ApiService {
     return result;
   }
 
-  async login(email, password) {
+  async login(email, password, userType = 'STUDENT') {
     return this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, userType }),
     });
   }
 
@@ -236,6 +236,46 @@ class ApiService {
     return this.request(`/chat/${messageId}`, {
       method: 'DELETE',
     });
+  }
+
+  // ===== AULAS DE PROFESSOR =====
+
+  async getTeacherClasses(month = null, year = null) {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    if (year) params.append('year', year);
+
+    return this.request(`/classes?${params.toString()}`);
+  }
+
+  async createOrUpdateClass(classData) {
+    console.log('apiService.createOrUpdateClass chamado com:', classData);
+    console.log('Token atual:', this.token);
+    return this.request('/classes', {
+      method: 'POST',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  async deleteClass(classId) {
+    return this.request(`/classes/${classId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async completeClass(classId, isCompleted) {
+    return this.request(`/classes/${classId}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify({ isCompleted }),
+    });
+  }
+
+  async getClassStats(month = null, year = null) {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    if (year) params.append('year', year);
+
+    return this.request(`/classes/stats?${params.toString()}`);
   }
 }
 

@@ -8,8 +8,12 @@ import RankingScreen from './RankingScreen';
 import TutorialScreen from './TutorialScreen';
 import ChatScreen from './ChatScreen';
 import RegisterScreen from './RegisterScreen';
+import TeacherRegisterScreen from './TeacherRegisterScreen';
 import MedalsScreen from './MedalsScreen';
 import AchievementsScreen from './AchievementsScreen';
+import TeacherScheduleScreen from './TeacherScheduleScreen';
+import TeacherClassesScreen from './TeacherClassesScreen';
+import CreateClassScreen from './CreateClassScreen';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -54,7 +58,7 @@ export default function App() {
 
   const handleLogin = async (userData) => {
     try {
-      const response = await apiService.login(userData.email, userData.password);
+      const response = await apiService.login(userData.email, userData.password, userData.userType);
       if (response.success) {
         // Salvar token
         await Storage.setItem('authToken', response.data.token);
@@ -115,6 +119,10 @@ export default function App() {
     setCurrentScreen('register');
   };
 
+  const navigateToTeacherRegister = () => {
+    setCurrentScreen('teacherRegister');
+  };
+
   const navigateToLogin = () => {
     setCurrentScreen('login');
     setShowSuccessMessage(true);
@@ -129,7 +137,10 @@ export default function App() {
       if (currentScreen === 'register') {
         return <RegisterScreen onRegister={handleRegister} onNavigateToLogin={navigateToLogin} />;
       }
-      return <LoginScreen onLogin={handleLogin} onNavigateToRegister={navigateToRegister} showSuccessMessage={showSuccessMessage} onSuccessMessageShown={() => setShowSuccessMessage(false)} />;
+      if (currentScreen === 'teacherRegister') {
+        return <TeacherRegisterScreen onRegister={handleRegister} onNavigateToLogin={navigateToLogin} />;
+      }
+      return <LoginScreen onLogin={handleLogin} onNavigateToRegister={navigateToRegister} onNavigateToTeacherRegister={navigateToTeacherRegister} showSuccessMessage={showSuccessMessage} onSuccessMessageShown={() => setShowSuccessMessage(false)} />;
     }
 
     switch (currentScreen) {
@@ -145,7 +156,17 @@ export default function App() {
         return <AchievementsScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} />;
       case 'register':
         return <RegisterScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} onRegister={handleRegister} currentUser={currentUser} />;
+      case 'schedule':
+        return <TeacherScheduleScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+      case 'classes':
+        return <TeacherClassesScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+      case 'createClass':
+        return <CreateClassScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
       default:
+        // Para professores, mostrar agenda como tela inicial
+        if (currentUser && currentUser.userType === 'TEACHER') {
+          return <TeacherScheduleScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+        }
         return <HomeScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
     }
   };
