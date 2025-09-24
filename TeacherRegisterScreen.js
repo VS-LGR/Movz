@@ -12,25 +12,41 @@ import {
 } from 'react-native';
 import CustomAlert from './CustomAlert';
 import useCustomAlert from './useCustomAlert';
+import useResponsive from './useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
 const TeacherRegisterScreen = ({ onRegister, onNavigateToLogin }) => {
+  const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     school: '',
     subject: '',
+    cpf: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   const handleInputChange = (field, value) => {
+    let formattedValue = value;
+    
+    // Formatar CPF enquanto digita
+    if (field === 'cpf') {
+      // Remove caracteres não numéricos
+      const numbers = value.replace(/\D/g, '');
+      // Aplica máscara XXX.XXX.XXX-XX
+      if (numbers.length <= 11) {
+        formattedValue = numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: formattedValue
     }));
     
     // Limpar erro do campo quando o usuário começar a digitar
@@ -40,6 +56,38 @@ const TeacherRegisterScreen = ({ onRegister, onNavigateToLogin }) => {
         [field]: null
       }));
     }
+  };
+
+  // Função para validar CPF
+  const isValidCPF = (cpf) => {
+    // Remove caracteres não numéricos
+    cpf = cpf.replace(/\D/g, '');
+    
+    // Verifica se tem 11 dígitos
+    if (cpf.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(9))) return false;
+    
+    // Validação do segundo dígito verificador
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(10))) return false;
+    
+    return true;
   };
 
   const validateForm = () => {
@@ -75,6 +123,18 @@ const TeacherRegisterScreen = ({ onRegister, onNavigateToLogin }) => {
       
       if (!hasLetter || !hasNumber) {
         errors.password = 'Senha deve conter pelo menos uma letra e um número';
+      }
+    }
+    
+    // Validar CPF
+    if (!formData.cpf.trim()) {
+      errors.cpf = 'CPF é obrigatório';
+    } else {
+      const cpf = formData.cpf.replace(/\D/g, ''); // Remove caracteres não numéricos
+      if (cpf.length !== 11) {
+        errors.cpf = 'CPF deve ter 11 dígitos';
+      } else if (!isValidCPF(cpf)) {
+        errors.cpf = 'CPF inválido';
       }
     }
     
@@ -197,6 +257,21 @@ const TeacherRegisterScreen = ({ onRegister, onNavigateToLogin }) => {
               autoCapitalize="none"
             />
             {fieldErrors.email && <Text style={styles.errorText}>{fieldErrors.email}</Text>}
+          </View>
+
+          {/* CPF */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>CPF</Text>
+            <TextInput
+              style={[styles.input, fieldErrors.cpf && styles.inputError]}
+              placeholder="Digite seu CPF"
+              placeholderTextColor="#666"
+              value={formData.cpf}
+              onChangeText={(value) => handleInputChange('cpf', value)}
+              keyboardType="numeric"
+              maxLength={14}
+            />
+            {fieldErrors.cpf && <Text style={styles.errorText}>{fieldErrors.cpf}</Text>}
           </View>
 
           {/* Senha */}

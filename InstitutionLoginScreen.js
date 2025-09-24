@@ -11,8 +11,11 @@ import {
 import CustomAlert from './CustomAlert';
 import useCustomAlert from './useCustomAlert';
 import apiService from './apiService';
+import useResponsive from './useResponsive';
 
 const InstitutionLoginScreen = ({ onNavigate, onLogin }) => {
+  const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -45,7 +48,9 @@ const InstitutionLoginScreen = ({ onNavigate, onLogin }) => {
     try {
       setIsLoading(true);
 
+      console.log('🔵 Enviando dados para API:', { email, password });
       const response = await apiService.loginInstitution(email, password);
+      console.log('🔵 Resposta da API:', response);
 
       if (response.success) {
         // Armazenar token e dados da instituição
@@ -60,7 +65,10 @@ const InstitutionLoginScreen = ({ onNavigate, onLogin }) => {
         showSuccess('Sucesso! 🎉', `Bem-vindo(a), ${institution.name}!\n\nLogin realizado com sucesso.`);
         
         // Navegar para a tela principal da instituição
-        onLogin(institution, 'INSTITUTION');
+        setTimeout(() => {
+          // Navegar diretamente sem fazer nova chamada à API
+          onLogin(institution, 'INSTITUTION');
+        }, 2000); // Aguardar 2 segundos para mostrar a mensagem de sucesso
       } else {
         // Tratar erros específicos da API
         let errorMessage = 'Erro ao fazer login';

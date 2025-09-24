@@ -11,10 +11,13 @@ import {
   SafeAreaView,
 } from 'react-native';
 import apiService from './apiService';
+import useResponsive from './useResponsive';
 import SideMenu from './SideMenu';
 import CustomModal from './CustomModal';
 
 const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
+  const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -22,10 +25,14 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
     totalStudents: 0,
     totalTeachers: 0,
     totalClasses: 0,
-    activeClasses: 0
+    activeClasses: 0,
+    recentRegistrations: 0,
+    pendingApprovals: 0
   });
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({});
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -39,22 +46,76 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
     school: '',
     grade: ''
   });
+  
+  // Estados para adicionar aluno à turma
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [studentsInInstitution, setStudentsInInstitution] = useState([]);
 
   // Carregar dados iniciais
   useEffect(() => {
-    loadStats();
-    loadUsers();
-    loadClasses();
+    const initializeData = async () => {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token encontrado:', token ? 'Sim' : 'Não');
+      
+      if (token) {
+        apiService.setToken(token);
+        console.log('✅ Token configurado no apiService');
+      } else {
+        console.log('❌ Token não encontrado no localStorage');
+        Alert.alert('Erro', 'Token de autenticação não encontrado. Faça login novamente.');
+        return;
+      }
+      
+      // Carregar dados após configurar o token
+      await Promise.all([
+        loadStats(),
+        loadUsers(),
+        loadClasses(),
+        loadNotifications(),
+        loadRecentActivities(),
+        loadStudentsInInstitution()
+      ]);
+    };
+    
+    initializeData();
   }, []);
 
   const loadStats = async () => {
     try {
       const response = await apiService.getInstitutionStats();
       if (response.success) {
-        setStats(response.data);
+        // Adicionar dados simulados para as novas métricas
+        const enhancedStats = {
+          ...response.data,
+          recentRegistrations: Math.floor(Math.random() * 10) + 1, // 1-10 novos cadastros
+          pendingApprovals: Math.floor(Math.random() * 5) + 1, // 1-5 pendências
+        };
+        setStats(enhancedStats);
+      } else {
+        // Se a API falhar, usar dados simulados
+        setStats({
+          totalStudents: 0,
+          totalTeachers: 0,
+          totalClasses: 0,
+          activeClasses: 0,
+          recentRegistrations: 0,
+          pendingApprovals: 0
+        });
       }
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
+      // Usar dados simulados em caso de erro
+      setStats({
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalClasses: 0,
+        activeClasses: 0,
+        recentRegistrations: 0,
+        pendingApprovals: 0
+      });
     }
   };
 
@@ -80,6 +141,93 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
     }
   };
 
+  const loadNotifications = async () => {
+    try {
+      // Simular notificações por enquanto - depois implementar API
+      const mockNotifications = [
+        {
+          id: 1,
+          type: 'warning',
+          title: 'Pendência de Aprovação',
+          message: '5 novos usuários aguardam aprovação',
+          time: '2 horas atrás',
+          urgent: true
+        },
+        {
+          id: 2,
+          type: 'info',
+          title: 'Nova Turma Criada',
+          message: 'Turma "Educação Física - 8º Ano" foi criada',
+          time: '1 dia atrás',
+          urgent: false
+        },
+        {
+          id: 3,
+          type: 'success',
+          title: 'Relatório Mensal',
+          message: 'Relatório de atividades do mês está disponível',
+          time: '3 dias atrás',
+          urgent: false
+        }
+      ];
+      setNotifications(mockNotifications);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+    }
+  };
+
+  const loadRecentActivities = async () => {
+    try {
+      // Simular atividades recentes por enquanto - depois implementar API
+      const mockActivities = [
+        {
+          id: 1,
+          type: 'user_registration',
+          message: 'João Silva se cadastrou como aluno',
+          time: '10 minutos atrás',
+          icon: '👤'
+        },
+        {
+          id: 2,
+          type: 'class_creation',
+          message: 'Professora Maria criou nova turma',
+          time: '1 hora atrás',
+          icon: '📚'
+        },
+        {
+          id: 3,
+          type: 'user_removal',
+          message: 'Pedro foi removido da turma A',
+          time: '2 horas atrás',
+          icon: '❌'
+        },
+        {
+          id: 4,
+          type: 'score_submission',
+          message: '15 alunos submeteram pontuações hoje',
+          time: '3 horas atrás',
+          icon: '🏆'
+        }
+      ];
+      setRecentActivities(mockActivities);
+    } catch (error) {
+      console.error('Erro ao carregar atividades recentes:', error);
+    }
+  };
+
+  const loadStudentsInInstitution = async () => {
+    try {
+      const response = await apiService.getInstitutionUsers();
+      if (response.success) {
+        // Filtrar apenas alunos
+        const students = response.data.filter(user => user.userType === 'STUDENT');
+        setStudentsInInstitution(students);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar alunos da instituição:', error);
+    }
+  };
+
   const handleSearchUserByCPF = async () => {
     if (!cpfSearch.trim()) {
       Alert.alert('Erro', 'Digite um CPF para buscar');
@@ -88,7 +236,22 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
     try {
       setIsLoading(true);
+      
+      // Verificar se o token está configurado
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token atual:', token ? 'Presente' : 'Ausente');
+      
+      if (!token) {
+        Alert.alert('Erro', 'Token de autenticação não encontrado. Faça login novamente.');
+        return;
+      }
+      
+      // Garantir que o token está configurado no apiService
+      apiService.setToken(token);
+      
+      console.log('🔍 Buscando usuário com CPF:', cpfSearch);
       const response = await apiService.searchUserByCPF(cpfSearch);
+      console.log('📡 Resposta da API:', response);
       
       if (response.success) {
         setFoundUser(response.data);
@@ -122,6 +285,47 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
     } catch (error) {
       console.error('Erro ao adicionar usuário:', error);
       Alert.alert('Erro', 'Erro ao adicionar usuário');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função para selecionar aluno
+  const handleSelectStudent = (studentId) => {
+    setSelectedStudentId(studentId);
+  };
+
+  // Função para adicionar aluno à turma
+  const handleAddStudentToClass = async () => {
+    if (!selectedStudentId || !selectedClassId) {
+      Alert.alert('Erro', 'Selecione um aluno e uma turma');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log('🔍 Adicionando aluno à turma:', {
+        studentId: selectedStudentId,
+        classId: selectedClassId
+      });
+      
+      const response = await apiService.addStudentToInstitutionClass(selectedClassId, selectedStudentId);
+      console.log('📡 Resposta da API:', response);
+      
+      if (response.success) {
+        Alert.alert('Sucesso', 'Aluno adicionado à turma com sucesso!');
+        setShowAddStudentModal(false);
+        setSelectedStudentId('');
+        setSelectedClassId('');
+        loadClasses();
+        loadStats();
+        loadStudentsInInstitution(); // Recarregar lista de alunos
+      } else {
+        Alert.alert('Erro', response.message || 'Erro ao adicionar aluno à turma');
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar aluno à turma:', error);
+      Alert.alert('Erro', 'Erro ao adicionar aluno à turma');
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +367,9 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
   const handleCreateClass = async () => {
     const { name, teacherId, school, grade } = newClass;
 
+    console.log('🔵 Dados da turma a ser criada:', newClass);
+    console.log('🔵 Campos obrigatórios:', { name, teacherId, school, grade });
+
     if (!name.trim() || !teacherId || !school.trim() || !grade.trim()) {
       Alert.alert('Erro', 'Todos os campos obrigatórios devem ser preenchidos');
       return;
@@ -170,7 +377,47 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
     try {
       setIsLoading(true);
-      const response = await apiService.createInstitutionClass(newClass);
+      
+      // Buscar professor por CPF para obter o ID
+      // Remover formatação do CPF (pontos e hífen)
+      const cleanCPF = teacherId.replace(/\D/g, '');
+      console.log('🔍 Buscando professor por CPF:', cleanCPF);
+      const teacherResponse = await apiService.searchUserByCPF(cleanCPF);
+      
+      if (!teacherResponse.success || !teacherResponse.data) {
+        Alert.alert('Erro', 'Professor não encontrado com este CPF');
+        return;
+      }
+      
+      const teacher = teacherResponse.data;
+      
+      // Verificar se é um professor
+      if (teacher.userType !== 'TEACHER') {
+        Alert.alert('Erro', 'O usuário encontrado não é um professor');
+        return;
+      }
+      
+      // Verificar se o professor pertence à instituição
+      if (teacher.institutionId !== currentUser.id) {
+        Alert.alert('Erro', 'Este professor não pertence à sua instituição');
+        return;
+      }
+      
+      console.log('✅ Professor encontrado:', teacher.name);
+      console.log('🆔 ID do professor:', teacher.id);
+      
+      // Preparar dados da turma com o ID do professor
+      const classData = {
+        name: newClass.name,
+        description: newClass.description,
+        teacherId: teacher.id, // Usar o ID do professor, não o CPF
+        school: newClass.school,
+        grade: newClass.grade
+      };
+      
+      console.log('🔵 Enviando dados para API:', classData);
+      const response = await apiService.createInstitutionClass(classData);
+      console.log('🔵 Resposta da API:', response);
       
       if (response.success) {
         Alert.alert('Sucesso', 'Turma criada com sucesso!');
@@ -191,21 +438,81 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
   const renderOverview = () => (
     <View style={styles.tabContent}>
-      <Text style={styles.tabTitle}>Visão Geral</Text>
+      <Text style={styles.tabTitle}>Dashboard da Instituição</Text>
       
-      {/* Estatísticas */}
+      {/* Estatísticas Principais */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{stats.totalStudents}</Text>
-          <Text style={styles.statLabel}>Alunos</Text>
+          <Text style={styles.statLabel}>Alunos Cadastrados</Text>
+          <Text style={styles.statSubLabel}>Total na instituição</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{stats.totalTeachers}</Text>
           <Text style={styles.statLabel}>Professores</Text>
+          <Text style={styles.statSubLabel}>Ativos</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{stats.totalClasses}</Text>
           <Text style={styles.statLabel}>Turmas</Text>
+          <Text style={styles.statSubLabel}>Criadas</Text>
+        </View>
+      </View>
+
+      {/* Estatísticas Secundárias */}
+      <View style={styles.secondaryStatsContainer}>
+        <View style={styles.secondaryStatCard}>
+          <Text style={styles.secondaryStatNumber}>{stats.recentRegistrations}</Text>
+          <Text style={styles.secondaryStatLabel}>Novos Cadastros</Text>
+          <Text style={styles.secondaryStatSubLabel}>Últimos 7 dias</Text>
+        </View>
+        <View style={styles.secondaryStatCard}>
+          <Text style={styles.secondaryStatNumber}>{stats.pendingApprovals}</Text>
+          <Text style={styles.secondaryStatLabel}>Pendências</Text>
+          <Text style={styles.secondaryStatSubLabel}>Aguardando</Text>
+        </View>
+      </View>
+
+      {/* Avisos Importantes */}
+      <View style={styles.notificationsSection}>
+        <Text style={styles.sectionTitle}>Avisos Importantes</Text>
+        <View style={styles.notificationsContainer}>
+          {notifications.map((notification) => (
+            <View 
+              key={notification.id} 
+              style={[
+                styles.notificationCard,
+                notification.urgent && styles.urgentNotification
+              ]}
+            >
+              <View style={styles.notificationHeader}>
+                <Text style={[
+                  styles.notificationTitle,
+                  notification.urgent && styles.urgentText
+                ]}>
+                  {notification.title}
+                </Text>
+                <Text style={styles.notificationTime}>{notification.time}</Text>
+              </View>
+              <Text style={styles.notificationMessage}>{notification.message}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Atividades Recentes */}
+      <View style={styles.activitiesSection}>
+        <Text style={styles.sectionTitle}>Atividades Recentes</Text>
+        <View style={styles.activitiesContainer}>
+          {recentActivities.map((activity) => (
+            <View key={activity.id} style={styles.activityCard}>
+              <Text style={styles.activityIcon}>{activity.icon}</Text>
+              <View style={styles.activityContent}>
+                <Text style={styles.activityMessage}>{activity.message}</Text>
+                <Text style={styles.activityTime}>{activity.time}</Text>
+              </View>
+            </View>
+          ))}
         </View>
       </View>
 
@@ -213,19 +520,37 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       <View style={styles.quickActions}>
         <Text style={styles.sectionTitle}>Ações Rápidas</Text>
         
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => setShowAddUserModal(true)}
-        >
-          <Text style={styles.actionButtonText}>+ Adicionar Usuário</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.primaryActionButton]}
+            onPress={() => setShowAddUserModal(true)}
+          >
+            <Text style={styles.actionButtonText}>+ Adicionar Usuário</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => setShowCreateClassModal(true)}
-        >
-          <Text style={styles.actionButtonText}>+ Criar Turma</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.secondaryActionButton]}
+            onPress={() => setShowCreateClassModal(true)}
+          >
+            <Text style={styles.actionButtonText}>+ Criar Turma</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.tertiaryActionButton]}
+            onPress={() => setActiveTab('users')}
+          >
+            <Text style={styles.actionButtonText}>👥 Gerenciar Usuários</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.tertiaryActionButton]}
+            onPress={() => setActiveTab('classes')}
+          >
+            <Text style={styles.actionButtonText}>📚 Gerenciar Turmas</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -289,13 +614,22 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       <View style={styles.tabContent}>
         <Text style={styles.tabTitle}>Turmas</Text>
         
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Pesquisar turmas..."
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholderTextColor="#999"
-        />
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Pesquisar turmas..."
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholderTextColor="#999"
+          />
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.primaryActionButton]}
+            onPress={() => setShowAddStudentModal(true)}
+          >
+            <Text style={styles.actionButtonText}>➕ Adicionar Aluno à Turma</Text>
+          </TouchableOpacity>
+        </View>
 
         {filteredClasses.length === 0 ? (
           <Text style={styles.emptyText}>Nenhuma turma encontrada</Text>
@@ -481,10 +815,21 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
             <TextInput
               style={styles.input}
-              placeholder="CPF do Professor"
+              placeholder="CPF do Professor (ex: 111.222.333-44)"
               value={newClass.teacherId}
-              onChangeText={(text) => setNewClass({ ...newClass, teacherId: text })}
+              onChangeText={(text) => {
+                // Formatar CPF
+                const formattedText = text
+                  .replace(/\D/g, '') // Remove caracteres não numéricos
+                  .replace(/(\d{3})(\d)/, '$1.$2') // Adiciona ponto após 3 dígitos
+                  .replace(/(\d{3})(\d)/, '$1.$2') // Adiciona ponto após 6 dígitos
+                  .replace(/(\d{3})(\d{1,2})$/, '$1-$2'); // Adiciona hífen antes dos últimos 2 dígitos
+                
+                setNewClass({ ...newClass, teacherId: formattedText });
+              }}
               placeholderTextColor="#999"
+              keyboardType="numeric"
+              maxLength={14}
             />
 
             <TextInput
@@ -516,6 +861,108 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
             >
               <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Adicionar Aluno à Turma */}
+      <Modal
+        visible={showAddStudentModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddStudentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContentMobile}>
+            <Text style={styles.modalTitle}>Adicionar Aluno à Turma</Text>
+            
+            {/* Seleção de Aluno */}
+            <View style={styles.selectionContainer}>
+              <Text style={styles.selectionTitle}>Selecione o Aluno:</Text>
+              <ScrollView style={styles.studentPicker} showsVerticalScrollIndicator={false}>
+                {studentsInInstitution.map((student) => (
+                  <TouchableOpacity
+                    key={student.id}
+                    style={[
+                      styles.studentOption,
+                      selectedStudentId === student.id && styles.selectedStudentOption
+                    ]}
+                    onPress={() => handleSelectStudent(student.id)}
+                  >
+                    <View style={styles.studentInfo}>
+                      <Text style={[
+                        styles.studentName,
+                        selectedStudentId === student.id && styles.selectedStudentText
+                      ]}>
+                        {student.name}
+                      </Text>
+                      <Text style={[
+                        styles.studentEmail,
+                        selectedStudentId === student.id && styles.selectedStudentText
+                      ]}>
+                        {student.email}
+                      </Text>
+                      <Text style={[
+                        styles.studentCPF,
+                        selectedStudentId === student.id && styles.selectedStudentText
+                      ]}>
+                        CPF: {student.cpf}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Seleção de Turma */}
+            {selectedStudentId && (
+              <View style={styles.selectionContainer}>
+                <Text style={styles.selectionTitle}>Selecione a Turma:</Text>
+                <ScrollView style={styles.classPicker} showsVerticalScrollIndicator={false}>
+                  {classes.map((cls) => (
+                    <TouchableOpacity
+                      key={cls.id}
+                      style={[
+                        styles.classOption,
+                        selectedClassId === cls.id && styles.selectedClassOption
+                      ]}
+                      onPress={() => setSelectedClassId(cls.id)}
+                    >
+                      <Text style={[
+                        styles.classOptionText,
+                        selectedClassId === cls.id && styles.selectedClassOptionText
+                      ]}>
+                        {cls.name} - {cls.school} ({cls.grade})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Botões */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.createButton, !selectedStudentId || !selectedClassId ? styles.disabledButton : null]}
+                onPress={handleAddStudentToClass}
+                disabled={isLoading || !selectedStudentId || !selectedClassId}
+              >
+                <Text style={styles.createButtonText}>
+                  {isLoading ? 'Adicionando...' : 'Adicionar à Turma'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowAddStudentModal(false);
+                  setSelectedStudentId('');
+                  setSelectedClassId('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -633,6 +1080,163 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'Poppins',
     marginTop: 5,
+  },
+  statSubLabel: {
+    fontSize: 10,
+    color: '#999',
+    fontFamily: 'Poppins',
+    marginTop: 2,
+  },
+  secondaryStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+  },
+  secondaryStatCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F9BB55',
+  },
+  secondaryStatNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#F9BB55',
+    fontFamily: 'Poppins',
+  },
+  secondaryStatLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontFamily: 'Poppins',
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  secondaryStatSubLabel: {
+    fontSize: 9,
+    color: '#999',
+    fontFamily: 'Poppins',
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  notificationsSection: {
+    marginBottom: 30,
+  },
+  notificationsContainer: {
+    gap: 10,
+  },
+  notificationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  urgentNotification: {
+    borderLeftColor: '#FF5722',
+    backgroundColor: '#FFF3E0',
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  notificationTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins',
+    flex: 1,
+  },
+  urgentText: {
+    color: '#FF5722',
+  },
+  notificationTime: {
+    fontSize: 11,
+    color: '#999',
+    fontFamily: 'Poppins',
+  },
+  notificationMessage: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Poppins',
+    lineHeight: 16,
+  },
+  activitiesSection: {
+    marginBottom: 30,
+  },
+  activitiesContainer: {
+    gap: 8,
+  },
+  activityCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  activityIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityMessage: {
+    fontSize: 13,
+    color: '#000',
+    fontFamily: 'Poppins',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 11,
+    color: '#999',
+    fontFamily: 'Poppins',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  primaryActionButton: {
+    backgroundColor: '#F9BB55',
+    flex: 1,
+  },
+  secondaryActionButton: {
+    backgroundColor: '#4CAF50',
+    flex: 1,
+  },
+  tertiaryActionButton: {
+    backgroundColor: '#2196F3',
+    flex: 1,
   },
   quickActions: {
     marginBottom: 20,
@@ -903,6 +1507,177 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
     fontFamily: 'Poppins',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 10,
+  },
+  searchButton: {
+    backgroundColor: '#F9BB55',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Poppins',
+  },
+  foundUserContainer: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  foundUserTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Poppins',
+    marginBottom: 8,
+  },
+  foundUserName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2C3E50',
+    fontFamily: 'Poppins',
+    marginBottom: 4,
+  },
+  foundUserEmail: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+    marginBottom: 2,
+  },
+  foundUserCPF: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  classSelectionContainer: {
+    marginVertical: 15,
+  },
+  classSelectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Poppins',
+    marginBottom: 10,
+  },
+  classPicker: {
+    maxHeight: 150,
+  },
+  classOption: {
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedClassOption: {
+    backgroundColor: '#F9BB55',
+    borderColor: '#F9BB55',
+  },
+  classOptionText: {
+    fontSize: 14,
+    color: '#333',
+    fontFamily: 'Poppins',
+  },
+  selectedClassOptionText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  // Estilos para responsividade mobile
+  modalContentMobile: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    margin: 20,
+    maxHeight: '90%',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  selectionContainer: {
+    marginVertical: 15,
+  },
+  selectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Poppins',
+    marginBottom: 10,
+  },
+  studentPicker: {
+    maxHeight: 200,
+    marginBottom: 10,
+  },
+  studentOption: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedStudentOption: {
+    backgroundColor: '#F9BB55',
+    borderColor: '#F9BB55',
+  },
+  studentInfo: {
+    flex: 1,
+  },
+  studentName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    fontFamily: 'Poppins',
+    marginBottom: 4,
+  },
+  studentEmail: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+    marginBottom: 2,
+  },
+  studentCPF: {
+    fontSize: 12,
+    color: '#999',
+    fontFamily: 'Poppins',
+  },
+  selectedStudentText: {
+    color: '#fff',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 10,
+  },
+  // Estilos responsivos para diferentes tamanhos de tela
+  '@media (max-width: 480px)': {
+    modalContentMobile: {
+      margin: 10,
+      padding: 15,
+      width: '95%',
+    },
+    studentPicker: {
+      maxHeight: 150,
+    },
+    classPicker: {
+      maxHeight: 120,
+    },
+    modalButtons: {
+      flexDirection: 'column',
+    },
   },
 });
 

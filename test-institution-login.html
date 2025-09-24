@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Login da Instituição</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #E9EEEE;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 402px;
+            height: 874px;
+            background-color: #E9EEEE;
+            padding: 20px;
+            position: relative;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            width: 175px;
+            height: 195px;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .input-container {
+            margin-bottom: 20px;
+        }
+
+        .input {
+            width: 100%;
+            height: 43px;
+            background-color: #FFFFFF;
+            border: none;
+            border-radius: 10px;
+            padding: 0 20px;
+            font-size: 16px;
+            color: #000;
+        }
+
+        .input::placeholder {
+            color: #666;
+        }
+
+        .user-type-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .user-type-button {
+            flex: 1;
+            height: 43px;
+            background-color: #FFFFFF;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .user-type-button.active {
+            background-color: #F9BB55;
+            font-weight: bold;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 43px;
+            background-color: #F9BB55;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #000;
+            cursor: pointer;
+            box-shadow: 0 0 7.4px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s;
+        }
+
+        .login-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .demo-info {
+            background: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        .demo-info strong {
+            color: #F9BB55;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo-container">
+            <div class="logo">LOGO</div>
+        </div>
+
+        <!-- Title -->
+        <h1 class="title">Movz</h1>
+
+        <!-- Email Input -->
+        <div class="input-container">
+            <input type="email" class="input" placeholder="E-mail" id="email" value="instituicao@exemplo.com">
+        </div>
+
+        <!-- Password Input -->
+        <div class="input-container">
+            <input type="password" class="input" placeholder="Senha" id="password" value="123456">
+        </div>
+
+        <!-- User Type Selection -->
+        <div class="user-type-container">
+            <button class="user-type-button" onclick="selectUserType('aluno')" id="aluno-btn">Aluno</button>
+            <button class="user-type-button" onclick="selectUserType('professor')" id="professor-btn">Professor</button>
+            <button class="user-type-button active" onclick="selectUserType('instituicao')" id="instituicao-btn">Instituição</button>
+        </div>
+
+        <!-- Login Button -->
+        <button class="login-button" onclick="handleLogin()">Entrar no Movimento</button>
+
+        <!-- Demo Info -->
+        <div class="demo-info">
+            <strong>Demo:</strong> Este é um teste do login da instituição.<br>
+            Clique em "Entrar no Movimento" para ver o redirecionamento.
+        </div>
+    </div>
+
+    <script>
+        let selectedUserType = 'instituicao';
+
+        function selectUserType(type) {
+            selectedUserType = type;
+            
+            // Update button styles
+            document.getElementById('aluno-btn').classList.toggle('active', type === 'aluno');
+            document.getElementById('professor-btn').classList.toggle('active', type === 'professor');
+            document.getElementById('instituicao-btn').classList.toggle('active', type === 'instituicao');
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            console.log('Login attempt:', { email, password, userType: selectedUserType });
+            
+            // Validação básica
+            if (!email || !password) {
+                alert('Por favor, preencha todos os campos');
+                return;
+            }
+            
+            // Simular login baseado no tipo de usuário
+            if (selectedUserType === 'instituicao') {
+                // Para instituições, simular login e redirecionar para dashboard
+                alert(`Login da Instituição realizado!\n\nEmail: ${email}\nRedirecionando para o dashboard...`);
+                
+                // Simular redirecionamento após 2 segundos
+                setTimeout(() => {
+                    // Redirecionar para a demo do dashboard da instituição
+                    window.location.href = 'institution-dashboard-demo.html';
+                }, 2000);
+            } else {
+                // Para alunos e professores, mostrar mensagem normal
+                alert(`Login: ${email}\nSenha: ${password}\nTipo: ${selectedUserType}`);
+            }
+        }
+    </script>
+</body>
+</html>

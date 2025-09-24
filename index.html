@@ -75,7 +75,7 @@
 
         .user-type-container {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 30px;
         }
 
@@ -146,6 +146,7 @@
         <div class="user-type-container">
             <button class="user-type-button active" onclick="selectUserType('aluno')" id="aluno-btn">Aluno</button>
             <button class="user-type-button" onclick="selectUserType('professor')" id="professor-btn">Professor</button>
+            <button class="user-type-button" onclick="selectUserType('instituicao')" id="instituicao-btn">Instituição</button>
         </div>
 
         <!-- Login Button -->
@@ -161,6 +162,7 @@
             // Update button styles
             document.getElementById('aluno-btn').classList.toggle('active', type === 'aluno');
             document.getElementById('professor-btn').classList.toggle('active', type === 'professor');
+            document.getElementById('instituicao-btn').classList.toggle('active', type === 'instituicao');
         }
 
         function handleLogin() {
@@ -168,7 +170,28 @@
             const password = document.getElementById('password').value;
             
             console.log('Login attempt:', { email, password, userType: selectedUserType });
-            alert(`Login: ${email}\nSenha: ${password}\nTipo: ${selectedUserType}`);
+            
+            // Validação básica
+            if (!email || !password) {
+                alert('Por favor, preencha todos os campos');
+                return;
+            }
+            
+            // Simular login baseado no tipo de usuário
+            if (selectedUserType === 'instituicao') {
+                // Para instituições, simular login e redirecionar para dashboard
+                alert(`Login da Instituição realizado!\n\nEmail: ${email}\nRedirecionando para o dashboard...`);
+                
+                // Simular redirecionamento após 2 segundos
+                setTimeout(() => {
+                    // Em uma aplicação real, aqui você faria a chamada para a API
+                    // e redirecionaria para a tela do dashboard da instituição
+                    window.location.href = 'institution-dashboard-demo.html';
+                }, 2000);
+            } else {
+                // Para alunos e professores, mostrar mensagem normal
+                alert(`Login: ${email}\nSenha: ${password}\nTipo: ${selectedUserType}`);
+            }
         }
     </script>
 </body>

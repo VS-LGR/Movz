@@ -11,10 +11,13 @@ import {
 } from 'react-native';
 import CustomAlert from './CustomAlert';
 import useCustomAlert from './useCustomAlert';
+import useResponsive from './useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, onNavigateToInstitutionRegister, onNavigateToInstitutionLogin, showSuccessMessage, onSuccessMessageShown }) => {
+  const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('STUDENT');
@@ -125,15 +128,31 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>Não tem uma conta? </Text>
           <View style={styles.registerButtons}>
-            <TouchableOpacity onPress={onNavigateToRegister}>
-              <Text style={styles.registerLink}>Cadastre-se (Estudante)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToTeacherRegister}>
-              <Text style={styles.registerLink}>Cadastre-se (Professor)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onNavigateToInstitutionRegister}>
-              <Text style={styles.registerLink}>Cadastre-se (Instituição)</Text>
-            </TouchableOpacity>
+            {/* Primeira linha - Estudante e Professor (topo do triângulo) */}
+            <View style={[styles.registerRow, { gap: getSpacing(15, 20, 25) }]}>
+              <TouchableOpacity onPress={onNavigateToRegister}>
+                <Text style={[styles.registerLink, { 
+                  fontSize: getFontSize(16, 18, 20),
+                  minWidth: getSpacing(120, 140, 160)
+                }]}>Cadastre-se (Estudante)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onNavigateToTeacherRegister}>
+                <Text style={[styles.registerLink, { 
+                  fontSize: getFontSize(16, 18, 20),
+                  minWidth: getSpacing(120, 140, 160)
+                }]}>Cadastre-se (Professor)</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Segunda linha - Instituição (base do triângulo) */}
+            <View style={styles.registerRow}>
+              <TouchableOpacity onPress={onNavigateToInstitutionRegister}>
+                <Text style={[styles.registerLink, { 
+                  fontSize: getFontSize(16, 18, 20),
+                  minWidth: getSpacing(160, 180, 200)
+                }]}>Cadastre-se (Instituição)</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           
           <View style={styles.institutionLogin}>
@@ -235,8 +254,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   registerButtons: {
+    flexDirection: 'column',
+    gap: 12,
+    alignItems: 'center',
+  },
+  registerRow: {
     flexDirection: 'row',
     gap: 15,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   registerLink: {
     fontSize: 14,
@@ -244,6 +270,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Poppins',
     textAlign: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 120,
   },
   institutionLogin: {
     flexDirection: 'row',

@@ -82,15 +82,44 @@ export default function App() {
     }
   };
 
-  const handleInstitutionLogin = async (institutionData) => {
+  const handleInstitutionLogin = async (institutionData, userType) => {
     try {
+      // Se institutionData já contém os dados da instituição (vem do login bem-sucedido)
+      if (institutionData.id && institutionData.name) {
+        // Configurar token do localStorage
+        const token = localStorage.getItem('token');
+        if (token) {
+          apiService.setToken(token);
+          // Também salvar no Storage para consistência
+          await Storage.setItem('authToken', token);
+        }
+        
+        // Adicionar userType ao objeto da instituição
+        const institutionWithType = {
+          ...institutionData,
+          userType: 'INSTITUTION'
+        };
+        
+        setCurrentUser(institutionWithType);
+        setIsAuthenticated(true);
+        setCurrentScreen('institutionDashboard');
+        return;
+      }
+      
+      // Se institutionData contém email e senha (login inicial)
       const response = await apiService.loginInstitution(institutionData.email, institutionData.password);
       if (response.success) {
         // Salvar token
         await Storage.setItem('authToken', response.data.token);
         apiService.setToken(response.data.token);
         
-        setCurrentUser(response.data.institution);
+        // Adicionar userType ao objeto da instituição
+        const institutionWithType = {
+          ...response.data.institution,
+          userType: 'INSTITUTION'
+        };
+        
+        setCurrentUser(institutionWithType);
         setIsAuthenticated(true);
         setCurrentScreen('institutionDashboard');
       } else {

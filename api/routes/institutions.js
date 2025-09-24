@@ -133,9 +133,17 @@ router.post('/register', async (req, res) => {
 // Login de instituição
 router.post('/login', async (req, res) => {
   try {
+    console.log('🔵 Recebendo requisição de login da instituição');
+    console.log('🔵 Headers:', req.headers);
+    console.log('🔵 Body:', req.body);
+    console.log('🔵 Content-Type:', req.get('Content-Type'));
+    
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('❌ Email ou senha não fornecidos');
+      console.log('❌ Email:', email);
+      console.log('❌ Password:', password);
       return res.status(400).json({
         success: false,
         message: 'Email e senha são obrigatórios'

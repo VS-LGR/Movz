@@ -8,12 +8,38 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
+  Dimensions,
 } from 'react-native';
 import CustomAlert from './CustomAlert';
 import useCustomAlert from './useCustomAlert';
 import apiService from './apiService';
+import useResponsive from './useResponsive';
 
 const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
+  const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  
+  // Função para obter estilos responsivos dos inputs
+  const getInputStyle = () => ({
+    ...styles.input,
+    fontSize: getFontSize(14, 16, 18),
+    paddingVertical: getSpacing(10, 12, 14),
+    paddingHorizontal: getSpacing(12, 15, 18),
+    marginBottom: getSpacing(12, 15, 18)
+  });
+  
+  // Função para obter estilos responsivos das seções
+  const getSectionStyle = () => ({
+    ...styles.section,
+    marginBottom: getSpacing(20, 30, 40)
+  });
+  
+  // Função para obter estilos responsivos dos títulos
+  const getSectionTitleStyle = () => ({
+    ...styles.sectionTitle,
+    fontSize: getFontSize(16, 18, 20),
+    marginBottom: getSpacing(12, 15, 18)
+  });
+  
   const [formData, setFormData] = useState({
     name: '',
     cnpj: '',
@@ -161,26 +187,35 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => onNavigate('login')}
-          >
-            <Text style={styles.backButtonText}>← Voltar</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Cadastro de Instituição</Text>
-        </View>
+      {/* Header fixo */}
+      <View style={[styles.header, { 
+        paddingHorizontal: getPadding(),
+        paddingTop: getSpacing(10, 15, 20),
+        paddingBottom: getSpacing(15, 20, 25)
+      }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => onNavigate('login')}
+        >
+          <Text style={[styles.backButtonText, { fontSize: getFontSize(14, 16, 18) }]}>← Voltar</Text>
+        </TouchableOpacity>
+        <Text style={[styles.title, { fontSize: getFontSize(24, 28, 32) }]}>Cadastro de Instituição</Text>
+      </View>
 
-        {/* Formulário */}
-        <View style={styles.form}>
+      {/* Formulário com Scroll */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[styles.formContent, { paddingHorizontal: getPadding() }]}>
           {/* Informações Básicas */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informações Básicas</Text>
+          <View style={getSectionStyle()}>
+            <Text style={getSectionTitleStyle()}>Informações Básicas</Text>
             
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Nome da Instituição *"
               value={formData.name}
               onChangeText={(text) => handleInputChange('name', text)}
@@ -188,7 +223,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="CNPJ *"
               value={formData.cnpj}
               onChangeText={(text) => handleInputChange('cnpj', text)}
@@ -197,7 +232,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Email *"
               value={formData.email}
               onChangeText={(text) => handleInputChange('email', text)}
@@ -207,7 +242,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Senha *"
               value={formData.password}
               onChangeText={(text) => handleInputChange('password', text)}
@@ -216,7 +251,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Confirmar Senha *"
               value={formData.confirmPassword}
               onChangeText={(text) => handleInputChange('confirmPassword', text)}
@@ -226,11 +261,11 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
           </View>
 
           {/* Informações de Contato */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Informações de Contato</Text>
+          <View style={getSectionStyle()}>
+            <Text style={getSectionTitleStyle()}>Informações de Contato</Text>
             
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Telefone"
               value={formData.phone}
               onChangeText={(text) => handleInputChange('phone', text)}
@@ -239,16 +274,16 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="Endereço"
               value={formData.address}
               onChangeText={(text) => handleInputChange('address', text)}
               placeholderTextColor="#999"
             />
 
-            <View style={styles.row}>
+            <View style={[styles.row, { gap: getSpacing(8, 10, 12) }]}>
               <TextInput
-                style={[styles.input, styles.halfInput]}
+                style={[getInputStyle(), styles.halfInput]}
                 placeholder="Cidade"
                 value={formData.city}
                 onChangeText={(text) => handleInputChange('city', text)}
@@ -256,7 +291,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
               />
 
               <TextInput
-                style={[styles.input, styles.halfInput]}
+                style={[getInputStyle(), styles.halfInput]}
                 placeholder="Estado"
                 value={formData.state}
                 onChangeText={(text) => handleInputChange('state', text)}
@@ -266,7 +301,7 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
             </View>
 
             <TextInput
-              style={styles.input}
+              style={getInputStyle()}
               placeholder="CEP"
               value={formData.zipCode}
               onChangeText={(text) => handleInputChange('zipCode', text)}
@@ -276,11 +311,14 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
           </View>
 
           {/* Descrição */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Descrição</Text>
+          <View style={getSectionStyle()}>
+            <Text style={getSectionTitleStyle()}>Descrição</Text>
             
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[getInputStyle(), styles.textArea, { 
+                height: getSpacing(80, 100, 120),
+                textAlignVertical: 'top'
+              }]}
               placeholder="Descrição da instituição (opcional)"
               value={formData.description}
               onChangeText={(text) => handleInputChange('description', text)}
@@ -290,27 +328,36 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
               textAlignVertical="top"
             />
           </View>
-
-          {/* Botão de Cadastro */}
-          <TouchableOpacity
-            style={[styles.registerButton, isLoading && styles.disabledButton]}
-            onPress={handleRegister}
-            disabled={isLoading}
-          >
-            <Text style={styles.registerButtonText}>
-              {isLoading ? 'Cadastrando...' : 'Cadastrar Instituição'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Link para Login */}
-          <View style={styles.loginLink}>
-            <Text style={styles.loginText}>Já tem uma conta? </Text>
-            <TouchableOpacity onPress={() => onNavigate('institutionLogin')}>
-              <Text style={styles.loginLinkText}>Fazer Login</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
+
+      {/* Botão de Cadastro - Posicionamento absoluto */}
+      <View style={[styles.buttonContainer, { 
+        paddingHorizontal: getPadding(),
+        paddingBottom: getSpacing(20, 30, 40)
+      }]}>
+        <TouchableOpacity
+          style={[styles.registerButton, isLoading && styles.disabledButton, {
+            paddingVertical: getSpacing(12, 15, 18)
+          }]}
+          onPress={handleRegister}
+          disabled={isLoading}
+        >
+          <Text style={[styles.registerButtonText, { 
+            fontSize: getFontSize(16, 18, 20) 
+          }]}>
+            {isLoading ? 'Cadastrando...' : 'Cadastrar Instituição'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Link para Login */}
+        <View style={[styles.loginLink, { marginTop: getSpacing(10, 15, 20) }]}>
+          <Text style={[styles.loginText, { fontSize: getFontSize(14, 16, 18) }]}>Já tem uma conta? </Text>
+          <TouchableOpacity onPress={() => onNavigate('institutionLogin')}>
+            <Text style={[styles.loginLinkText, { fontSize: getFontSize(14, 16, 18) }]}>Fazer Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
       
       <CustomAlert
         visible={alert.visible}
@@ -328,13 +375,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E8EDED',
   },
-  content: {
+  scrollContainer: {
     flex: 1,
-    padding: 20,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  formContent: {
+    paddingBottom: 20,
   },
   header: {
-    marginBottom: 30,
-    paddingTop: 10,
+    backgroundColor: '#E8EDED',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    zIndex: 10,
   },
   backButton: {
     alignSelf: 'flex-start',
@@ -391,16 +446,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  // Estilos responsivos
+  '@media (max-width: 768px)': {
+    row: {
+      flexDirection: 'column',
+      gap: 0,
+    },
+    halfInput: {
+      flex: 1,
+      marginBottom: 15,
+    },
+  },
   halfInput: {
     flex: 1,
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#E8EDED',
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
   },
   registerButton: {
     backgroundColor: '#F9BB55',
     borderRadius: 10,
     paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
