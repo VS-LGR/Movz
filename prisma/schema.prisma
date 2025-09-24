@@ -11,19 +11,23 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  age       Int?
-  school    String?
-  class     String?
-  avatar    String?
-  userType  UserType @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  cpf          String?  @unique
+  age          Int?
+  school       String?
+  class        String?
+  avatar       String?
+  userType     UserType @default(STUDENT)
+  institutionId String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relacionamentos
+  institution    Institution? @relation(fields: [institutionId], references: [id])
   userSports     UserSport[]
   userScores     UserScore[]
   userProgress   UserProgress[]
@@ -153,19 +157,21 @@ model TeacherClass {
 }
 
 model Class {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  teacherId   String
-  school      String
-  grade       String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  teacherId     String
+  institutionId String
+  school        String
+  grade         String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relacionamentos
-  teacher  User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  students ClassStudent[]
+  teacher     User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  students    ClassStudent[]
 
   @@map("classes")
 }
@@ -200,7 +206,31 @@ enum Difficulty {
   EXPERT
 }
 
+model Institution {
+  id          String   @id @default(cuid())
+  name        String
+  cnpj        String   @unique
+  email       String   @unique
+  password    String
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  users  User[]
+  classes Class[]
+
+  @@map("institutions")
+}
+
 enum UserType {
   STUDENT
   TEACHER
+  INSTITUTION
 }

@@ -12,6 +12,7 @@ const scoreRoutes = require('./routes/scores');
 const chatRoutes = require('./routes/chat');
 const classRoutes = require('./routes/classes');
 const classManagementRoutes = require('./routes/classManagement');
+const institutionRoutes = require('./routes/institutions');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -46,6 +47,7 @@ app.use('/api/scores', scoreRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/class-management', classManagementRoutes);
+app.use('/api/institutions', institutionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -16,11 +16,14 @@ import TeacherClassesScreen from './TeacherClassesScreen';
 import CreateClassScreen from './CreateClassScreen';
 import ClassScreen from './ClassScreen';
 import ClassManagementScreen from './ClassManagementScreen';
+import InstitutionRegisterScreen from './InstitutionRegisterScreen';
+import InstitutionLoginScreen from './InstitutionLoginScreen';
+import InstitutionDashboardScreen from './InstitutionDashboardScreen';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [currentScreen, setCurrentScreen] = useState('home');
+  const [currentScreen, setCurrentScreen] = useState('login');
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -69,9 +72,33 @@ export default function App() {
         setCurrentUser(response.data.user);
         setIsAuthenticated(true);
         setCurrentScreen('home');
+      } else {
+        // Se não foi sucesso, lançar erro com a mensagem da API
+        throw new Error(response.message || 'Erro no login');
       }
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const handleInstitutionLogin = async (institutionData) => {
+    try {
+      const response = await apiService.loginInstitution(institutionData.email, institutionData.password);
+      if (response.success) {
+        // Salvar token
+        await Storage.setItem('authToken', response.data.token);
+        apiService.setToken(response.data.token);
+        
+        setCurrentUser(response.data.institution);
+        setIsAuthenticated(true);
+        setCurrentScreen('institutionDashboard');
+      } else {
+        // Se não foi sucesso, lançar erro com a mensagem da API
+        throw new Error(response.message || 'Erro no login da instituição');
+      }
+    } catch (error) {
+      console.error('Institution login error:', error);
       throw error;
     }
   };
@@ -131,6 +158,14 @@ export default function App() {
     setCurrentScreen('teacherRegister');
   };
 
+  const navigateToInstitutionRegister = () => {
+    setCurrentScreen('institutionRegister');
+  };
+
+  const navigateToInstitutionLogin = () => {
+    setCurrentScreen('institutionLogin');
+  };
+
   const navigateToLogin = () => {
     setCurrentScreen('login');
     setShowSuccessMessage(true);
@@ -148,7 +183,21 @@ export default function App() {
       if (currentScreen === 'teacherRegister') {
         return <TeacherRegisterScreen onRegister={handleRegister} onNavigateToLogin={navigateToLogin} />;
       }
-      return <LoginScreen onLogin={handleLogin} onNavigateToRegister={navigateToRegister} onNavigateToTeacherRegister={navigateToTeacherRegister} showSuccessMessage={showSuccessMessage} onSuccessMessageShown={() => setShowSuccessMessage(false)} />;
+      if (currentScreen === 'institutionRegister') {
+        return <InstitutionRegisterScreen onNavigate={navigateToScreen} onLogin={handleLogin} />;
+      }
+      if (currentScreen === 'institutionLogin') {
+        return <InstitutionLoginScreen onNavigate={navigateToScreen} onLogin={handleInstitutionLogin} />;
+      }
+      return <LoginScreen 
+        onLogin={handleLogin} 
+        onNavigateToRegister={navigateToRegister} 
+        onNavigateToTeacherRegister={navigateToTeacherRegister}
+        onNavigateToInstitutionRegister={navigateToInstitutionRegister}
+        onNavigateToInstitutionLogin={navigateToInstitutionLogin}
+        showSuccessMessage={showSuccessMessage} 
+        onSuccessMessageShown={() => setShowSuccessMessage(false)} 
+      />;
     }
 
     switch (currentScreen) {
@@ -174,10 +223,16 @@ export default function App() {
         return <ClassScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
       case 'classManagement':
         return <ClassManagementScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+      case 'institutionDashboard':
+        return <InstitutionDashboardScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
       default:
         // Para professores, mostrar agenda como tela inicial
         if (currentUser && currentUser.userType === 'TEACHER') {
           return <TeacherScheduleScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+        }
+        // Para instituições, mostrar dashboard
+        if (currentUser && currentUser.userType === 'INSTITUTION') {
+          return <InstitutionDashboardScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
         }
         return <HomeScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
     }

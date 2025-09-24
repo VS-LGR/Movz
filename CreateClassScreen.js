@@ -12,6 +12,8 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import CustomAlert from './CustomAlert';
+import useCustomAlert from './useCustomAlert';
 import apiService from './apiService';
 import SideMenu from './SideMenu';
 import CustomModal from './CustomModal';
@@ -39,6 +41,7 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
   const [showDateModal, setShowDateModal] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({});
+  const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
   
   // Step 1: Sport Selection
   const [selectedSport, setSelectedSport] = useState(null);
@@ -135,7 +138,7 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
       }
     } catch (error) {
       console.error('Erro ao alternar favorito:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar os favoritos');
+      showError('❌ Erro', 'Não foi possível atualizar os favoritos');
     }
   };
 
@@ -163,19 +166,19 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
 
     // Validation
     if (!selectedSport) {
-      Alert.alert('Erro', 'Selecione um esporte');
+      showError('❌ Erro', 'Selecione um esporte');
       return;
     }
     if (!institution.trim() || !grade.trim()) {
-      Alert.alert('Erro', 'Preencha a instituição e turma');
+      showError('❌ Erro', 'Preencha a instituição e turma');
       return;
     }
     if (!classType) {
-      Alert.alert('Erro', 'Selecione o tipo da aula');
+      showError('❌ Erro', 'Selecione o tipo da aula');
       return;
     }
     if (!startTime || !endTime) {
-      Alert.alert('Erro', 'Preencha o horário de início e fim');
+      showError('❌ Erro', 'Preencha o horário de início e fim');
       return;
     }
 
@@ -620,6 +623,14 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
           />
         </View>
       </ScrollView>
+      
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
+      />
     </SafeAreaView>
   );
 };

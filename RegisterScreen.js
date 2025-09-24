@@ -11,6 +11,8 @@ import {
   Image,
   Alert,
 } from 'react-native';
+import CustomAlert from './CustomAlert';
+import useCustomAlert from './useCustomAlert';
 import SideMenu from './SideMenu';
 
 const { width, height } = Dimensions.get('window');
@@ -25,6 +27,7 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
   const [fieldErrors, setFieldErrors] = useState({});
 
   const handleInputChange = (field, value) => {
@@ -108,7 +111,7 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
     // Se há erros, mostrar o primeiro
     if (Object.keys(errors).length > 0) {
       const firstError = Object.values(errors)[0];
-      Alert.alert('❌ Dados inválidos', firstError);
+      showError('❌ Dados inválidos', firstError);
       return false;
     }
     
@@ -136,14 +139,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
         if (typeof window !== 'undefined' && window.alert) {
           window.alert(`Sucesso: ${result.message}`);
         } else {
-          Alert.alert('Sucesso', result.message, [
-            {
-              text: 'OK',
-              onPress: () => {
-                onNavigateToLogin && onNavigateToLogin();
-              }
-            }
-          ]);
+          showSuccess('Sucesso! 🎉', result.message);
+          setTimeout(() => {
+            onNavigateToLogin && onNavigateToLogin();
+          }, 2000);
         }
         
         // Redirecionar automaticamente após 2 segundos
@@ -155,7 +154,7 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
         if (typeof window !== 'undefined' && window.alert) {
           window.alert(`Erro: Resposta inesperada do servidor - ${JSON.stringify(result)}`);
         } else {
-          Alert.alert('Erro', 'Resposta inesperada do servidor');
+          showError('❌ Erro', 'Resposta inesperada do servidor');
         }
       }
     } catch (error) {
@@ -163,7 +162,7 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
       if (typeof window !== 'undefined' && window.alert) {
         window.alert(`Erro: ${error.message || 'Erro ao salvar cadastro'}`);
       } else {
-        Alert.alert('Erro', error.message || 'Erro ao salvar cadastro');
+        showError('❌ Erro', error.message || 'Erro ao salvar cadastro');
       }
     } finally {
       setIsLoading(false);
@@ -303,6 +302,14 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
         isVisible={isMenuVisible} 
         onClose={() => setIsMenuVisible(false)}
         onNavigate={onNavigate}
+      />
+      
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
       />
     </SafeAreaView>
   );

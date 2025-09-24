@@ -40,13 +40,22 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Erro na requisição');
+        // Retornar a resposta de erro em vez de lançar exceção
+        return {
+          success: false,
+          message: data.message || 'Erro na requisição',
+          status: response.status
+        };
       }
 
       return data;
     } catch (error) {
       console.error('Erro na API:', error);
-      throw error;
+      return {
+        success: false,
+        message: error.message || 'Erro de conexão',
+        status: 0
+      };
     }
   }
 
@@ -343,6 +352,74 @@ class ApiService {
 
   async getClassManagementStats() {
     return this.request('/class-management/classes/stats');
+  }
+
+  // ===== INSTITUIÇÕES =====
+
+  async registerInstitution(institutionData) {
+    return this.request('/institutions/register', {
+      method: 'POST',
+      body: JSON.stringify(institutionData),
+    });
+  }
+
+  async loginInstitution(email, password) {
+    return this.request('/institutions/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async searchUserByCPF(cpf) {
+    return this.request(`/institutions/users/search?cpf=${cpf}`);
+  }
+
+  async addUserToInstitution(userId) {
+    return this.request(`/institutions/users/${userId}/add`, {
+      method: 'POST',
+    });
+  }
+
+  async removeUserFromInstitution(userId) {
+    return this.request(`/institutions/users/${userId}/remove`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getInstitutionUsers(userType = null, search = '') {
+    const params = new URLSearchParams();
+    if (userType) params.append('userType', userType);
+    if (search) params.append('search', search);
+
+    return this.request(`/institutions/users?${params.toString()}`);
+  }
+
+  async getInstitutionClasses() {
+    return this.request('/institutions/classes');
+  }
+
+  async createInstitutionClass(classData) {
+    return this.request('/institutions/classes', {
+      method: 'POST',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  async addStudentToInstitutionClass(classId, studentId) {
+    return this.request(`/institutions/classes/${classId}/students`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    });
+  }
+
+  async removeStudentFromInstitutionClass(classId, studentId) {
+    return this.request(`/institutions/classes/${classId}/students/${studentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getInstitutionStats() {
+    return this.request('/institutions/stats');
   }
 }
 

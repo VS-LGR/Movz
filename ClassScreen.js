@@ -9,6 +9,8 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import CustomAlert from './CustomAlert';
+import useCustomAlert from './useCustomAlert';
 import apiService from './apiService';
 
 const { width } = Dimensions.get('window');
@@ -22,6 +24,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [loading, setLoading] = useState(false);
   const [expandedCard, setExpandedCard] = useState('aquecimento');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   // Dados de exemplo dos exercícios (em produção viria da API)
   const workoutSections = [
@@ -67,9 +70,9 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setAttendanceTaken(true);
-      Alert.alert('Sucesso', 'Chamada realizada com sucesso!');
+      showSuccess('Sucesso! 🎉', 'Chamada realizada com sucesso!');
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao realizar a chamada');
+      showError('❌ Erro', 'Erro ao realizar a chamada');
     } finally {
       setLoading(false);
     }
@@ -95,7 +98,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
           window.navigationParams.classCompleted = true;
         }
         
-        Alert.alert('Sucesso', 'Aula concluída com sucesso!');
+        showSuccess('Sucesso! 🎉', 'Aula concluída com sucesso!');
         
         // Navegar de volta para a lista de aulas
         onNavigate('classes');
@@ -104,7 +107,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       }
     } catch (error) {
       console.error('Erro ao concluir aula:', error);
-      Alert.alert('Erro', error.message || 'Erro ao concluir a aula');
+      showError('❌ Erro', error.message || 'Erro ao concluir a aula');
     } finally {
       setLoading(false);
     }
@@ -227,6 +230,14 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
           </View>
         </View>
       )}
+      
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
+      />
     </ScrollView>
   );
 };

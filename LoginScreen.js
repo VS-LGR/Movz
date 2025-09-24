@@ -9,36 +9,32 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import CustomAlert from './CustomAlert';
+import useCustomAlert from './useCustomAlert';
 
 const { width, height } = Dimensions.get('window');
 
-const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, showSuccessMessage, onSuccessMessageShown }) => {
+const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, onNavigateToInstitutionRegister, onNavigateToInstitutionLogin, showSuccessMessage, onSuccessMessageShown }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [userType, setUserType] = useState('STUDENT');
   const [isLoading, setIsLoading] = useState(false);
+  const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   // Mostrar mensagem de sucesso quando vier do cadastro
   useEffect(() => {
     if (showSuccessMessage) {
-      Alert.alert(
+      showSuccess(
         'Cadastro Realizado!', 
-        'Sua conta foi criada com sucesso. Agora você pode fazer login.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              onSuccessMessageShown && onSuccessMessageShown();
-            }
-          }
-        ]
+        'Sua conta foi criada com sucesso. Agora você pode fazer login.'
       );
+      onSuccessMessageShown && onSuccessMessageShown();
     }
-  }, [showSuccessMessage, onSuccessMessageShown]);
+  }, [showSuccessMessage, onSuccessMessageShown, showSuccess]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos');
+      showError('❌ Campos Obrigatórios', 'Por favor, preencha todos os campos');
       return;
     }
 
@@ -47,7 +43,7 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
     try {
       await onLogin({ email, password, userType });
     } catch (error) {
-      Alert.alert('Erro', error.message || 'Erro ao fazer login');
+      showError('❌ Erro no Login', error.message || 'Erro ao fazer login');
     } finally {
       setIsLoading(false);
     }
@@ -135,9 +131,27 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
             <TouchableOpacity onPress={onNavigateToTeacherRegister}>
               <Text style={styles.registerLink}>Cadastre-se (Professor)</Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={onNavigateToInstitutionRegister}>
+              <Text style={styles.registerLink}>Cadastre-se (Instituição)</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.institutionLogin}>
+            <Text style={styles.institutionText}>Já tem uma instituição? </Text>
+            <TouchableOpacity onPress={onNavigateToInstitutionLogin}>
+              <Text style={styles.institutionLink}>Login da Instituição</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
+      
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
+      />
     </SafeAreaView>
   );
 };
@@ -230,6 +244,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Poppins',
     textAlign: 'center',
+  },
+  institutionLogin: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  institutionText: {
+    color: '#666',
+    fontSize: 16,
+    fontFamily: 'Poppins',
+  },
+  institutionLink: {
+    color: '#F9BB55',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Poppins',
+    textDecorationLine: 'underline',
   },
   userTypeContainer: {
     marginBottom: 30,
