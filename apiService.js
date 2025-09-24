@@ -103,6 +103,22 @@ class ApiService {
     return this.request('/users/stats');
   }
 
+  async addFavoriteSport(sportId) {
+    return this.request(`/sports/${sportId}/favorite`, {
+      method: 'POST',
+    });
+  }
+
+  async removeFavoriteSport(sportId) {
+    return this.request(`/sports/${sportId}/favorite`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getFavoriteSports() {
+    return this.request('/sports/favorites');
+  }
+
   // ===== ESPORTES =====
 
   async getSports() {
@@ -263,7 +279,7 @@ class ApiService {
     });
   }
 
-  async completeClass(classId, isCompleted) {
+  async completeClass(classId, isCompleted = true) {
     return this.request(`/classes/${classId}/complete`, {
       method: 'PUT',
       body: JSON.stringify({ isCompleted }),
@@ -276,6 +292,57 @@ class ApiService {
     if (year) params.append('year', year);
 
     return this.request(`/classes/stats?${params.toString()}`);
+  }
+
+  // ===== GERENCIAMENTO DE TURMAS =====
+
+  async getClasses() {
+    return this.request('/class-management/classes');
+  }
+
+  async createClass(classData) {
+    return this.request('/class-management/classes', {
+      method: 'POST',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  async updateClass(classId, classData) {
+    return this.request(`/class-management/classes/${classId}`, {
+      method: 'PUT',
+      body: JSON.stringify(classData),
+    });
+  }
+
+  async deleteClass(classId) {
+    return this.request(`/class-management/classes/${classId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAvailableStudents(classId = null, search = '') {
+    const params = new URLSearchParams();
+    if (classId) params.append('classId', classId);
+    if (search) params.append('search', search);
+
+    return this.request(`/class-management/students/available?${params.toString()}`);
+  }
+
+  async addStudentToClass(classId, studentId) {
+    return this.request(`/class-management/classes/${classId}/students`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    });
+  }
+
+  async removeStudentFromClass(classId, studentId) {
+    return this.request(`/class-management/classes/${classId}/students/${studentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getClassManagementStats() {
+    return this.request('/class-management/classes/stats');
   }
 }
 

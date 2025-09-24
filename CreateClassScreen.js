@@ -10,12 +10,28 @@ import {
   Alert,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import apiService from './apiService';
 import SideMenu from './SideMenu';
 import CustomModal from './CustomModal';
 
 const { width, height } = Dimensions.get('window');
+
+// Mapeamento de esportes para suas imagens
+const getSportIcon = (sportName) => {
+  const iconMap = {
+    'Basquete': require('./img/Basquete_sports.svg'),
+    'Handball': require('./img/Handball_sports.svg'),
+    'Vôlei': require('./img/Voley_sports.svg'),
+    'Ping-Pong': require('./img/pingPong_sports.svg'),
+    'Natação': require('./img/Swimming_sports.svg'),
+    'Futebol': require('./img/futebol_sports.svg'),
+    'Exercícios': require('./img/Exercise_sports.svg'),
+    'Queimada': require('./img/queimada_sports.svg'),
+  };
+  return iconMap[sportName] || null;
+};
 
 const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -27,6 +43,7 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
   // Step 1: Sport Selection
   const [selectedSport, setSelectedSport] = useState(null);
   const [sports, setSports] = useState([]);
+  const [favoriteSports, setFavoriteSports] = useState([]);
   
   // Step 2: Institution and Class
   const [institution, setInstitution] = useState('');
@@ -44,7 +61,8 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
   // Load sports from API
   useEffect(() => {
     loadSports();
-  }, []);
+    loadFavoriteSports();
+  }, [currentUser]);
 
   const loadSports = async () => {
     try {
@@ -58,6 +76,27 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
     } catch (error) {
       console.error('Erro ao carregar esportes:', error);
       setSports([]);
+    }
+  };
+
+  const loadFavoriteSports = async () => {
+    try {
+      // Carregar esportes favoritos do usuário atual
+      if (currentUser && currentUser.id) {
+        const response = await apiService.getFavoriteSports();
+        
+        if (response.success && response.data?.sports) {
+          const favoriteIds = response.data.sports.map(sport => sport.id);
+          setFavoriteSports(favoriteIds);
+        } else {
+          setFavoriteSports([]);
+        }
+      } else {
+        setFavoriteSports([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar esportes favoritos:', error);
+      setFavoriteSports([]);
     }
   };
 
@@ -77,6 +116,27 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
     setTimeout(() => {
       setCurrentStep(2);
     }, 500);
+  };
+
+  const toggleFavorite = async (sportId, event) => {
+    event.stopPropagation(); // Evitar que o clique na estrela selecione o esporte
+    
+    try {
+      const isCurrentlyFavorite = favoriteSports.includes(sportId);
+      
+      if (isCurrentlyFavorite) {
+        // Remover dos favoritos
+        await apiService.removeFavoriteSport(sportId);
+        setFavoriteSports(prev => prev.filter(id => id !== sportId));
+      } else {
+        // Adicionar aos favoritos
+        await apiService.addFavoriteSport(sportId);
+        setFavoriteSports(prev => [...prev, sportId]);
+      }
+    } catch (error) {
+      console.error('Erro ao alternar favorito:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar os favoritos');
+    }
   };
 
   const handleNext = () => {
@@ -222,12 +282,25 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
             >
               <View style={styles.sportCardContent}>
                 <View style={styles.sportIndicator} />
-                <Text style={styles.sportName}>{sport.name}</Text>
-                {index < 3 && (
-                  <View style={styles.favoriteStar}>
-                    <Text style={styles.starText}>★</Text>
-                  </View>
+                {getSportIcon(sport.name) && (
+                  <Image 
+                    source={getSportIcon(sport.name)} 
+                    style={styles.sportIcon}
+                    resizeMode="contain"
+                  />
                 )}
+                <Text style={styles.sportName}>{sport.name}</Text>
+                <TouchableOpacity 
+                  style={styles.favoriteStar}
+                  onPress={(event) => toggleFavorite(sport.id, event)}
+                >
+                  <Text style={[
+                    styles.starText,
+                    favoriteSports.includes(sport.id) && styles.starTextActive
+                  ]}>
+                    ★
+                  </Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           ))
@@ -625,19 +698,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingHorizontal: 5,
   },
   sportCard: {
-    width: (width - 60) / 3,
-    height: 91,
+    width: (width - 70) / 3,
+    height: 110,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 15,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sportCardSelected: {
     backgroundColor: '#F9BB55',
     borderColor: '#364859',
+    shadowColor: '#F9BB55',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    transform: [{ scale: 1.02 }],
   },
   sportCardContent: {
     flex: 1,
@@ -651,24 +738,65 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#364859',
     position: 'absolute',
-    top: 7,
+    top: 8,
     left: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  sportIcon: {
+    width: 38,
+    height: 38,
+    marginBottom: 8,
+    marginTop: 12,
   },
   sportName: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#000',
     fontFamily: 'Poppins',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 4,
+    fontWeight: '600',
+    paddingHorizontal: 6,
+    lineHeight: 16,
   },
   favoriteStar: {
     position: 'absolute',
-    top: 5,
-    right: 8,
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 10,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   starText: {
-    fontSize: 16,
+    fontSize: 12,
+    color: '#666666',
+    opacity: 0.8,
+  },
+  starTextActive: {
     color: '#F9BB55',
+    opacity: 1,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   formContainer: {
     marginTop: 20,

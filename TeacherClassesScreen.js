@@ -30,6 +30,25 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
     loadClasses();
   }, []);
 
+  // Recarregar aulas quando voltar da tela de aula
+  useEffect(() => {
+    const handleFocus = () => {
+      loadClasses();
+    };
+
+    // Simular evento de foco (em uma aplicação real usaria useFocusEffect do React Navigation)
+    const interval = setInterval(() => {
+      // Verificar se há mudanças nos parâmetros de navegação
+      if (window.navigationParams && window.navigationParams.classCompleted) {
+        loadClasses();
+        // Limpar o parâmetro para evitar recarregamentos desnecessários
+        window.navigationParams.classCompleted = false;
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Filtrar aulas quando searchText ou selectedFilter mudar
   useEffect(() => {
     filterClasses();
@@ -133,6 +152,10 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
 
   const handleEditClass = (classId) => {
     onNavigate('editClass', { classId });
+  };
+
+  const handleStartClass = (classItem) => {
+    onNavigate('class', { classData: classItem });
   };
 
   const showModal = (config) => {
@@ -373,6 +396,15 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
 
                 {/* Card Actions */}
                 <View style={styles.cardActions}>
+                  {!classItem.isCompleted && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.startButton]}
+                      onPress={() => handleStartClass(classItem)}
+                    >
+                      <Text style={styles.actionButtonText}>Iniciar Aula</Text>
+                    </TouchableOpacity>
+                  )}
+                  
                   <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => handleEditClass(classItem.id)}
@@ -659,15 +691,22 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 8,
   },
   actionButton: {
-    flex: 1,
+    minWidth: 80,
     height: 35,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
-    marginHorizontal: 2,
+    paddingHorizontal: 12,
+    flex: 1,
+    maxWidth: '48%',
+  },
+  startButton: {
+    backgroundColor: '#2196F3',
   },
   completeButton: {
     backgroundColor: '#4CAF50',
@@ -679,10 +718,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F44336',
   },
   actionButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#FFFFFF',
     fontFamily: 'Poppins',
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   statsContainer: {
     backgroundColor: '#FFFFFF',

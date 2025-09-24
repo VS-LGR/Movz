@@ -14,6 +14,8 @@ import AchievementsScreen from './AchievementsScreen';
 import TeacherScheduleScreen from './TeacherScheduleScreen';
 import TeacherClassesScreen from './TeacherClassesScreen';
 import CreateClassScreen from './CreateClassScreen';
+import ClassScreen from './ClassScreen';
+import ClassManagementScreen from './ClassManagementScreen';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -110,9 +112,15 @@ export default function App() {
     }
   };
 
-  const navigateToScreen = (screen) => {
+  const navigateToScreen = (screen, params = {}) => {
     setCurrentScreen(screen);
     setIsMenuVisible(false);
+    // Armazenar parâmetros para uso nas telas
+    if (params && Object.keys(params).length > 0) {
+      // Para este exemplo simples, vamos usar um estado global
+      // Em uma aplicação real, você usaria React Navigation
+      window.navigationParams = params;
+    }
   };
 
   const navigateToRegister = () => {
@@ -162,6 +170,10 @@ export default function App() {
         return <TeacherClassesScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
       case 'createClass':
         return <CreateClassScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+      case 'class':
+        return <ClassScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
+      case 'classManagement':
+        return <ClassManagementScreen isMenuVisible={isMenuVisible} setIsMenuVisible={setIsMenuVisible} onNavigate={navigateToScreen} currentUser={currentUser} onLogout={handleLogout} />;
       default:
         // Para professores, mostrar agenda como tela inicial
         if (currentUser && currentUser.userType === 'TEACHER') {

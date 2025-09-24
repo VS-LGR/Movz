@@ -8,57 +8,90 @@ async function main() {
   // Criar esportes
   const sports = await Promise.all([
     prisma.sport.upsert({
-      where: { name: 'Futebol' },
-      update: {},
-      create: {
-        name: 'Futebol',
-        description: 'O esporte mais popular do mundo',
-        icon: '⚽',
-        color: '#00FF00',
-        isActive: true
-      }
-    }),
-    prisma.sport.upsert({
       where: { name: 'Basquete' },
-      update: {},
+      update: { icon: 'img/Basquete_sports.svg' },
       create: {
         name: 'Basquete',
         description: 'Esporte de quadra com cesta',
-        icon: '🏀',
+        icon: 'img/Basquete_sports.svg',
         color: '#FF8C00',
         isActive: true
       }
     }),
     prisma.sport.upsert({
+      where: { name: 'Handball' },
+      update: { icon: 'img/Handball_sports.svg' },
+      create: {
+        name: 'Handball',
+        description: 'Esporte de quadra com gol',
+        icon: 'img/Handball_sports.svg',
+        color: '#FF6B6B',
+        isActive: true
+      }
+    }),
+    prisma.sport.upsert({
       where: { name: 'Vôlei' },
-      update: {},
+      update: { icon: 'img/Voley_sports.svg' },
       create: {
         name: 'Vôlei',
         description: 'Esporte de quadra com rede',
-        icon: '🏐',
+        icon: 'img/Voley_sports.svg',
         color: '#FFD700',
         isActive: true
       }
     }),
     prisma.sport.upsert({
-      where: { name: 'Tênis' },
-      update: {},
+      where: { name: 'Ping-Pong' },
+      update: { icon: 'img/pingPong_sports.svg' },
       create: {
-        name: 'Tênis',
-        description: 'Esporte de raquete',
-        icon: '🎾',
+        name: 'Ping-Pong',
+        description: 'Esporte de mesa com raquete',
+        icon: 'img/pingPong_sports.svg',
         color: '#00FFFF',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Natação' },
-      update: {},
+      update: { icon: 'img/Swimming_sports.svg' },
       create: {
         name: 'Natação',
         description: 'Esporte aquático',
-        icon: '🏊',
+        icon: 'img/Swimming_sports.svg',
         color: '#0080FF',
+        isActive: true
+      }
+    }),
+    prisma.sport.upsert({
+      where: { name: 'Futebol' },
+      update: { icon: 'img/futebol_sports.svg' },
+      create: {
+        name: 'Futebol',
+        description: 'O esporte mais popular do mundo',
+        icon: 'img/futebol_sports.svg',
+        color: '#00FF00',
+        isActive: true
+      }
+    }),
+    prisma.sport.upsert({
+      where: { name: 'Exercícios' },
+      update: { icon: 'img/Exercise_sports.svg' },
+      create: {
+        name: 'Exercícios',
+        description: 'Atividades físicas gerais',
+        icon: 'img/Exercise_sports.svg',
+        color: '#9C27B0',
+        isActive: true
+      }
+    }),
+    prisma.sport.upsert({
+      where: { name: 'Queimada' },
+      update: { icon: 'img/queimada_sports.svg' },
+      create: {
+        name: 'Queimada',
+        description: 'Jogo tradicional brasileiro',
+        icon: 'img/queimada_sports.svg',
+        color: '#FF5722',
         isActive: true
       }
     })
@@ -171,7 +204,7 @@ async function main() {
 
   const exampleUser = await prisma.user.upsert({
     where: { email: 'usuario@exemplo.com' },
-    update: {},
+    update: { userType: 'TEACHER' },
     create: {
       name: 'Usuário Exemplo',
       email: 'usuario@exemplo.com',
@@ -179,20 +212,46 @@ async function main() {
       age: 25,
       school: 'Escola Exemplo',
       class: 'Turma A',
-      avatar: null
+      avatar: null,
+      userType: 'TEACHER'
     }
   });
 
   console.log('✅ Usuário de exemplo criado');
 
   // Inscrição do usuário em alguns esportes
-  await prisma.userSport.createMany({
-    data: [
-      { userId: exampleUser.id, sportId: sports[0].id }, // Futebol
-      { userId: exampleUser.id, sportId: sports[1].id }, // Basquete
-      { userId: exampleUser.id, sportId: sports[2].id }  // Vôlei
-    ]
-  });
+  await Promise.all([
+    prisma.userSport.upsert({
+      where: {
+        userId_sportId: {
+          userId: exampleUser.id,
+          sportId: sports[0].id // Basquete
+        }
+      },
+      update: { isActive: true },
+      create: { userId: exampleUser.id, sportId: sports[0].id }
+    }),
+    prisma.userSport.upsert({
+      where: {
+        userId_sportId: {
+          userId: exampleUser.id,
+          sportId: sports[5].id // Futebol
+        }
+      },
+      update: { isActive: true },
+      create: { userId: exampleUser.id, sportId: sports[5].id }
+    }),
+    prisma.userSport.upsert({
+      where: {
+        userId_sportId: {
+          userId: exampleUser.id,
+          sportId: sports[2].id // Vôlei
+        }
+      },
+      update: { isActive: true },
+      create: { userId: exampleUser.id, sportId: sports[2].id }
+    })
+  ]);
 
   console.log('✅ Usuário inscrito em esportes');
 

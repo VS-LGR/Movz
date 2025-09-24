@@ -29,6 +29,8 @@ model User {
   userProgress   UserProgress[]
   chatMessages   ChatMessage[]
   teacherClasses TeacherClass[]
+  classes        Class[]
+  classStudents  ClassStudent[]
 
   @@map("users")
 }
@@ -148,6 +150,39 @@ model TeacherClass {
   teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@map("teacher_classes")
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  teacherId   String
+  school      String
+  grade       String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  teacher  User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  students ClassStudent[]
+
+  @@map("classes")
+}
+
+model ClassStudent {
+  id        String   @id @default(cuid())
+  classId   String
+  studentId String
+  joinedAt  DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  // Relacionamentos
+  class    Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student  User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@map("class_students")
 }
 
 enum ContentType {

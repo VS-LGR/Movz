@@ -336,4 +336,154 @@ router.get('/:id/ranking', async (req, res) => {
   }
 });
 
+// ===== FAVORITOS =====
+
+// Adicionar esporte aos favoritos
+router.post('/:id/favorite', authenticateToken, async (req, res) => {
+  try {
+    const { id: sportId } = req.params;
+    const userId = req.user.userId;
+
+    // Verificar se o esporte existe
+    const sport = await prisma.sport.findUnique({
+      where: { id: sportId }
+    });
+
+    if (!sport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Esporte não encontrado'
+      });
+    }
+
+    // Verificar se já está nos favoritos
+    const existingFavorite = await prisma.userSport.findUnique({
+      where: {
+        userId_sportId: {
+          userId,
+          sportId
+        }
+      }
+    });
+
+    if (existingFavorite && existingFavorite.isActive) {
+      return res.status(409).json({
+        success: false,
+        message: 'Esporte já está nos seus favoritos'
+      });
+    }
+
+    // Criar ou reativar favorito
+    if (existingFavorite) {
+      await prisma.userSport.update({
+        where: { id: existingFavorite.id },
+        data: { isActive: true }
+      });
+    } else {
+      await prisma.userSport.create({
+        data: {
+          userId,
+          sportId
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Esporte adicionado aos favoritos'
+    });
+
+  } catch (error) {
+    console.error('Erro ao adicionar favorito:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Remover esporte dos favoritos
+router.delete('/:id/favorite', authenticateToken, async (req, res) => {
+  try {
+    const { id: sportId } = req.params;
+    const userId = req.user.userId;
+
+    const userSport = await prisma.userSport.findUnique({
+      where: {
+        userId_sportId: {
+          userId,
+          sportId
+        }
+      }
+    });
+
+    if (!userSport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Esporte não está nos seus favoritos'
+      });
+    }
+
+    // Desativar favorito
+    await prisma.userSport.update({
+      where: { id: userSport.id },
+      data: { isActive: false }
+    });
+
+    res.json({
+      success: true,
+      message: 'Esporte removido dos favoritos'
+    });
+
+  } catch (error) {
+    console.error('Erro ao remover favorito:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar esportes favoritos do usuário
+router.get('/favorites', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const favoriteSports = await prisma.userSport.findMany({
+      where: {
+        userId,
+        isActive: true
+      },
+      include: {
+        sport: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            icon: true,
+            color: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        sports: favoriteSports.map(fav => fav.sport)
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar favoritos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 module.exports = router;

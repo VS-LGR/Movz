@@ -36,10 +36,11 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
   const menuItems = userType === 'TEACHER' ? [
     { id: 'agenda', title: 'Agenda de Aulas', y: 200, height: 42, screen: 'schedule' },
     { id: 'classes', title: 'Minhas Aulas', y: 269, height: 42, screen: 'classes' },
-    { id: 'perfil', title: 'Perfil', y: 339, height: 42, screen: 'home' },
-    { id: 'chat', title: 'Chat', y: 408, height: 41, screen: 'chat' },
-    { id: 'tutorial', title: 'Tutorial', y: 477, height: 42, screen: 'tutorial' },
-    { id: 'logout', title: 'Sair', y: 546, height: 42, screen: 'logout' },
+    { id: 'classManagement', title: 'Gerenciar Turmas', y: 339, height: 42, screen: 'classManagement' },
+    { id: 'perfil', title: 'Perfil', y: 408, height: 42, screen: 'home' },
+    { id: 'chat', title: 'Chat', y: 477, height: 41, screen: 'chat' },
+    { id: 'tutorial', title: 'Tutorial', y: 546, height: 42, screen: 'tutorial' },
+    { id: 'logout', title: 'Sair', y: 615, height: 42, screen: 'logout' },
   ] : [
     { id: 'perfil', title: 'Perfil', y: 200, height: 42, screen: 'home' },
     { id: 'ranking', title: 'Ranking', y: 269, height: 42, screen: 'ranking' },
