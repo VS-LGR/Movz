@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
@@ -186,16 +187,14 @@ const MyClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentU
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Minhas Turmas</Text>
+            <Text style={styles.subtitle}>Visualizar turmas e alunos</Text>
+          </View>
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Minhas Turmas</Text>
-          <Text style={styles.subtitle}>Visualizar turmas e alunos</Text>
+            style={styles.menuButton}
+          />
         </View>
 
         {/* Estatísticas */}
@@ -250,22 +249,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  menuButton: {
-    width: 24,
-    height: 18,
-    justifyContent: 'space-between',
-    marginRight: 15,
+  headerLeft: {
+    flex: 1,
   },
-  menuLine: {
-    height: 2,
-    backgroundColor: '#333',
-    borderRadius: 1,
+  menuButton: {
+    marginLeft: 15,
   },
   title: {
     fontSize: 24,

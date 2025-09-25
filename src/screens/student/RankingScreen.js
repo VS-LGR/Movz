@@ -9,10 +9,11 @@ import {
   SafeAreaView,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 
 const { width, height } = Dimensions.get('window');
 
-const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }) => {
+const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const rankingData = [
     { position: 1, name: 'Nome do Aluno', hasGradient: true, gradientType: 'gold' },
     { position: 2, name: 'Nome do Aluno', hasGradient: true, gradientType: 'blue' },
@@ -64,14 +65,10 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>Movz</Text>
-          <TouchableOpacity 
-            style={styles.menuIcon} 
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
+            style={styles.menuButton}
+          />
         </View>
 
         {/* Title */}
@@ -149,16 +146,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'Poppins',
   },
-  menuIcon: {
-    width: 39,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 39,
-    height: 6,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 3,
+  menuButton: {
+    marginLeft: 15,
   },
   title: {
     fontSize: 24,

@@ -8,6 +8,7 @@ import {
   Dimensions,
   SafeAreaView,
   Alert,
+  Image,
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
@@ -66,7 +67,13 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
       <View style={styles.content}>
         {/* Logo */}
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>Movz</Text>
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../../assets/images/Logo.svg')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
 
         {/* Title */}
@@ -197,12 +204,19 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginBottom: 40,
+    marginTop: 20,
   },
-  logo: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#000',
-    fontFamily: 'Poppins',
+  logoWrapper: {
+    backgroundColor: 'transparent',
+    borderRadius: 75,
+    padding: 10,
+    // Aplicar multiply blend mode no container
+    mixBlendMode: 'multiply',
+  },
+  logoImage: {
+    width: 150,
+    height: 150,
+    opacity: 0.9,
   },
   title: {
     fontSize: 28,

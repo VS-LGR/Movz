@@ -17,18 +17,36 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
 
   React.useEffect(() => {
     if (isVisible) {
+      // Disable scroll when menu is open
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
         useNativeDriver: false,
       }).start();
     } else {
+      // Re-enable scroll when menu is closed
+      document.body.style.overflow = 'unset';
+      document.body.style.position = 'unset';
+      document.body.style.width = 'unset';
+      
       Animated.timing(slideAnim, {
         toValue: screenWidth,
         duration: 300,
         useNativeDriver: false,
       }).start();
     }
+
+    // Cleanup function to ensure scroll is re-enabled
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.position = 'unset';
+      document.body.style.width = 'unset';
+    };
   }, [isVisible, slideAnim]);
 
   if (!isVisible) return null;
@@ -72,59 +90,42 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
           },
         ]}
       >
-        {/* Background SVG */}
-        <Image 
-          source={require('../assets/images/SideMenu.svg')} 
-          style={styles.backgroundSvg}
-          resizeMode="cover"
-        />
-
-        {/* Close Button - Line 1 and Line 2 */}
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <View style={styles.closeIcon}>
-            <View style={[styles.closeLine, styles.closeLine1]} />
-            <View style={[styles.closeLine, styles.closeLine2]} />
-          </View>
+        {/* Main Background */}
+        <View style={styles.background} />
+        
+        {/* Half Circle - Perfectly connected to rectangle */}
+        <View style={styles.halfCircle} />
+        
+        {/* Close Button X in bottom circle */}
+        <TouchableOpacity style={styles.bottomCloseButton} onPress={onClose}>
+          <Text style={styles.closeX}>×</Text>
         </TouchableOpacity>
 
-        {/* User Profile Section */}
-        <View style={styles.userProfile}>
+        {/* User Avatar */}
+        <View style={styles.avatarContainer}>
           <Image
             source={require('../assets/images/aiAtivo 1logo.png')}
             style={styles.userAvatar}
             resizeMode="cover"
           />
-          <Text style={styles.userGreeting}>
-            Oi, {currentUser?.name || 'Usuário'}
-          </Text>
         </View>
 
-            {/* Menu Items with Gradient Borders */}
-            {menuItems.map((item, index) => (
-              <View key={item.id} style={[styles.menuItemContainer, { top: item.y - 23 }]}>
-                {/* Top gradient line - simple gradient */}
-                <View style={styles.menuItemBorderTop}>
-                  <View style={styles.gradientLine} />
-                </View>
-                {/* Bottom gradient line - simple gradient */}
-                <View style={styles.menuItemBorderBottom}>
-                  <View style={styles.gradientLine} />
-                </View>
-                {/* Menu Item Text */}
-                <TouchableOpacity 
-                  style={[styles.menuItemTextContainer, { height: item.height }]}
-                  onPress={() => {
-                    if (item.screen === 'logout') {
-                      onLogout && onLogout();
-                    } else {
-                      onNavigate && onNavigate(item.screen);
-                    }
-                  }}
-                >
-                  <Text style={styles.menuItemText}>{item.title}</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+        {/* Menu Items */}
+        {menuItems.map((item, index) => (
+          <TouchableOpacity 
+            key={item.id} 
+            style={[styles.menuItem, { top: item.y - 23 }]}
+            onPress={() => {
+              if (item.screen === 'logout') {
+                onLogout && onLogout();
+              } else {
+                onNavigate && onNavigate(item.screen);
+              }
+            }}
+          >
+            <Text style={styles.menuItemText}>{item.title}</Text>
+          </TouchableOpacity>
+        ))}
       </Animated.View>
     </View>
   );
@@ -141,108 +142,93 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Simple backdrop blur
   },
   menuContainer: {
     position: 'absolute',
-    top: 23, // Exact Figma y position
+    top: 0,
     right: 0,
-    width: 229, // Exact Figma width
-    height: 570, // Exact Figma height
+    width: 195,
+    height: screenHeight,
+    zIndex: 1000, // Ensure it's above other content
+    // Force positioning to right side
+    left: 'auto',
+    transform: [{ translateX: 0 }], // Reset any transforms
   },
-  backgroundSvg: {
+  // Simple background
+  background: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
+    left: 27,
+    width: 168,
     height: '100%',
+    backgroundColor: '#F19341', // Solid orange color
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 8,
   },
-  closeButton: {
+  // Half circle - connected to left side of rectangle
+  halfCircle: {
     position: 'absolute',
-    top: 20, // 43 - 23 = 20
-    right: 20, // 371 - 175 = 196, but we need it at right edge
-    width: 20,
-    height: 20,
+    bottom: 30,
+    left: 0, // Starts from the left edge
+    width: 28, // Half width for half circle
+    height: 56, // Full height for half circle
+    backgroundColor: '#F19341',
+    borderTopLeftRadius: 28, // Only top-left corner rounded
+    borderBottomLeftRadius: 28, // Only bottom-left corner rounded
+    // No right radius to create perfect connection with rectangle
+    // Custom shadow only on rounded parts
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 }, // Only left shadow
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 8, // Same as rectangle for continuity
+  },
+  // Close button in half circle - clean and centered
+  bottomCloseButton: {
+    position: 'absolute',
+    bottom: 47, // Perfect center: 30 + 28 - 15 = 43
+    left: 13, // Perfect center: 0 + 28 - 15 = 13, adjusted to 14
+    width: 30,
+    height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    // No background, no border radius - clean X only
   },
-  closeIcon: {
-    width: 18.38, // Exact Figma width
-    height: 18.38,
-    justifyContent: 'center',
-    alignItems: 'center',
+  closeX: {
+    fontSize: 24, // Larger X
+    color: '#fff',
+    fontWeight: 'bold',
   },
-  closeLine: {
+  // Avatar container
+  avatarContainer: {
     position: 'absolute',
-    width: 18.38,
-    height: 3, // Exact Figma strokeWeight
-    backgroundColor: '#fff', // Exact Figma color
-  },
-  closeLine1: {
-    transform: [{ rotate: '45deg' }],
-  },
-  closeLine2: {
-    transform: [{ rotate: '-45deg' }],
-  },
-  userProfile: {
-    position: 'absolute',
-    top: 69, // 92 - 23 = 69
-    left: 11, // 186 - 175 = 11
-    flexDirection: 'row',
-    alignItems: 'center',
+    top: 50,
+    left: 80,
+    width: 60,
+    height: 60,
   },
   userAvatar: {
-    width: 55, // Exact Figma width
-    height: 55, // Exact Figma height
-    borderRadius: 27.5,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
-  userGreeting: {
-    marginLeft: 15, // 256 - 186 - 55 = 15
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff', // Exact Figma color
-  },
-  menuItemContainer: {
+  // Menu items
+  menuItem: {
     position: 'absolute',
-    left: 3, // 178 - 175 = 3
-    width: 226, // Exact Figma width
-    backgroundColor: 'transparent', // Transparent background
-  },
-  menuItemBorderTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  menuItemBorderBottom: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-  },
-  gradientLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    // Simple gradient effect using boxShadow
-    backgroundColor: 'rgba(47, 212, 205, 0.8)',
-    boxShadow: '0px 0px 2px rgba(47, 212, 205, 0.6)',
-  },
-  menuItemTextContainer: {
+    left: 27,
+    width: 168,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   menuItemText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '500',
-    color: '#fff', // Exact Figma color
+    color: '#fff',
     textAlign: 'center',
   },
 });

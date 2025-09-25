@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 import CustomModal from '../../components/CustomModal';
 
 const { width, height } = Dimensions.get('window');
@@ -345,15 +346,13 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
       <ScrollView style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Gerenciar Turmas</Text>
+          </View>
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Gerenciar Turmas</Text>
+            style={styles.menuButton}
+          />
         </View>
 
         {/* Estatísticas */}
@@ -556,19 +555,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
     paddingTop: 10,
   },
-  menuButton: {
-    flexDirection: 'column',
-    gap: 3,
-    marginRight: 15,
+  headerLeft: {
+    flex: 1,
   },
-  menuLine: {
-    width: 25,
-    height: 3,
-    backgroundColor: '#000',
-    borderRadius: 2,
+  menuButton: {
+    marginLeft: 15,
   },
   title: {
     fontSize: 28,

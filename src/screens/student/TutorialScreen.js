@@ -10,10 +10,11 @@ import {
   Animated,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 
 const { width, height } = Dimensions.get('window');
 
-const TutorialScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }) => {
+const TutorialScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [expandedCard, setExpandedCard] = useState('aquecimento');
 
   const workoutSections = [
@@ -76,14 +77,10 @@ const TutorialScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUs
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>Movz</Text>
-          <TouchableOpacity 
-            style={styles.menuIcon} 
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
+            style={styles.menuButton}
+          />
         </View>
 
         {/* Tutorial Title */}
@@ -166,16 +163,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'Poppins',
   },
-  menuIcon: {
-    width: 39,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 39,
-    height: 6,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 3,
+  menuButton: {
+    marginLeft: 15,
   },
   tutorialTitle: {
     fontSize: 24,

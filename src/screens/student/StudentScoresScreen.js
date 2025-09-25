@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
@@ -165,16 +166,14 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>Minhas Pontuações</Text>
+            <Text style={styles.subtitle}>Acompanhe seu desempenho nos esportes</Text>
+          </View>
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Minhas Pontuações</Text>
-          <Text style={styles.subtitle}>Acompanhe seu desempenho nos esportes</Text>
+            style={styles.menuButton}
+          />
         </View>
 
         {isLoading ? (
@@ -226,12 +225,14 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#F9BB55',
     padding: 20,
     paddingTop: 50,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
-    alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -239,19 +240,12 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-  menuButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    padding: 10,
-    zIndex: 1,
+  headerLeft: {
+    flex: 1,
+    alignItems: 'center',
   },
-  menuLine: {
-    width: 25,
-    height: 3,
-    backgroundColor: '#333',
-    marginVertical: 4,
-    borderRadius: 2,
+  menuButton: {
+    marginLeft: 15,
   },
   title: {
     fontSize: 24,

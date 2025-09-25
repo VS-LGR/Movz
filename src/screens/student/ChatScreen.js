@@ -12,10 +12,11 @@ import {
   Platform,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 
 const { width, height } = Dimensions.get('window');
 
-const ChatScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }) => {
+const ChatScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -148,14 +149,10 @@ const ChatScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>Movz</Text>
-          <TouchableOpacity 
-            style={styles.menuIcon} 
+          <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
+            style={styles.menuButton}
+          />
         </View>
 
         {/* Chat Title */}
@@ -231,16 +228,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'Poppins',
   },
-  menuIcon: {
-    width: 39,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 39,
-    height: 6,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 3,
+  menuButton: {
+    marginLeft: 15,
   },
   chatTitle: {
     fontSize: 24,

@@ -7,6 +7,7 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
@@ -113,6 +114,17 @@ const InstitutionLoginScreen = ({ onNavigate, onLogin }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../../assets/images/Logo.svg')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -187,6 +199,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  logoWrapper: {
+    backgroundColor: 'transparent',
+    borderRadius: 65,
+    padding: 8,
+    // Aplicar multiply blend mode no container
+    mixBlendMode: 'multiply',
+  },
+  logoImage: {
+    width: 130,
+    height: 130,
+    opacity: 0.9,
   },
   header: {
     marginBottom: 40,

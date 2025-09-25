@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
-import SideMenu from '../../components/SideMenu';
 import CustomModal from '../../components/CustomModal';
 
 const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
@@ -662,7 +661,7 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
         
         <View style={styles.searchContainer}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { flex: 1 }]}
             placeholder="Pesquisar turmas..."
             value={searchText}
             onChangeText={setSearchText}
@@ -670,10 +669,19 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
           />
           
           <TouchableOpacity
-            style={[styles.actionButton, styles.primaryActionButton]}
+            style={[styles.actionButton, styles.primaryActionButton, { 
+              flex: isMobile ? 0 : 1,
+              minWidth: isMobile ? 'auto' : 200,
+              paddingHorizontal: isMobile ? 12 : 20
+            }]}
             onPress={() => setShowAddStudentModal(true)}
           >
-            <Text style={styles.actionButtonText}>➕ Adicionar Aluno à Turma</Text>
+            <Text style={[styles.actionButtonText, { 
+              fontSize: isMobile ? 12 : 16,
+              textAlign: 'center'
+            }]}>
+              {isMobile ? '➕ Adicionar' : '➕ Adicionar Aluno à Turma'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -711,25 +719,10 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
   return (
     <SafeAreaView style={styles.container}>
-      <SideMenu
-        isVisible={isMenuVisible}
-        onClose={() => setIsMenuVisible(false)}
-        onNavigate={onNavigate}
-        currentUser={currentUser}
-        onLogout={onLogout}
-      />
 
       <ScrollView style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
           <Text style={styles.title}>{currentUser?.name}</Text>
         </View>
 
@@ -925,13 +918,24 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
         onRequestClose={() => setShowAddStudentModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContentMobile}>
+          <View style={[
+            styles.modalContentMobile,
+            {
+              margin: isMobile ? 15 : 30,
+              padding: isMobile ? 20 : 25,
+              maxWidth: isMobile ? '95%' : 500,
+              width: isMobile ? '95%' : 'auto'
+            }
+          ]}>
             <Text style={styles.modalTitle}>Adicionar Aluno à Turma</Text>
             
             {/* Seleção de Aluno */}
             <View style={styles.selectionContainer}>
               <Text style={styles.selectionTitle}>Selecione o Aluno:</Text>
-              <ScrollView style={styles.studentPicker} showsVerticalScrollIndicator={false}>
+              <ScrollView style={[
+                styles.studentPicker,
+                { maxHeight: isMobile ? 150 : 200 }
+              ]} showsVerticalScrollIndicator={false}>
                 {studentsInInstitution.map((student) => (
                   <TouchableOpacity
                     key={student.id}
@@ -970,7 +974,10 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
             {selectedStudentId && (
               <View style={styles.selectionContainer}>
                 <Text style={styles.selectionTitle}>Selecione a Turma:</Text>
-                <ScrollView style={styles.classPicker} showsVerticalScrollIndicator={false}>
+                <ScrollView style={[
+                  styles.classPicker,
+                  { maxHeight: isMobile ? 120 : 150 }
+                ]} showsVerticalScrollIndicator={false}>
                   {classes.map((cls) => (
                     <TouchableOpacity
                       key={cls.id}
@@ -993,26 +1000,50 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
             )}
 
             {/* Botões */}
-            <View style={styles.modalButtons}>
+            <View style={[styles.modalButtons, { 
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 12 : 15
+            }]}>
               <TouchableOpacity
-                style={[styles.createButton, !selectedStudentId || !selectedClassId ? styles.disabledButton : null]}
+                style={[
+                  styles.createButton, 
+                  { 
+                    flex: isMobile ? 0 : 1,
+                    minHeight: isMobile ? 50 : 45,
+                    paddingVertical: isMobile ? 15 : 12
+                  },
+                  !selectedStudentId || !selectedClassId ? styles.disabledButton : null
+                ]}
                 onPress={handleAddStudentToClass}
                 disabled={isLoading || !selectedStudentId || !selectedClassId}
               >
-                <Text style={styles.createButtonText}>
+                <Text style={[
+                  styles.createButtonText,
+                  { fontSize: isMobile ? 16 : 14 }
+                ]}>
                   {isLoading ? 'Adicionando...' : 'Adicionar à Turma'}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[
+                  styles.cancelButton,
+                  { 
+                    flex: isMobile ? 0 : 1,
+                    minHeight: isMobile ? 50 : 45,
+                    paddingVertical: isMobile ? 15 : 12
+                  }
+                ]}
                 onPress={() => {
                   setShowAddStudentModal(false);
                   setSelectedStudentId('');
                   setSelectedClassId('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                <Text style={[
+                  styles.cancelButtonText,
+                  { fontSize: isMobile ? 16 : 14 }
+                ]}>Cancelar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1062,19 +1093,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
     paddingTop: 10,
-  },
-  menuButton: {
-    flexDirection: 'column',
-    gap: 3,
-    marginRight: 15,
-  },
-  menuLine: {
-    width: 25,
-    height: 3,
-    backgroundColor: '#000',
-    borderRadius: 2,
   },
   title: {
     fontSize: 24,
@@ -1345,7 +1366,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     fontFamily: 'Poppins',
-    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1570,10 +1590,19 @@ const styles = StyleSheet.create({
   },
   createButton: {
     backgroundColor: '#F9BB55',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'center',
+    shadowColor: '#F9BB55',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   createButtonText: {
     fontSize: 16,
@@ -1582,10 +1611,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   cancelButton: {
-    backgroundColor: '#E0E0E0',
-    borderRadius: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   cancelButtonText: {
     fontSize: 16,
@@ -1598,6 +1631,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     gap: 10,
+    flexWrap: 'wrap',
   },
   searchButton: {
     backgroundColor: '#F9BB55',
@@ -1678,7 +1712,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#e0e0e0',
+    shadowOpacity: 0,
+    elevation: 0,
     opacity: 0.6,
   },
   // Estilos para responsividade mobile
@@ -1744,25 +1780,11 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 25,
     gap: 10,
-  },
-  // Estilos responsivos para diferentes tamanhos de tela
-  '@media (max-width: 480px)': {
-    modalContentMobile: {
-      margin: 10,
-      padding: 15,
-      width: '95%',
-    },
-    studentPicker: {
-      maxHeight: 150,
-    },
-    classPicker: {
-      maxHeight: 120,
-    },
-    modalButtons: {
-      flexDirection: 'column',
-    },
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
 });
 
