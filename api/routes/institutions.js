@@ -703,6 +703,46 @@ router.delete('/classes/:classId/students/:studentId', authenticateToken, requir
   }
 });
 
+// Remover turma
+router.delete('/classes/:classId', authenticateToken, requireInstitution, async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    // Verificar se turma pertence à instituição
+    const classItem = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        institutionId: req.user.institutionId
+      }
+    });
+
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turma não encontrada'
+      });
+    }
+
+    // Desativar turma em vez de deletar
+    await prisma.class.update({
+      where: { id: classId },
+      data: { isActive: false }
+    });
+
+    res.json({
+      success: true,
+      message: 'Turma removida com sucesso'
+    });
+
+  } catch (error) {
+    console.error('Erro ao remover turma:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 // ===== ESTATÍSTICAS =====
 
 // Obter estatísticas da instituição

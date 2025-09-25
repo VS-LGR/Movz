@@ -9,88 +9,88 @@ async function main() {
   const sports = await Promise.all([
     prisma.sport.upsert({
       where: { name: 'Basquete' },
-      update: { icon: 'img/Basquete_sports.svg' },
+      update: { icon: 'src/assets/images/Basquete_sports.svg' },
       create: {
         name: 'Basquete',
         description: 'Esporte de quadra com cesta',
-        icon: 'img/Basquete_sports.svg',
+        icon: 'src/assets/images/Basquete_sports.svg',
         color: '#FF8C00',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Handball' },
-      update: { icon: 'img/Handball_sports.svg' },
+      update: { icon: 'src/assets/images/Handball_sports.svg' },
       create: {
         name: 'Handball',
         description: 'Esporte de quadra com gol',
-        icon: 'img/Handball_sports.svg',
+        icon: 'src/assets/images/Handball_sports.svg',
         color: '#FF6B6B',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Vôlei' },
-      update: { icon: 'img/Voley_sports.svg' },
+      update: { icon: 'src/assets/images/Voley_sports.svg' },
       create: {
         name: 'Vôlei',
         description: 'Esporte de quadra com rede',
-        icon: 'img/Voley_sports.svg',
+        icon: 'src/assets/images/Voley_sports.svg',
         color: '#FFD700',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Ping-Pong' },
-      update: { icon: 'img/pingPong_sports.svg' },
+      update: { icon: 'src/assets/images/pingPong_sports.svg' },
       create: {
         name: 'Ping-Pong',
         description: 'Esporte de mesa com raquete',
-        icon: 'img/pingPong_sports.svg',
+        icon: 'src/assets/images/pingPong_sports.svg',
         color: '#00FFFF',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Natação' },
-      update: { icon: 'img/Swimming_sports.svg' },
+      update: { icon: 'src/assets/images/Swimming_sports.svg' },
       create: {
         name: 'Natação',
         description: 'Esporte aquático',
-        icon: 'img/Swimming_sports.svg',
+        icon: 'src/assets/images/Swimming_sports.svg',
         color: '#0080FF',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Futebol' },
-      update: { icon: 'img/futebol_sports.svg' },
+      update: { icon: 'src/assets/images/futebol_sports.svg' },
       create: {
         name: 'Futebol',
         description: 'O esporte mais popular do mundo',
-        icon: 'img/futebol_sports.svg',
+        icon: 'src/assets/images/futebol_sports.svg',
         color: '#00FF00',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Exercícios' },
-      update: { icon: 'img/Exercise_sports.svg' },
+      update: { icon: 'src/assets/images/Exercise_sports.svg' },
       create: {
         name: 'Exercícios',
         description: 'Atividades físicas gerais',
-        icon: 'img/Exercise_sports.svg',
+        icon: 'src/assets/images/Exercise_sports.svg',
         color: '#9C27B0',
         isActive: true
       }
     }),
     prisma.sport.upsert({
       where: { name: 'Queimada' },
-      update: { icon: 'img/queimada_sports.svg' },
+      update: { icon: 'src/assets/images/queimada_sports.svg' },
       create: {
         name: 'Queimada',
         description: 'Jogo tradicional brasileiro',
-        icon: 'img/queimada_sports.svg',
+        icon: 'src/assets/images/queimada_sports.svg',
         color: '#FF5722',
         isActive: true
       }

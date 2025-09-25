@@ -2,7 +2,7 @@
   "name": "muvz-app",
   "version": "1.0.0",
   "description": "Movz App - Login Screen",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

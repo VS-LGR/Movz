@@ -4,10 +4,10 @@
     "slug": "muvz-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./img/aiAtivo 1logo.png",
+    "icon": "./src/assets/images/aiAtivo 1logo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./img/aiAtivo 1logo.png",
+      "image": "./src/assets/images/aiAtivo 1logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#E9EEEE"
     },
@@ -19,12 +19,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./img/aiAtivo 1logo.png",
+        "foregroundImage": "./src/assets/images/aiAtivo 1logo.png",
         "backgroundColor": "#E9EEEE"
       }
     },
     "web": {
-      "favicon": "./img/aiAtivo 1logo.png"
+      "favicon": "./src/assets/images/aiAtivo 1logo.png"
     }
   }
 }

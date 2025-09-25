@@ -32,7 +32,7 @@ const authenticateToken = (req, res, next) => {
 // Registrar usuário
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, age, school, class: userClass, userType = 'STUDENT' } = req.body;
+    const { name, email, password, age, school, class: userClass, cpf, userType = 'STUDENT' } = req.body;
 
     // Validações básicas
     if (!name || !email || !password) {
@@ -47,6 +47,29 @@ router.post('/register', async (req, res) => {
         success: false,
         message: 'A senha deve ter pelo menos 6 caracteres'
       });
+    }
+
+    // Validar CPF se fornecido
+    if (cpf) {
+      const cleanCpf = cpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        return res.status(400).json({
+          success: false,
+          message: 'CPF deve ter 11 dígitos'
+        });
+      }
+      
+      // Verificar se CPF já existe
+      const existingCpf = await prisma.user.findUnique({
+        where: { cpf: cleanCpf }
+      });
+      
+      if (existingCpf) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este CPF já está cadastrado'
+        });
+      }
     }
 
     // Validar tipo de usuário
@@ -78,6 +101,7 @@ router.post('/register', async (req, res) => {
         name,
         email,
         password: hashedPassword,
+        cpf: cpf ? cpf.replace(/\D/g, '') : null,
         age: age ? parseInt(age) : null,
         school: school || null,
         class: userClass || null,
@@ -87,6 +111,7 @@ router.post('/register', async (req, res) => {
         id: true,
         name: true,
         email: true,
+        cpf: true,
         age: true,
         school: true,
         class: true,
@@ -147,9 +172,14 @@ router.post('/login', async (req, res) => {
 
     // Verificar se o tipo de usuário corresponde
     if (user.userType !== userType) {
+      const userTypeNames = {
+        'STUDENT': 'estudante',
+        'TEACHER': 'professor',
+        'INSTITUTION': 'instituição'
+      };
       return res.status(401).json({
         success: false,
-        message: `Credenciais inválidas para ${userType === 'STUDENT' ? 'estudante' : 'professor'}`
+        message: `Credenciais inválidas para ${userTypeNames[userType] || userType.toLowerCase()}`
       });
     }
 
@@ -223,6 +253,88 @@ router.get('/verify', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Erro na verificação:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar turma do aluno
+router.get('/student/class', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Verificar se o usuário é um aluno
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true }
+    });
+
+    if (!user || user.userType !== 'STUDENT') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
+      });
+    }
+
+    // Buscar a turma ativa do aluno
+    const classStudent = await prisma.classStudent.findFirst({
+      where: {
+        studentId: userId,
+        isActive: true
+      },
+      include: {
+        class: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true
+              }
+            },
+            students: {
+              where: {
+                isActive: true
+              },
+              include: {
+                student: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    age: true,
+                    avatar: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!classStudent) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'Aluno não está em nenhuma turma ativa'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        class: classStudent.class,
+        teacher: classStudent.class.teacher,
+        classmates: classStudent.class.students.map(cs => cs.student)
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar turma do aluno:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
