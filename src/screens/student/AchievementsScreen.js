@@ -13,7 +13,7 @@ import SideMenu from '../../components/SideMenu';
 
 const { width, height } = Dimensions.get('window');
 
-const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }) => {
+const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [userAchievements, setUserAchievements] = useState([]);
   const [allAchievements, setAllAchievements] = useState([]);
 

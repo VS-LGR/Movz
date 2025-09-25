@@ -5,6 +5,7 @@ import apiService from './services/apiService';
 import LoginScreen from './screens/auth/LoginScreen';
 import HomeScreen from './screens/student/HomeScreen';
 import MyClassScreen from './screens/student/MyClassScreen';
+import StudentScoresScreen from './screens/student/StudentScoresScreen';
 import RankingScreen from './screens/student/RankingScreen';
 import TutorialScreen from './screens/student/TutorialScreen';
 import ChatScreen from './screens/student/ChatScreen';
@@ -343,6 +344,16 @@ export default function App() {
       case 'myClass':
         return (
           <MyClassScreen
+            isMenuVisible={isMenuVisible}
+            setIsMenuVisible={setIsMenuVisible}
+            onNavigate={handleNavigate}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        );
+      case 'studentScores':
+        return (
+          <StudentScoresScreen
             isMenuVisible={isMenuVisible}
             setIsMenuVisible={setIsMenuVisible}
             onNavigate={handleNavigate}

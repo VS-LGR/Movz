@@ -358,4 +358,99 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Buscar pontuações do aluno por esporte (incluindo pontuações das aulas)
+router.get('/student/sports', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Verificar se é aluno
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true }
+    });
+
+    if (!user || user.userType !== 'STUDENT') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
+      });
+    }
+
+    // Buscar esportes do aluno
+    const userSports = await prisma.userSport.findMany({
+      where: {
+        userId,
+        isActive: true
+      },
+      include: {
+        sport: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+            color: true
+          }
+        }
+      }
+    });
+
+    // Para cada esporte, buscar pontuações das aulas
+    const sportsWithScores = await Promise.all(
+      userSports.map(async (userSport) => {
+        // Buscar pontuações das aulas para este esporte
+        const classScores = await prisma.classScore.findMany({
+          where: {
+            studentId: userId,
+            sportId: userSport.sportId
+          },
+          include: {
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: true,
+                grade: true
+              }
+            },
+            teacher: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+
+        // Calcular pontuação total e média
+        const totalScore = classScores.reduce((sum, score) => sum + score.score, 0);
+        const averageScore = classScores.length > 0 ? Math.round(totalScore / classScores.length) : 0;
+        const totalClasses = classScores.length;
+
+        return {
+          sport: userSport.sport,
+          totalScore,
+          averageScore,
+          totalClasses,
+          scores: classScores
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: sportsWithScores
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar pontuações do aluno:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 module.exports = router;

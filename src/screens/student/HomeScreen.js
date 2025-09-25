@@ -94,6 +94,12 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
               </View>
             ))}
           </View>
+          <TouchableOpacity 
+            style={styles.seeMoreButton}
+            onPress={() => onNavigate('studentScores')}
+          >
+            <Text style={styles.seeMoreText}>Ver Mais</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Attendance Card */}
@@ -281,6 +287,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontFamily: 'Poppins',
   },
+  seeMoreButton: {
+    alignItems: 'center',
+  },
+  seeMoreText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontFamily: 'Poppins',
+  },
   sportsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -439,14 +453,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     numberOfLines: 1, // Força uma linha apenas
-    fontFamily: 'Poppins',
-  },
-  seeMoreButton: {
-    alignItems: 'center',
-  },
-  seeMoreText: {
-    fontSize: 12,
-    color: '#6B7280', // Cor exata do Figma (r: 0.420, g: 0.447, b: 0.502)
     fontFamily: 'Poppins',
   },
 });

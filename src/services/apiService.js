@@ -233,6 +233,10 @@ class ApiService {
     return this.request('/scores/stats');
   }
 
+  async getStudentSportsScores() {
+    return this.request('/scores/student/sports');
+  }
+
   // ===== CHAT =====
 
   async sendMessage(message) {
@@ -356,6 +360,19 @@ class ApiService {
 
   async getClassManagementStats() {
     return this.request('/class-management/classes/stats');
+  }
+
+  // ===== PONTUAÇÕES DE AULAS =====
+
+  async saveClassScore(classId, studentId, sportId, score, notes = null) {
+    return this.request(`/class-management/classes/${classId}/scores`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId, sportId, score, notes }),
+    });
+  }
+
+  async getClassScores(classId) {
+    return this.request(`/class-management/classes/${classId}/scores`);
   }
 
   // ===== INSTITUIÇÕES =====

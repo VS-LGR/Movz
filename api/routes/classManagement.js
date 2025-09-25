@@ -530,4 +530,192 @@ router.get('/classes/stats', authenticateToken, requireTeacher, async (req, res)
   }
 });
 
+// ===== PONTUAÇÕES =====
+
+// Salvar pontuação do aluno na aula
+router.post('/classes/:classId/scores', authenticateToken, requireTeacher, async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { studentId, sportId, score, notes } = req.body;
+
+    // Validações
+    if (!studentId || !sportId || score === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID do aluno, ID do esporte e pontuação são obrigatórios'
+      });
+    }
+
+    if (score < 0 || score > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Pontuação deve estar entre 0 e 100'
+      });
+    }
+
+    // Verificar se a turma pertence ao professor
+    const existingClass = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        teacherId: req.user.userId,
+        isActive: true
+      }
+    });
+
+    if (!existingClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turma não encontrada'
+      });
+    }
+
+    // Verificar se o aluno está na turma
+    const classStudent = await prisma.classStudent.findFirst({
+      where: {
+        classId,
+        studentId,
+        isActive: true
+      }
+    });
+
+    if (!classStudent) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aluno não está nesta turma'
+      });
+    }
+
+    // Verificar se o esporte existe
+    const sport = await prisma.sport.findFirst({
+      where: {
+        id: sportId,
+        isActive: true
+      }
+    });
+
+    if (!sport) {
+      return res.status(404).json({
+        success: false,
+        message: 'Esporte não encontrado'
+      });
+    }
+
+    // Criar ou atualizar pontuação
+    const classScore = await prisma.classScore.upsert({
+      where: {
+        classId_studentId_sportId: {
+          classId,
+          studentId,
+          sportId
+        }
+      },
+      update: {
+        score,
+        notes: notes || null,
+        teacherId: req.user.userId
+      },
+      create: {
+        classId,
+        studentId,
+        sportId,
+        score,
+        notes: notes || null,
+        teacherId: req.user.userId
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        sport: {
+          select: {
+            id: true,
+            name: true,
+            icon: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Pontuação salva com sucesso',
+      data: classScore
+    });
+
+  } catch (error) {
+    console.error('Erro ao salvar pontuação:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Obter pontuações de uma turma
+router.get('/classes/:classId/scores', authenticateToken, requireTeacher, async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    // Verificar se a turma pertence ao professor
+    const existingClass = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        teacherId: req.user.userId,
+        isActive: true
+      }
+    });
+
+    if (!existingClass) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turma não encontrada'
+      });
+    }
+
+    const scores = await prisma.classScore.findMany({
+      where: {
+        classId
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        },
+        sport: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+            color: true
+          }
+        }
+      },
+      orderBy: [
+        { student: { name: 'asc' } },
+        { sport: { name: 'asc' } }
+      ]
+    });
+
+    res.json({
+      success: true,
+      data: scores
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar pontuações:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 module.exports = router;

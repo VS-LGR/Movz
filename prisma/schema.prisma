@@ -35,6 +35,8 @@ model User {
   teacherClasses TeacherClass[]
   classes        Class[]
   classStudents  ClassStudent[]
+  classScores    ClassScore[]
+  teacherScores  ClassScore[] @relation("ClassScoreTeacher")
 
   @@map("users")
 }
@@ -53,6 +55,7 @@ model Sport {
   userSports   UserSport[]
   contents     Content[]
   userScores   UserScore[]
+  classScores  ClassScore[]
 
   @@map("sports")
 }
@@ -172,6 +175,7 @@ model Class {
   teacher     User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   students    ClassStudent[]
+  scores      ClassScore[]
 
   @@map("classes")
 }
@@ -189,6 +193,27 @@ model ClassStudent {
 
   @@unique([classId, studentId])
   @@map("class_students")
+}
+
+model ClassScore {
+  id          String   @id @default(cuid())
+  classId     String
+  studentId   String
+  sportId     String
+  score       Int      // Pontuação dada pelo professor (0-100)
+  notes       String?  // Observações do professor
+  teacherId   String   // Professor que deu a pontuação
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  class    Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student  User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sport    Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  teacher  User  @relation("ClassScoreTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId, sportId])
+  @@map("class_scores")
 }
 
 enum ContentType {

@@ -13,7 +13,7 @@ import SideMenu from '../../components/SideMenu';
 
 const { width, height } = Dimensions.get('window');
 
-const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser }) => {
+const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [userMedals, setUserMedals] = useState([]);
   const [allMedals, setAllMedals] = useState([]);
 

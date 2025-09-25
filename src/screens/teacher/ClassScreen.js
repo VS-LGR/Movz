@@ -8,6 +8,8 @@ import {
   Alert,
   Image,
   Dimensions,
+  TextInput,
+  Modal,
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
@@ -25,7 +27,51 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [loading, setLoading] = useState(false);
   const [expandedCard, setExpandedCard] = useState('aquecimento');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showScoringModal, setShowScoringModal] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [sports, setSports] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSport, setSelectedSport] = useState(null);
+  const [score, setScore] = useState('');
+  const [notes, setNotes] = useState('');
   const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
+
+  // Carregar dados iniciais
+  useEffect(() => {
+    loadStudents();
+    loadSports();
+  }, []);
+
+  const loadStudents = async () => {
+    try {
+      if (classData.id) {
+        const response = await apiService.getClassScores(classData.id);
+        if (response.success) {
+          // Extrair alunos únicos das pontuações
+          const uniqueStudents = response.data.reduce((acc, score) => {
+            if (!acc.find(s => s.id === score.student.id)) {
+              acc.push(score.student);
+            }
+            return acc;
+          }, []);
+          setStudents(uniqueStudents);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar alunos:', error);
+    }
+  };
+
+  const loadSports = async () => {
+    try {
+      const response = await apiService.getSports();
+      if (response.success) {
+        setSports(response.data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar esportes:', error);
+    }
+  };
 
   // Dados de exemplo dos exercícios (em produção viria da API)
   const workoutSections = [
@@ -121,6 +167,52 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     }
   };
 
+  const handleOpenScoring = () => {
+    setShowScoringModal(true);
+  };
+
+  const handleSaveScore = async () => {
+    try {
+      if (!selectedStudent || !selectedSport || !score) {
+        showError('❌ Erro', 'Preencha todos os campos obrigatórios');
+        return;
+      }
+
+      const scoreValue = parseInt(score);
+      if (scoreValue < 0 || scoreValue > 100) {
+        showError('❌ Erro', 'Pontuação deve estar entre 0 e 100');
+        return;
+      }
+
+      setLoading(true);
+      
+      const response = await apiService.saveClassScore(
+        classData.id,
+        selectedStudent.id,
+        selectedSport.id,
+        scoreValue,
+        notes.trim() || null
+      );
+
+      if (response.success) {
+        showSuccess('Sucesso! 🎉', 'Pontuação salva com sucesso!');
+        setShowScoringModal(false);
+        setSelectedStudent(null);
+        setSelectedSport(null);
+        setScore('');
+        setNotes('');
+        loadStudents(); // Recarregar dados
+      } else {
+        throw new Error(response.message || 'Erro ao salvar pontuação');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar pontuação:', error);
+      showError('❌ Erro', error.message || 'Erro ao salvar pontuação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderWorkoutCard = (section) => (
     <TouchableOpacity
       key={section.id}
@@ -202,6 +294,15 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         {workoutSections.map(renderWorkoutCard)}
       </View>
 
+      {/* Botão de Pontuação */}
+      <TouchableOpacity 
+        style={styles.scoringButton}
+        onPress={handleOpenScoring}
+        disabled={loading}
+      >
+        <Text style={styles.scoringButtonText}>Avaliar Alunos</Text>
+      </TouchableOpacity>
+
       {/* Botão de Conclusão */}
       <TouchableOpacity 
         style={[styles.completeButton, classCompleted && styles.completeButtonCompleted]}
@@ -241,6 +342,104 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
           </View>
         </View>
       )}
+
+      {/* Modal de Pontuação */}
+      <Modal
+        visible={showScoringModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowScoringModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.scoringModalContent}>
+            <Text style={styles.scoringModalTitle}>Avaliar Aluno</Text>
+            
+            {/* Seleção de Aluno */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Aluno *</Text>
+              <ScrollView style={styles.studentList} nestedScrollEnabled>
+                {students.map((student) => (
+                  <TouchableOpacity
+                    key={student.id}
+                    style={[
+                      styles.studentItem,
+                      selectedStudent?.id === student.id && styles.selectedStudentItem
+                    ]}
+                    onPress={() => setSelectedStudent(student)}
+                  >
+                    <Text style={styles.studentName}>{student.name}</Text>
+                    <Text style={styles.studentEmail}>{student.email}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Seleção de Esporte */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Esporte *</Text>
+              <ScrollView style={styles.sportList} nestedScrollEnabled>
+                {sports.map((sport) => (
+                  <TouchableOpacity
+                    key={sport.id}
+                    style={[
+                      styles.sportItem,
+                      selectedSport?.id === sport.id && styles.selectedSportItem
+                    ]}
+                    onPress={() => setSelectedSport(sport)}
+                  >
+                    <Text style={styles.sportName}>{sport.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Pontuação */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Pontuação (0-100) *</Text>
+              <TextInput
+                style={styles.scoreInput}
+                placeholder="Digite a pontuação"
+                value={score}
+                onChangeText={setScore}
+                keyboardType="numeric"
+                maxLength={3}
+              />
+            </View>
+
+            {/* Observações */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Observações</Text>
+              <TextInput
+                style={styles.notesInput}
+                placeholder="Observações sobre o desempenho (opcional)"
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Botões */}
+            <View style={styles.scoringModalButtons}>
+              <TouchableOpacity
+                style={[styles.scoringModalButton, styles.cancelButton]}
+                onPress={() => setShowScoringModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.scoringModalButton, styles.saveButton]}
+                onPress={handleSaveScore}
+                disabled={loading}
+              >
+                <Text style={styles.saveButtonText}>
+                  {loading ? 'Salvando...' : 'Salvar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       <SideMenu 
         isVisible={isMenuVisible} 
@@ -502,6 +701,132 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
+  },
+  // Estilos do modal de pontuação
+  scoringButton: {
+    backgroundColor: '#F9BB55',
+    marginHorizontal: 20,
+    marginBottom: 15,
+    paddingVertical: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  scoringButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  scoringModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    marginHorizontal: 20,
+    maxHeight: '80%',
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  scoringModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  studentList: {
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+  },
+  studentItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  selectedStudentItem: {
+    backgroundColor: '#F9BB55',
+  },
+  studentName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  studentEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  sportList: {
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+  },
+  sportItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  selectedSportItem: {
+    backgroundColor: '#F9BB55',
+  },
+  sportName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  scoreInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
+  },
+  scoringModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginTop: 10,
+  },
+  scoringModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 
