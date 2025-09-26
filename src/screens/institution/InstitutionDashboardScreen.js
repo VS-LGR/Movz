@@ -620,9 +620,31 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       (user.cpf && user.cpf.includes(searchText))
     );
 
+    // Separar alunos e professores
+    const students = filteredUsers.filter(user => user.userType === 'STUDENT');
+    const teachers = filteredUsers.filter(user => user.userType === 'TEACHER');
+
+    const renderUserCard = (user) => (
+      <View key={user.id} style={styles.userCard}>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
+          {user.cpf && (
+            <Text style={styles.userCpf}>CPF: {user.cpf}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => handleRemoveUser(user)}
+        >
+          <Text style={styles.removeButtonText}>Remover</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
     return (
       <View style={styles.tabContent}>
-        <Text style={styles.tabTitle}>Usuários</Text>
+        <Text style={styles.tabTitle}>Usuários da Instituição</Text>
         
         <TextInput
           style={styles.searchInput}
@@ -635,28 +657,37 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
         {filteredUsers.length === 0 ? (
           <Text style={styles.emptyText}>Nenhum usuário encontrado</Text>
         ) : (
-          <View style={styles.usersList}>
-            {filteredUsers.map((user) => (
-              <View key={user.id} style={styles.userCard}>
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                  <Text style={styles.userType}>
-                    {user.userType === 'STUDENT' ? 'Aluno' : 'Professor'}
-                  </Text>
-                  {user.cpf && (
-                    <Text style={styles.userCpf}>CPF: {user.cpf}</Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveUser(user)}
-                >
-                  <Text style={styles.removeButtonText}>Remover</Text>
-                </TouchableOpacity>
+          <ScrollView style={styles.usersContainer} showsVerticalScrollIndicator={false}>
+            {/* Seção de Alunos */}
+            <View style={styles.userSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>👥 Alunos ({students.length})</Text>
+                <View style={styles.sectionDivider} />
               </View>
-            ))}
-          </View>
+              {students.length === 0 ? (
+                <Text style={styles.emptySectionText}>Nenhum aluno encontrado</Text>
+              ) : (
+                <View style={styles.usersList}>
+                  {students.map(renderUserCard)}
+                </View>
+              )}
+            </View>
+
+            {/* Seção de Professores */}
+            <View style={styles.userSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>👨‍🏫 Professores ({teachers.length})</Text>
+                <View style={styles.sectionDivider} />
+              </View>
+              {teachers.length === 0 ? (
+                <Text style={styles.emptySectionText}>Nenhum professor encontrado</Text>
+              ) : (
+                <View style={styles.usersList}>
+                  {teachers.map(renderUserCard)}
+                </View>
+              )}
+            </View>
+          </ScrollView>
         )}
       </View>
     );
@@ -1407,13 +1438,42 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  usersContainer: {
+    flex: 1,
+  },
+  userSection: {
+    marginBottom: 25,
+  },
+  sectionHeader: {
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+    marginBottom: 8,
+  },
+  sectionDivider: {
+    height: 2,
+    backgroundColor: '#F9BB55',
+    borderRadius: 1,
+  },
+  emptySectionText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+    fontFamily: 'Poppins',
+  },
   usersList: {
     gap: 15,
   },
   userCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 12,
+    padding: 18,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1425,31 +1485,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F9BB55',
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#364859',
     fontFamily: 'Poppins',
+    marginBottom: 6,
   },
   userEmail: {
     fontSize: 14,
     color: '#666',
     fontFamily: 'Poppins',
-  },
-  userType: {
-    fontSize: 12,
-    color: '#F9BB55',
-    fontFamily: 'Poppins',
-    fontWeight: '600',
+    marginBottom: 4,
   },
   userCpf: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 13,
+    color: '#888',
     fontFamily: 'Poppins',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
   removeButton: {
     backgroundColor: '#D9493C',
