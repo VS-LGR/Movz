@@ -69,6 +69,7 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
       const dateStr = cls.date.toISOString().split('T')[0];
       classesByDate[dateStr] = {
         id: cls.id,
+        classId: cls.classId, // ID da turma associada
         school: cls.school,
         grade: cls.grade,
         subject: cls.subject,
@@ -94,7 +95,7 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
 // Criar ou atualizar aula
 router.post('/', authenticateToken, requireTeacher, async (req, res) => {
   try {
-    const { date, school, grade, subject, notes } = req.body;
+    const { date, school, grade, subject, notes, classId } = req.body;
 
     if (!date || !school || !grade) {
       return res.status(400).json({
@@ -122,7 +123,8 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
           school,
           grade,
           subject: subject || null,
-          notes: notes || null
+          notes: notes || null,
+          classId: classId || null
         }
       });
     } else {
@@ -130,6 +132,7 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       classData = await prisma.teacherClass.create({
         data: {
           teacherId: req.user.userId,
+          classId: classId || null,
           date: classDate,
           school,
           grade,

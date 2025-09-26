@@ -296,6 +296,19 @@ class ApiService {
     });
   }
 
+  // Buscar alunos de uma turma específica
+  async getClassStudents(classId) {
+    return this.request(`/class-management/classes/${classId}/students`);
+  }
+
+  // Salvar presença de alunos
+  async saveAttendance(classId, attendanceData) {
+    return this.request(`/class-management/classes/${classId}/attendance`, {
+      method: 'POST',
+      body: JSON.stringify(attendanceData),
+    });
+  }
+
   async completeClass(classId, isCompleted = true) {
     return this.request(`/classes/${classId}/complete`, {
       method: 'PUT',

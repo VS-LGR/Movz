@@ -143,6 +143,7 @@ model ChatMessage {
 model TeacherClass {
   id          String   @id @default(cuid())
   teacherId   String
+  classId     String?  // ID da turma associada à aula
   date        DateTime
   school      String
   grade       String
@@ -155,6 +156,7 @@ model TeacherClass {
 
   // Relacionamentos
   teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class? @relation(fields: [classId], references: [id], onDelete: SetNull)
 
   @@map("teacher_classes")
 }
@@ -176,6 +178,7 @@ model Class {
   institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   students    ClassStudent[]
   scores      ClassScore[]
+  teacherClasses TeacherClass[]
 
   @@map("classes")
 }

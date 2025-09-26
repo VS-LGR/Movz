@@ -63,6 +63,7 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
         // Converter objeto para array e ordenar por data
         const classesArray = Object.entries(response.data).map(([date, classData]) => ({
           id: classData.id,
+          classId: classData.classId, // ID da turma associada
           date: new Date(date),
           school: classData.school,
           grade: classData.grade,

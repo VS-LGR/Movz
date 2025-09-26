@@ -309,6 +309,62 @@ router.get('/students/available', authenticateToken, requireTeacher, async (req,
   }
 });
 
+// Obter alunos de uma turma específica
+router.get('/classes/:classId/students', authenticateToken, requireTeacher, async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    // Verificar se a turma existe e pertence ao professor
+    const classData = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        teacherId: req.user.userId
+      }
+    });
+
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turma não encontrada'
+      });
+    }
+
+    // Buscar alunos da turma
+    const classStudents = await prisma.classStudent.findMany({
+      where: {
+        classId: classId,
+        isActive: true
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            age: true,
+            school: true,
+            class: true,
+            avatar: true,
+            userType: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: classStudents
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar alunos da turma:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Adicionar aluno à turma
 router.post('/classes/:classId/students', authenticateToken, requireTeacher, async (req, res) => {
   try {

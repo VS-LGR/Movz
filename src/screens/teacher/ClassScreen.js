@@ -35,6 +35,8 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [selectedSport, setSelectedSport] = useState(null);
   const [score, setScore] = useState('');
   const [notes, setNotes] = useState('');
+  const [attendanceData, setAttendanceData] = useState({}); // { studentId: 'present' | 'absent' }
+  const [scoresData, setScoresData] = useState({}); // { studentId: { sportId: { score, notes } } }
   const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   // Carregar dados iniciais
@@ -45,21 +47,35 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
 
   const loadStudents = async () => {
     try {
-      if (classData.id) {
-        const response = await apiService.getClassScores(classData.id);
+      console.log('🔵 Carregando alunos para a aula:', classData);
+      console.log('🔵 classData.classId:', classData.classId);
+      console.log('🔵 classData.id:', classData.id);
+      
+      // Se a aula tem classId (ID da turma), buscar alunos da turma
+      if (classData.classId) {
+        console.log('🔵 Buscando alunos da turma:', classData.classId);
+        const response = await apiService.getClassStudents(classData.classId);
+        console.log('🔵 Resposta da API getClassStudents:', response);
         if (response.success) {
-          // Extrair alunos únicos das pontuações
-          const uniqueStudents = response.data.reduce((acc, score) => {
-            if (!acc.find(s => s.id === score.student.id)) {
-              acc.push(score.student);
-            }
-            return acc;
-          }, []);
-          setStudents(uniqueStudents);
+          const students = response.data.map(item => item.student);
+          console.log(`🔵 ${students.length} alunos encontrados na turma:`, students.map(s => s.name));
+          setStudents(students);
+        } else {
+          console.error('❌ Erro ao buscar alunos da turma:', response.message);
+        }
+      } else {
+        console.log('🔵 Aula sem turma associada, usando alunos passados via navegação');
+        // Usar alunos passados via navegação (fallback)
+        if (classData.students && Array.isArray(classData.students)) {
+          console.log('🔵 Usando alunos passados via navegação:', classData.students.length);
+          setStudents(classData.students);
+        } else {
+          console.log('🔵 Nenhum aluno encontrado');
+          setStudents([]);
         }
       }
     } catch (error) {
-      console.error('Erro ao carregar alunos:', error);
+      console.error('❌ Erro ao carregar alunos:', error);
     }
   };
 
@@ -113,9 +129,32 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const handleTakeAttendance = async () => {
     try {
       setLoading(true);
-      // Aqui seria implementada a lógica de chamada
-      // Por enquanto, apenas simula o processo
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!classData.classId) {
+        showError('❌ Erro', 'Aula não está associada a uma turma');
+        return;
+      }
+
+      // Salvar presença de todos os alunos
+      const attendancePromises = students.map(async (student) => {
+        const status = attendanceData[student.id] || 'present'; // Default: presente
+        
+        try {
+          const response = await apiService.saveAttendance(classData.classId, {
+            studentId: student.id,
+            isPresent: status === 'present',
+            date: classData.date
+          });
+          
+          if (!response.success) {
+            console.error(`Erro ao salvar presença do aluno ${student.name}:`, response.message);
+          }
+        } catch (error) {
+          console.error(`Erro ao salvar presença do aluno ${student.name}:`, error);
+        }
+      });
+
+      await Promise.all(attendancePromises);
       
       setAttendanceTaken(true);
       showSuccess('Sucesso! 🎉', 'Chamada realizada com sucesso!');
@@ -187,8 +226,13 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
 
       setLoading(true);
       
+      if (!classData.classId) {
+        showError('❌ Erro', 'Aula não está associada a uma turma');
+        return;
+      }
+      
       const response = await apiService.saveClassScore(
-        classData.id,
+        classData.classId,
         selectedStudent.id,
         selectedSport.id,
         scoreValue,
