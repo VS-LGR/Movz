@@ -233,11 +233,18 @@ router.get('/user/:sportId', authenticateToken, async (req, res) => {
 });
 
 // Buscar ranking geral
-router.get('/ranking', async (req, res) => {
+router.get('/ranking', authenticateToken, async (req, res) => {
   try {
     const { sportId, limit = 50, offset = 0 } = req.query;
 
-    const whereClause = sportId ? { sportId } : {};
+    let whereClause = sportId ? { sportId } : {};
+    
+    // Se for uma instituição, filtrar apenas usuários da instituição
+    if (req.user.userType === 'INSTITUTION') {
+      whereClause.user = {
+        institutionId: req.user.institutionId
+      };
+    }
 
     const rankings = await prisma.userScore.findMany({
       where: whereClause,

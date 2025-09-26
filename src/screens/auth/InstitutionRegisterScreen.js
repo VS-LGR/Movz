@@ -144,8 +144,10 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
           description: ''
         });
         
-        // Navegar para login
-        onNavigate('institutionLogin');
+        // Navegar para login inicial
+        setTimeout(() => {
+          onNavigate('login');
+        }, 2000);
       } else {
         // Tratar erros específicos da API
         let errorMessage = 'Erro ao cadastrar instituição';

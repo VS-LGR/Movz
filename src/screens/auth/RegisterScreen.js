@@ -229,10 +229,6 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
     }
   };
 
-  const handleProfileImagePress = () => {
-    // Placeholder function - will be implemented later
-    alert('Selecionar foto de perfil (Funcionalidade será implementada)');
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -240,39 +236,31 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logo}>Movz</Text>
-          <TouchableOpacity 
-            style={styles.menuIcon} 
-            onPress={() => setIsMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Faça seu cadastro</Text>
+        <Text style={styles.title}>Cadastro de Estudante</Text>
+        <Text style={styles.subtitle}>Preencha os dados para criar sua conta</Text>
 
-        {/* Profile Image Section */}
-        <View style={styles.profileImageContainer}>
-          <TouchableOpacity 
-            style={styles.profileImagePlaceholder}
-            onPress={handleProfileImagePress}
-          >
-            <View style={styles.profileImageCircle}>
-              <Text style={styles.profileImageText}>+</Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.profileImageLabel}>Escolher foto de perfil</Text>
+        {/* Logo Section */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('../../assets/images/Logo.svg')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
 
         {/* Form Fields */}
         <View style={styles.formContainer}>
           {/* Nome */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Nome Completo</Text>
             <TextInput
               style={[styles.input, fieldErrors.name && styles.inputError]}
-              placeholder="Nome"
+              placeholder="Digite seu nome completo"
               placeholderTextColor="#666"
               value={formData.name}
               onChangeText={(value) => handleInputChange('name', value)}
@@ -282,9 +270,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* Idade */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Idade</Text>
             <TextInput
               style={[styles.input, fieldErrors.age && styles.inputError]}
-              placeholder="Idade"
+              placeholder="Digite sua idade"
               placeholderTextColor="#666"
               value={formData.age}
               onChangeText={(value) => handleInputChange('age', value)}
@@ -295,9 +284,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* Escola */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Escola</Text>
             <TextInput
               style={[styles.input, fieldErrors.school && styles.inputError]}
-              placeholder="Escola"
+              placeholder="Digite o nome da sua escola"
               placeholderTextColor="#666"
               value={formData.school}
               onChangeText={(value) => handleInputChange('school', value)}
@@ -307,9 +297,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* Turma */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Turma</Text>
             <TextInput
               style={[styles.input, fieldErrors.class && styles.inputError]}
-              placeholder="Turma"
+              placeholder="Digite sua turma"
               placeholderTextColor="#666"
               value={formData.class}
               onChangeText={(value) => handleInputChange('class', value)}
@@ -319,9 +310,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* E-mail */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>E-mail</Text>
             <TextInput
               style={[styles.input, fieldErrors.email && styles.inputError]}
-              placeholder="E-mail"
+              placeholder="Digite seu e-mail"
               placeholderTextColor="#666"
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
@@ -333,9 +325,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* CPF */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>CPF</Text>
             <TextInput
               style={[styles.input, fieldErrors.cpf && styles.inputError]}
-              placeholder="CPF"
+              placeholder="Digite seu CPF"
               placeholderTextColor="#666"
               value={formData.cpf}
               onChangeText={(value) => handleInputChange('cpf', value)}
@@ -347,9 +340,10 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 
           {/* Senha */}
           <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Senha</Text>
             <TextInput
               style={[styles.input, fieldErrors.password && styles.inputError]}
-              placeholder="Senha"
+              placeholder="Digite sua senha"
               placeholderTextColor="#666"
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
@@ -366,9 +360,17 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
           disabled={isLoading}
         >
           <Text style={styles.saveButtonText}>
-            {isLoading ? 'Salvando...' : 'Salvar'}
+            {isLoading ? 'Salvando...' : 'Criar Conta'}
           </Text>
         </TouchableOpacity>
+
+        {/* Link para Login */}
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>Já tem uma conta? </Text>
+          <TouchableOpacity onPress={onNavigateToLogin}>
+            <Text style={styles.loginLink}>Fazer Login</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
       
       {/* Side Menu */}
@@ -392,101 +394,94 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E9EDEE',
   },
   scrollView: {
     flex: 1,
     paddingHorizontal: 20,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 20,
     paddingBottom: 20,
   },
   logo: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#000',
     fontFamily: 'Poppins',
-  },
-  menuIcon: {
-    width: 39,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 39,
-    height: 6,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 3,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
+    marginBottom: 10,
+    fontFamily: 'Poppins',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
     marginBottom: 30,
     fontFamily: 'Poppins',
   },
-  profileImageContainer: {
+  logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
+    marginTop: 10,
   },
-  profileImagePlaceholder: {
-    marginBottom: 15,
+  logoWrapper: {
+    backgroundColor: 'transparent',
+    borderRadius: 75,
+    padding: 10,
+    mixBlendMode: 'multiply',
   },
-  profileImageCircle: {
-    width: 161,
-    height: 161,
-    borderRadius: 80.5,
-    backgroundColor: '#D9D9D9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImageText: {
-    fontSize: 48,
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  profileImageLabel: {
-    fontSize: 16,
-    color: '#000',
-    fontFamily: 'Poppins',
+  logoImage: {
+    width: 120,
+    height: 120,
+    opacity: 0.9,
   },
   formContainer: {
     marginBottom: 30,
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    color: '#000',
+    marginBottom: 8,
+    fontFamily: 'Poppins',
+    fontWeight: 'bold',
   },
   input: {
-    backgroundColor: '#D9D9D9',
-    height: 43,
+    backgroundColor: '#FFFFFF',
+    height: 50,
     paddingHorizontal: 20,
     fontSize: 16,
     color: '#000',
     fontFamily: 'Poppins',
-    textAlign: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D9D9D9',
   },
   saveButton: {
-    backgroundColor: '#B5B5B5',
-    height: 43,
+    backgroundColor: '#F9BB55',
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
-    alignSelf: 'center',
-    width: 233,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-    fontFamily: 'Poppins',
+    borderRadius: 10,
+    marginBottom: 20,
   },
   saveButtonDisabled: {
     backgroundColor: '#D9D9D9',
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    fontFamily: 'Poppins',
   },
   inputError: {
     borderColor: '#FF4444',
@@ -497,7 +492,23 @@ const styles = StyleSheet.create({
     color: '#FF4444',
     fontSize: 12,
     marginTop: 4,
-    marginLeft: 5,
+    fontFamily: 'Poppins',
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  loginText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  loginLink: {
+    fontSize: 16,
+    color: '#F9BB55',
+    fontWeight: 'bold',
     fontFamily: 'Poppins',
   },
 });

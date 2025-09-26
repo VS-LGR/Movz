@@ -90,21 +90,30 @@ export default function App() {
       // Garantir que userType não seja undefined
       const finalUserType = userType || userData.userType || 'STUDENT';
       console.log('🔵 Tentando login:', { email: userData.email, userType: finalUserType, originalUserType: userType });
-      const response = await apiService.login(userData.email, userData.password, finalUserType);
+      
+      let response;
+      
+      // Se for instituição, usar a API específica de login de instituição
+      if (finalUserType === 'INSTITUTION') {
+        response = await apiService.loginInstitution(userData.email, userData.password);
+      } else {
+        response = await apiService.login(userData.email, userData.password, finalUserType);
+      }
+      
       console.log('🔵 Resposta do login:', response);
       
       if (response.success) {
-        const { token, user } = response.data;
+        const { token, user, institution } = response.data;
         
         // Salvar dados de autenticação
         await Storage.setItem('authToken', token);
         await Storage.setItem('userType', finalUserType);
-        await Storage.setItem('currentUser', JSON.stringify(user));
+        await Storage.setItem('currentUser', JSON.stringify(institution || user));
         
         // Configurar token no serviço
         apiService.setToken(token);
         
-        setCurrentUser(user);
+        setCurrentUser(institution || user);
         setIsAuthenticated(true);
         
         // Navegar para a tela apropriada
@@ -114,6 +123,9 @@ export default function App() {
             break;
           case 'TEACHER':
             setCurrentScreen('teacherClasses');
+            break;
+          case 'INSTITUTION':
+            setCurrentScreen('institutionDashboard');
             break;
           default:
             setCurrentScreen('home');
@@ -181,9 +193,8 @@ export default function App() {
       const response = await apiService.register(userData);
       
       if (response.success) {
-        // Após registro bem-sucedido, fazer login automaticamente
-        await handleLogin(userData, 'STUDENT');
-        return { success: true, message: 'Estudante cadastrado com sucesso!' };
+        // Retornar sucesso sem fazer login automático
+        return { success: true, message: 'Estudante cadastrado com sucesso! Agora você pode fazer login.' };
       } else {
         throw new Error(response.message || 'Erro no cadastro');
       }
@@ -198,9 +209,8 @@ export default function App() {
       const response = await apiService.register({ ...userData, userType: 'TEACHER' });
       
       if (response.success) {
-        // Após registro bem-sucedido, fazer login automaticamente
-        await handleLogin(userData, 'TEACHER');
-        return { success: true, message: 'Professor cadastrado com sucesso!' };
+        // Retornar sucesso sem fazer login automático
+        return { success: true, message: 'Professor cadastrado com sucesso! Agora você pode fazer login.' };
       } else {
         throw new Error(response.message || 'Erro no cadastro do professor');
       }
@@ -215,9 +225,8 @@ export default function App() {
       const response = await apiService.registerInstitution(institutionData);
       
       if (response.success) {
-        // Após registro bem-sucedido, fazer login automaticamente
-        await handleInstitutionLogin(institutionData, 'INSTITUTION');
-        return { success: true, message: 'Instituição cadastrada com sucesso!' };
+        // Retornar sucesso sem fazer login automático
+        return { success: true, message: 'Instituição cadastrada com sucesso! Agora você pode fazer login.' };
       } else {
         throw new Error(response.message || 'Erro no cadastro da instituição');
       }
@@ -286,7 +295,6 @@ export default function App() {
             onNavigateToRegister={handleNavigateToRegister}
             onNavigateToTeacherRegister={handleNavigateToTeacherRegister}
             onNavigateToInstitutionRegister={handleNavigateToInstitutionRegister}
-            onNavigateToInstitutionLogin={handleNavigateToInstitutionLogin}
           />
         );
       case 'register':
@@ -491,7 +499,6 @@ export default function App() {
             onNavigateToRegister={handleNavigateToRegister}
             onNavigateToTeacherRegister={handleNavigateToTeacherRegister}
             onNavigateToInstitutionRegister={handleNavigateToInstitutionRegister}
-            onNavigateToInstitutionLogin={handleNavigateToInstitutionLogin}
           />
         );
     }

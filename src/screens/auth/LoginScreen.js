@@ -16,7 +16,7 @@ import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
-const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, onNavigateToInstitutionRegister, onNavigateToInstitutionLogin, showSuccessMessage, onSuccessMessageShown }) => {
+const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegister, onNavigateToInstitutionRegister, showSuccessMessage, onSuccessMessageShown }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
   
   const [email, setEmail] = useState('');
@@ -100,6 +100,14 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
                 Professor
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.userTypeButton, userType === 'INSTITUTION' && styles.userTypeButtonActive]}
+              onPress={() => setUserType('INSTITUTION')}
+            >
+              <Text style={[styles.userTypeButtonText, userType === 'INSTITUTION' && styles.userTypeButtonTextActive]}>
+                Instituição
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -171,12 +179,6 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
             </View>
           </View>
           
-          <View style={styles.institutionLogin}>
-            <Text style={styles.institutionText}>Já tem uma instituição? </Text>
-            <TouchableOpacity onPress={onNavigateToInstitutionLogin}>
-              <Text style={styles.institutionLink}>Login da Instituição</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
       
@@ -297,24 +299,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minWidth: 120,
   },
-  institutionLogin: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  institutionText: {
-    color: '#666',
-    fontSize: 16,
-    fontFamily: 'Poppins',
-  },
-  institutionLink: {
-    color: '#F9BB55',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Poppins',
-    textDecorationLine: 'underline',
-  },
   userTypeContainer: {
     marginBottom: 30,
   },
@@ -328,16 +312,18 @@ const styles = StyleSheet.create({
   },
   userTypeButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 15,
+    gap: 10,
   },
   userTypeButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#D9D9D9',
     backgroundColor: '#FFFFFF',
+    minWidth: 100,
   },
   userTypeButtonActive: {
     backgroundColor: '#F9BB55',

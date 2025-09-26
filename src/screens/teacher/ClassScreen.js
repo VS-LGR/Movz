@@ -21,6 +21,7 @@ const { width } = Dimensions.get('window');
 const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   // Usar parâmetros passados via navegação
   const classData = window.navigationParams?.classData || {};
+  
 
   const [attendanceTaken, setAttendanceTaken] = useState(false);
   const [classCompleted, setClassCompleted] = useState(false);
@@ -66,7 +67,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     try {
       const response = await apiService.getSports();
       if (response.success) {
-        setSports(response.data);
+        setSports(response.data.sports || []);
       }
     } catch (error) {
       console.error('Erro ao carregar esportes:', error);
