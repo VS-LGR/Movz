@@ -183,35 +183,20 @@ const TeacherRegisterScreen = ({ onRegister, onNavigateToLogin }) => {
       const result = await onRegister(userDataToSend);
       
       if (result && result.success) {
-        // Usar Alert para web
-        if (typeof window !== 'undefined' && window.alert) {
-          window.alert(`Sucesso: ${result.message}`);
-        } else {
-          showSuccess('Sucesso! 🎉', result.message);
-          setTimeout(() => {
-            onNavigateToLogin && onNavigateToLogin();
-          }, 2000);
-        }
+        // Usar CustomAlert para manter consistência visual
+        showSuccess('Cadastro Realizado! 🎉', result.message);
         
-        // Redirecionar automaticamente após 2 segundos
+        // Redirecionar após 1.5 segundos (tempo suficiente para ler a mensagem)
         setTimeout(() => {
           onNavigateToLogin && onNavigateToLogin();
-        }, 2000);
+        }, 1500);
         
       } else {
-        if (typeof window !== 'undefined' && window.alert) {
-          window.alert(`Erro: Resposta inesperada do servidor - ${JSON.stringify(result)}`);
-        } else {
-          showError('❌ Erro', 'Resposta inesperada do servidor');
-        }
+        showError('Erro no Cadastro', result?.message || 'Resposta inesperada do servidor');
       }
     } catch (error) {
       console.error('Erro no cadastro:', error);
-      if (typeof window !== 'undefined' && window.alert) {
-        window.alert(`Erro: ${error.message || 'Erro ao salvar cadastro'}`);
-      } else {
-        showError('❌ Erro', error.message || 'Erro ao salvar cadastro');
-      }
+      showError('Erro no Cadastro', error.message || 'Erro ao salvar cadastro');
     } finally {
       setIsLoading(false);
     }
