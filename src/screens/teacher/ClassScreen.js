@@ -37,10 +37,17 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [notes, setNotes] = useState('');
   const [attendanceData, setAttendanceData] = useState({}); // { studentId: 'present' | 'absent' }
   const [scoresData, setScoresData] = useState({}); // { studentId: { sportId: { score, notes } } }
+  
+  // Estados para avaliação em lote
+  const [selectedStudents, setSelectedStudents] = useState([]); // Array de IDs dos alunos selecionados
+  const [batchScore, setBatchScore] = useState('');
+  const [batchNotes, setBatchNotes] = useState('');
   const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   // Carregar dados iniciais
   useEffect(() => {
+    console.log('🔵 ClassScreen - classData recebido:', classData);
+    console.log('🔵 ClassScreen - subject:', classData.subject);
     loadStudents();
     loadSports();
   }, []);
@@ -211,6 +218,122 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     setShowScoringModal(true);
   };
 
+  // Funções para avaliação em lote
+  const toggleStudentSelection = (studentId) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const toggleAttendance = (studentId) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: prev[studentId] === 'present' ? 'absent' : 'present'
+    }));
+  };
+
+  const handleBatchSaveScores = async () => {
+    try {
+      if (selectedStudents.length === 0) {
+        showError('❌ Erro', 'Selecione pelo menos um aluno');
+        return;
+      }
+
+      if (!batchScore) {
+        showError('❌ Erro', 'Digite uma pontuação');
+        return;
+      }
+
+      const scoreValue = parseInt(batchScore);
+      if (scoreValue < 0 || scoreValue > 100) {
+        showError('❌ Erro', 'Pontuação deve estar entre 0 e 100');
+        return;
+      }
+
+      setLoading(true);
+      
+      if (!classData.classId) {
+        showError('❌ Erro', 'Aula não está associada a uma turma');
+        return;
+      }
+
+      // Buscar o esporte da aula automaticamente
+      // O esporte está no campo 'subject' no formato "Nome do Esporte - Tipo da Aula"
+      const subjectParts = classData.subject?.split(' - ') || [];
+      const sportName = subjectParts[0]; // Primeira parte é o nome do esporte
+      
+      const classSport = sports.find(sport => 
+        sport.name.toLowerCase() === sportName?.toLowerCase()
+      );
+
+      if (!classSport) {
+        showError('❌ Erro', `Esporte "${sportName}" da aula não encontrado`);
+        return;
+      }
+
+      // Salvar pontuação para todos os alunos selecionados
+      const scorePromises = selectedStudents.map(async (studentId) => {
+        try {
+          const response = await apiService.saveClassScore(
+            classData.classId,
+            studentId,
+            classSport.id,
+            scoreValue,
+            batchNotes.trim() || null
+          );
+          
+          if (!response.success) {
+            console.error(`Erro ao salvar pontuação do aluno ${studentId}:`, response.message);
+          }
+        } catch (error) {
+          console.error(`Erro ao salvar pontuação do aluno ${studentId}:`, error);
+        }
+      });
+
+      await Promise.all(scorePromises);
+
+      // Salvar presença de todos os alunos
+      const attendancePromises = students.map(async (student) => {
+        const status = attendanceData[student.id] || 'present';
+        
+        try {
+          const response = await apiService.saveAttendance(classData.classId, {
+            studentId: student.id,
+            isPresent: status === 'present',
+            date: classData.date
+          });
+          
+          if (!response.success) {
+            console.error(`Erro ao salvar presença do aluno ${student.name}:`, response.message);
+          }
+        } catch (error) {
+          console.error(`Erro ao salvar presença do aluno ${student.name}:`, error);
+        }
+      });
+
+      await Promise.all(attendancePromises);
+
+      showSuccess('Sucesso! 🎉', `Pontuações e presenças salvas para ${selectedStudents.length} aluno(s) no esporte ${classSport.name}!`);
+      
+      // Limpar estados
+      setSelectedStudents([]);
+      setBatchScore('');
+      setBatchNotes('');
+      setAttendanceData({});
+      setShowScoringModal(false);
+      setAttendanceTaken(true);
+      
+      loadStudents(); // Recarregar dados
+    } catch (error) {
+      console.error('Erro ao salvar avaliações:', error);
+      showError('❌ Erro', 'Erro ao salvar avaliações');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveScore = async () => {
     try {
       if (!selectedStudent || !selectedSport || !score) {
@@ -323,16 +446,12 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         </Text>
       </View>
 
-      {/* Botão de Chamada */}
-      <TouchableOpacity 
-        style={[styles.attendanceButton, attendanceTaken && styles.attendanceButtonCompleted]}
-        onPress={handleTakeAttendance}
-        disabled={attendanceTaken || loading}
-      >
-        <Text style={styles.attendanceButtonText}>
-          {attendanceTaken ? 'Chamada Realizada' : 'Fazer a Chamada'}
-        </Text>
-      </TouchableOpacity>
+      {/* Status da Chamada */}
+      {attendanceTaken && (
+        <View style={styles.attendanceStatusContainer}>
+          <Text style={styles.attendanceStatusText}>✅ Chamada realizada com sucesso!</Text>
+        </View>
+      )}
 
       {/* Seções de Exercícios */}
       <View style={styles.workoutContainer}>
@@ -388,7 +507,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         </View>
       )}
 
-      {/* Modal de Pontuação */}
+      {/* Modal de Avaliação Completa */}
       <Modal
         visible={showScoringModal}
         animationType="slide"
@@ -397,45 +516,63 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       >
         <View style={styles.modalOverlay}>
           <View style={styles.scoringModalContent}>
-            <Text style={styles.scoringModalTitle}>Avaliar Aluno</Text>
+            <Text style={styles.scoringModalTitle}>Avaliar Alunos e Presença</Text>
             
-            {/* Seleção de Aluno */}
+            {/* Lista de Alunos com Seleção e Presença */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Aluno *</Text>
+              <Text style={styles.inputLabel}>Alunos da Turma</Text>
               <ScrollView style={styles.studentList} nestedScrollEnabled>
                 {students.map((student) => (
-                  <TouchableOpacity
-                    key={student.id}
-                    style={[
-                      styles.studentItem,
-                      selectedStudent?.id === student.id && styles.selectedStudentItem
-                    ]}
-                    onPress={() => setSelectedStudent(student)}
-                  >
-                    <Text style={styles.studentName}>{student.name}</Text>
-                    <Text style={styles.studentEmail}>{student.email}</Text>
-                  </TouchableOpacity>
+                  <View key={student.id} style={styles.studentRow}>
+                    {/* Checkbox para seleção */}
+                    <TouchableOpacity
+                      style={styles.checkboxContainer}
+                      onPress={() => toggleStudentSelection(student.id)}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        selectedStudents.includes(student.id) && styles.checkboxChecked
+                      ]}>
+                        {selectedStudents.includes(student.id) && (
+                          <Text style={styles.checkmark}>✓</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                    
+                    {/* Informações do aluno */}
+                    <View style={styles.studentInfo}>
+                      <Text style={styles.studentName}>{student.name}</Text>
+                      <Text style={styles.studentEmail}>{student.email}</Text>
+                    </View>
+                    
+                    {/* Toggle de presença */}
+                    <TouchableOpacity
+                      style={[
+                        styles.attendanceToggle,
+                        attendanceData[student.id] === 'absent' && styles.attendanceToggleAbsent
+                      ]}
+                      onPress={() => toggleAttendance(student.id)}
+                    >
+                      <Text style={styles.attendanceToggleText}>
+                        {attendanceData[student.id] === 'absent' ? 'F' : 'P'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </ScrollView>
             </View>
 
-            {/* Seleção de Esporte */}
+            {/* Esporte da Aula */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Esporte *</Text>
-              <ScrollView style={styles.sportList} nestedScrollEnabled>
-                {sports.map((sport) => (
-                  <TouchableOpacity
-                    key={sport.id}
-                    style={[
-                      styles.sportItem,
-                      selectedSport?.id === sport.id && styles.selectedSportItem
-                    ]}
-                    onPress={() => setSelectedSport(sport)}
-                  >
-                    <Text style={styles.sportName}>{sport.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <Text style={styles.inputLabel}>Esporte da Aula</Text>
+              <View style={styles.sportDisplayContainer}>
+                <Text style={styles.sportDisplayText}>
+                  🏆 {(() => {
+                    const subjectParts = classData.subject?.split(' - ') || [];
+                    return subjectParts[0] || 'Esporte não definido';
+                  })()}
+                </Text>
+              </View>
             </View>
 
             {/* Pontuação */}
@@ -444,8 +581,8 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
               <TextInput
                 style={styles.scoreInput}
                 placeholder="Digite a pontuação"
-                value={score}
-                onChangeText={setScore}
+                value={batchScore}
+                onChangeText={setBatchScore}
                 keyboardType="numeric"
                 maxLength={3}
               />
@@ -457,28 +594,50 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
               <TextInput
                 style={styles.notesInput}
                 placeholder="Observações sobre o desempenho (opcional)"
-                value={notes}
-                onChangeText={setNotes}
+                value={batchNotes}
+                onChangeText={setBatchNotes}
                 multiline
                 numberOfLines={3}
               />
+            </View>
+
+            {/* Resumo */}
+            <View style={styles.summaryContainer}>
+              <Text style={styles.summaryText}>
+                📊 {selectedStudents.length} aluno(s) selecionado(s) para avaliação
+              </Text>
+              <Text style={styles.summaryText}>
+                🏆 Esporte: {(() => {
+                  const subjectParts = classData.subject?.split(' - ') || [];
+                  return subjectParts[0] || 'Não definido';
+                })()}
+              </Text>
+              <Text style={styles.summaryText}>
+                📝 Presença será salva para todos os alunos
+              </Text>
             </View>
 
             {/* Botões */}
             <View style={styles.scoringModalButtons}>
               <TouchableOpacity
                 style={[styles.scoringModalButton, styles.cancelButton]}
-                onPress={() => setShowScoringModal(false)}
+                onPress={() => {
+                  setShowScoringModal(false);
+                  setSelectedStudents([]);
+                  setBatchScore('');
+                  setBatchNotes('');
+                  setAttendanceData({});
+                }}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.scoringModalButton, styles.saveButton]}
-                onPress={handleSaveScore}
+                onPress={handleBatchSaveScores}
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? 'Salvando...' : 'Salvar'}
+                  {loading ? 'Salvando...' : 'Salvar Tudo'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -738,7 +897,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9BB55',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
   },
@@ -764,10 +923,10 @@ const styles = StyleSheet.create({
   scoringModalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 25,
-    marginHorizontal: 20,
-    maxHeight: '80%',
-    width: '90%',
+    padding: 20,
+    marginHorizontal: 10,
+    maxHeight: '90%',
+    width: '95%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -778,23 +937,23 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   scoringModalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   studentList: {
-    maxHeight: 120,
+    maxHeight: 150,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
@@ -808,23 +967,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9BB55',
   },
   studentName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
   },
   studentEmail: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     marginTop: 2,
   },
   sportList: {
-    maxHeight: 120,
+    maxHeight: 100,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
   },
   sportItem: {
-    padding: 12,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -832,7 +991,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9BB55',
   },
   sportName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
   },
@@ -840,38 +999,132 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    padding: 10,
+    fontSize: 14,
     backgroundColor: '#fff',
   },
   notesInput: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    padding: 10,
+    fontSize: 14,
     backgroundColor: '#fff',
     textAlignVertical: 'top',
+    minHeight: 60,
   },
   scoringModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 15,
-    marginTop: 10,
+    gap: 10,
+    marginTop: 8,
   },
   scoringModalButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
   },
   saveButton: {
     backgroundColor: '#4CAF50',
   },
   saveButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Novos estilos para avaliação em lote
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#fff',
+  },
+  checkboxContainer: {
+    marginRight: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#F9BB55',
+    borderColor: '#F9BB55',
+  },
+  checkmark: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  studentInfo: {
+    flex: 1,
+  },
+  attendanceToggle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  attendanceToggleAbsent: {
+    backgroundColor: '#F44336',
+  },
+  attendanceToggleText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  summaryContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  summaryText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 3,
+    fontFamily: 'Poppins',
+  },
+  sportDisplayContainer: {
+    backgroundColor: '#F0F8FF',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+  sportDisplayText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1976D2',
+    textAlign: 'center',
+  },
+  attendanceStatusContainer: {
+    backgroundColor: '#E8F5E8',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  attendanceStatusText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2E7D32',
+    textAlign: 'center',
   },
 });
 
