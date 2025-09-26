@@ -13,6 +13,7 @@ import {
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import CustomModal from '../../components/CustomModal';
+import ClassDetailsScreen from './ClassDetailsScreen';
 
 const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
@@ -51,6 +52,8 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedClassId, setSelectedClassId] = useState('');
   const [studentsInInstitution, setStudentsInInstitution] = useState([]);
+  const [showClassDetails, setShowClassDetails] = useState(false);
+  const [selectedClassIdForDetails, setSelectedClassIdForDetails] = useState(null);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -360,6 +363,16 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       onCancel: () => setModalVisible(false)
     });
     setModalVisible(true);
+  };
+
+  const handleViewClassDetails = (classId) => {
+    setSelectedClassIdForDetails(classId);
+    setShowClassDetails(true);
+  };
+
+  const handleBackFromDetails = () => {
+    setShowClassDetails(false);
+    setSelectedClassIdForDetails(null);
   };
 
   const confirmRemoveClass = async (classId) => {
@@ -703,12 +716,20 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
                     {classItem.students.length} alunos
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={styles.removeClassButton}
-                  onPress={() => handleRemoveClass(classItem)}
-                >
-                  <Text style={styles.removeClassButtonText}>🗑️</Text>
-                </TouchableOpacity>
+                <View style={styles.classActions}>
+                  <TouchableOpacity
+                    style={styles.detailsButton}
+                    onPress={() => handleViewClassDetails(classItem.id)}
+                  >
+                    <Text style={styles.detailsButtonText}>📋</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeClassButton}
+                    onPress={() => handleRemoveClass(classItem)}
+                  >
+                    <Text style={styles.removeClassButtonText}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -716,6 +737,17 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       </View>
     );
   };
+
+  // Renderizar tela de detalhes da turma se selecionada
+  if (showClassDetails && selectedClassIdForDetails) {
+    return (
+      <ClassDetailsScreen
+        classId={selectedClassIdForDetails}
+        onBack={handleBackFromDetails}
+        currentUser={currentUser}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1463,6 +1495,21 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   removeClassButtonText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  classActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  detailsButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  detailsButtonText: {
     fontSize: 16,
     color: '#fff',
   },

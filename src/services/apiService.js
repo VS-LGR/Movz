@@ -467,6 +467,11 @@ class ApiService {
   async getInstitutionStats() {
     return this.request('/institutions/stats');
   }
+
+  // Buscar dados detalhados de uma turma específica
+  async getInstitutionClassDetails(classId) {
+    return this.request(`/institutions/classes/${classId}/details`);
+  }
 }
 
 // Instância singleton

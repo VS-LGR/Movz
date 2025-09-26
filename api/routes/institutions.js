@@ -413,6 +413,206 @@ router.get('/users', authenticateToken, requireInstitution, async (req, res) => 
 
 // ===== GERENCIAMENTO DE TURMAS =====
 
+// Obter dados detalhados de uma turma específica
+router.get('/classes/:classId/details', authenticateToken, requireInstitution, async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const institutionId = req.user.institutionId;
+
+    // Verificar se a turma pertence à instituição
+    const classData = await prisma.class.findFirst({
+      where: {
+        id: classId,
+        institutionId: institutionId,
+        isActive: true
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        students: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                cpf: true
+              }
+            }
+          },
+          where: {
+            isActive: true
+          }
+        }
+      }
+    });
+
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turma não encontrada'
+      });
+    }
+
+    // Buscar aulas da turma
+    const classSessions = await prisma.teacherClass.findMany({
+      where: {
+        classId: classId,
+        isCompleted: true
+      },
+      orderBy: {
+        date: 'desc'
+      }
+    });
+
+    // Buscar pontuações de todos os alunos da turma
+    const classScores = await prisma.classScore.findMany({
+      where: {
+        classId: classId
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        sport: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    // Calcular estatísticas de presença
+    const totalSessions = classSessions.length;
+    const studentAttendanceData = await Promise.all(
+      classData.students.map(async (classStudent) => {
+        const studentId = classStudent.student.id;
+        
+        // Contar presenças (baseado em pontuações)
+        const presentSessions = await Promise.all(
+          classSessions.map(async (session) => {
+            const hasScore = await prisma.classScore.findFirst({
+              where: {
+                classId: classId,
+                studentId: studentId,
+                createdAt: {
+                  gte: session.date,
+                  lt: new Date(session.date.getTime() + 24 * 60 * 60 * 1000)
+                }
+              }
+            });
+            return !!hasScore;
+          })
+        );
+
+        const presentCount = presentSessions.filter(p => p).length;
+        const absentCount = totalSessions - presentCount;
+        const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+
+        return {
+          studentId,
+          studentName: classStudent.student.name,
+          presentCount,
+          absentCount,
+          attendanceRate
+        };
+      })
+    );
+
+    // Encontrar aluno com mais faltas
+    const studentWithMostAbsences = studentAttendanceData.reduce((max, current) => 
+      current.absentCount > max.absentCount ? current : max, 
+      { absentCount: 0, studentName: 'Nenhum' }
+    );
+
+    // Calcular média geral de notas da turma
+    const allScores = classScores.map(score => score.score);
+    const averageScore = allScores.length > 0 
+      ? Math.round(allScores.reduce((sum, score) => sum + score, 0) / allScores.length)
+      : 0;
+
+    // Calcular total de faltas da turma
+    const totalAbsences = studentAttendanceData.reduce((sum, student) => sum + student.absentCount, 0);
+
+    // Calcular média de presença da turma
+    const averageAttendanceRate = studentAttendanceData.length > 0
+      ? Math.round(studentAttendanceData.reduce((sum, student) => sum + student.attendanceRate, 0) / studentAttendanceData.length)
+      : 0;
+
+    // Estatísticas por esporte
+    const sportStats = {};
+    classScores.forEach(score => {
+      const sportName = score.sport.name;
+      if (!sportStats[sportName]) {
+        sportStats[sportName] = {
+          totalScores: 0,
+          totalStudents: 0,
+          averageScore: 0,
+          scores: []
+        };
+      }
+      sportStats[sportName].totalScores++;
+      sportStats[sportName].scores.push(score.score);
+    });
+
+    // Calcular médias por esporte
+    Object.keys(sportStats).forEach(sportName => {
+      const sport = sportStats[sportName];
+      sport.averageScore = Math.round(sport.scores.reduce((sum, score) => sum + score, 0) / sport.scores.length);
+      sport.totalStudents = new Set(classScores
+        .filter(score => score.sport.name === sportName)
+        .map(score => score.studentId)
+      ).size;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        classInfo: {
+          id: classData.id,
+          name: classData.name,
+          school: classData.school,
+          grade: classData.grade,
+          teacher: classData.teacher
+        },
+        statistics: {
+          totalStudents: classData.students.length,
+          totalSessions: totalSessions,
+          totalAbsences: totalAbsences,
+          averageScore: averageScore,
+          averageAttendanceRate: averageAttendanceRate,
+          studentWithMostAbsences: studentWithMostAbsences.studentName,
+          studentWithMostAbsencesCount: studentWithMostAbsences.absentCount
+        },
+        students: studentAttendanceData,
+        sportStats: sportStats,
+        recentSessions: classSessions.slice(0, 10).map(session => ({
+          id: session.id,
+          date: session.date,
+          subject: session.subject,
+          isCompleted: session.isCompleted
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar dados da turma:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Listar turmas da instituição
 router.get('/classes', authenticateToken, requireInstitution, async (req, res) => {
   try {
