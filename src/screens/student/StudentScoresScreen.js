@@ -10,6 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
@@ -68,80 +69,199 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     return 'Precisa Melhorar';
   };
 
-  const renderSportCard = (sportData) => (
-    <View key={sportData.sport.id} style={styles.sportCard}>
-      <View style={styles.sportHeader}>
-        <View style={styles.sportInfo}>
-          <Text style={styles.sportName}>{sportData.sport.name}</Text>
-          <Text style={styles.sportStats}>
-            {sportData.totalClasses} aula(s) • Média: {sportData.averageScore}pts
-          </Text>
-        </View>
-        <View style={[styles.totalScoreBadge, { backgroundColor: getScoreColor(sportData.averageScore) }]}>
-          <Text style={styles.totalScoreText}>{sportData.totalScore}</Text>
-          <Text style={styles.totalScoreLabel}>Total</Text>
-        </View>
-      </View>
+  const getMedalIcon = (score) => {
+    if (score >= 90) return '🥇'; // Ouro
+    if (score >= 70) return '🥈'; // Prata
+    if (score >= 50) return '🥉'; // Bronze
+    return '🏅'; // Participação
+  };
 
-      {sportData.scores.length > 0 ? (
-        <View style={styles.scoresList}>
-          <Text style={styles.scoresTitle}>Histórico de Aulas:</Text>
-          {sportData.scores.map((score, index) => (
-            <View key={score.id} style={styles.scoreItem}>
-              <View style={styles.scoreInfo}>
-                <Text style={styles.className}>{score.class.name}</Text>
-                <Text style={styles.classDetails}>
-                  {score.class.school} - {score.class.grade}
-                </Text>
-                <Text style={styles.teacherName}>Prof. {score.teacher.name}</Text>
-                {score.notes && (
-                  <Text style={styles.scoreNotes}>"{score.notes}"</Text>
-                )}
-              </View>
-              <View style={styles.scoreValue}>
-                <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(score.score) }]}>
-                  <Text style={styles.scoreNumber}>{score.score}</Text>
-                </View>
-                <Text style={[styles.scoreLabel, { color: getScoreColor(score.score) }]}>
-                  {getScoreLabel(score.score)}
-                </Text>
-                <Text style={styles.scoreDate}>
-                  {new Date(score.createdAt).toLocaleDateString('pt-BR')}
-                </Text>
-              </View>
+  const getMedalColor = (score) => {
+    if (score >= 90) return '#FFD700'; // Dourado
+    if (score >= 70) return '#C0C0C0'; // Prateado
+    if (score >= 50) return '#CD7F32'; // Bronze
+    return '#E0E0E0'; // Cinza
+  };
+
+  const getAchievementLevel = (totalClasses) => {
+    if (totalClasses >= 10) return { level: 'Mestre', icon: '👑', color: '#8B5CF6' };
+    if (totalClasses >= 5) return { level: 'Expert', icon: '⭐', color: '#F59E0B' };
+    if (totalClasses >= 3) return { level: 'Avançado', icon: '🔥', color: '#EF4444' };
+    if (totalClasses >= 1) return { level: 'Iniciante', icon: '🌱', color: '#10B981' };
+    return { level: 'Novato', icon: '🌱', color: '#6B7280' };
+  };
+
+  const renderSportCard = (sportData) => {
+    const hasScores = sportData.totalClasses > 0;
+    const achievement = getAchievementLevel(sportData.totalClasses);
+    const medalIcon = hasScores ? getMedalIcon(sportData.averageScore) : '🏅';
+    const medalColor = hasScores ? getMedalColor(sportData.averageScore) : '#E0E0E0';
+
+    return (
+      <TouchableOpacity 
+        key={sportData.sport.id} 
+        style={[
+          styles.sportCard,
+          { 
+            opacity: hasScores ? 1 : 0.7,
+            borderColor: medalColor,
+            borderWidth: hasScores ? 2 : 1
+          }
+        ]}
+        activeOpacity={0.8}
+      >
+        {/* Header com ícone do esporte e medalha */}
+        <View style={styles.sportHeader}>
+          <View style={styles.sportIconContainer}>
+            <View style={[styles.sportIcon, { backgroundColor: sportData.sport.color || '#F9BB55' }]}>
+              <Text style={styles.sportIconText}>
+                {sportData.sport.name.charAt(0).toUpperCase()}
+              </Text>
             </View>
-          ))}
+            <View style={[styles.medalBadge, { backgroundColor: medalColor }]}>
+              <Text style={styles.medalIcon}>{medalIcon}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.sportInfo}>
+            <Text style={[styles.sportName, { color: hasScores ? '#364859' : '#9CA3AF' }]}>
+              {sportData.sport.name}
+            </Text>
+            <Text style={styles.achievementLevel}>
+              {achievement.icon} {achievement.level}
+            </Text>
+          </View>
         </View>
-      ) : (
-        <View style={styles.noScoresContainer}>
-          <Text style={styles.noScoresText}>
-            Nenhuma pontuação registrada para este esporte ainda.
-          </Text>
+
+        {/* Estatísticas */}
+        <View style={styles.sportStats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{sportData.totalClasses}</Text>
+            <Text style={styles.statLabel}>Aulas</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{sportData.totalScore}</Text>
+            <Text style={styles.statLabel}>Pontos</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>{sportData.averageScore}</Text>
+            <Text style={styles.statLabel}>Média</Text>
+          </View>
         </View>
-      )}
-    </View>
-  );
+
+        {/* Progresso visual */}
+        {hasScores && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View 
+                style={[
+                  styles.progressFill, 
+                  { 
+                    width: `${Math.min((sportData.averageScore / 100) * 100, 100)}%`,
+                    backgroundColor: medalColor
+                  }
+                ]} 
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {getScoreLabel(sportData.averageScore)}
+            </Text>
+          </View>
+        )}
+
+        {/* Estado vazio */}
+        {!hasScores && (
+          <View style={styles.emptySportContainer}>
+            <Text style={styles.emptySportText}>
+              Ainda não há pontuações para este esporte
+            </Text>
+            <Text style={styles.emptySportSubtext}>
+              Participe das aulas para conquistar medalhas! 🏆
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderStats = () => {
     const totalSports = sportsData.length;
+    const sportsWithScores = sportsData.filter(sport => sport.totalClasses > 0).length;
     const totalClasses = sportsData.reduce((sum, sport) => sum + sport.totalClasses, 0);
-    const averageScore = sportsData.length > 0 
-      ? Math.round(sportsData.reduce((sum, sport) => sum + sport.averageScore, 0) / sportsData.length)
+    const totalScore = sportsData.reduce((sum, sport) => sum + sport.totalScore, 0);
+    const averageScore = sportsWithScores > 0 
+      ? Math.round(sportsData.filter(sport => sport.totalClasses > 0).reduce((sum, sport) => sum + sport.averageScore, 0) / sportsWithScores)
       : 0;
+
+    const getOverallLevel = () => {
+      if (totalClasses >= 20) return { level: 'Lenda', icon: '👑', color: '#8B5CF6' };
+      if (totalClasses >= 15) return { level: 'Mestre', icon: '⭐', color: '#F59E0B' };
+      if (totalClasses >= 10) return { level: 'Expert', icon: '🔥', color: '#EF4444' };
+      if (totalClasses >= 5) return { level: 'Avançado', icon: '🌱', color: '#10B981' };
+      if (totalClasses >= 1) return { level: 'Iniciante', icon: '🌱', color: '#6B7280' };
+      return { level: 'Novato', icon: '🌱', color: '#6B7280' };
+    };
+
+    const overallLevel = getOverallLevel();
 
     return (
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalSports}</Text>
-          <Text style={styles.statLabel}>Esportes</Text>
+        {/* Card Principal de Conquistas */}
+        <View style={styles.achievementCard}>
+          <View style={styles.achievementHeader}>
+            <Text style={styles.achievementTitle}>🏆 Suas Pontuações</Text>
+            <View style={[styles.levelBadge, { backgroundColor: overallLevel.color }]}>
+              <Text style={styles.levelIcon}>{overallLevel.icon}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.achievementContent}>
+            <Text style={styles.levelText}>{overallLevel.level}</Text>
+            <Text style={styles.levelSubtext}>Nível Geral</Text>
+          </View>
+
+          <View style={styles.achievementStats}>
+            <View style={styles.achievementStat}>
+              <Text style={styles.achievementStatNumber}>{sportsWithScores}</Text>
+              <Text style={styles.achievementStatLabel}>Esportes Ativos</Text>
+            </View>
+            <View style={styles.achievementStat}>
+              <Text style={styles.achievementStatNumber}>{totalClasses}</Text>
+              <Text style={styles.achievementStatLabel}>Aulas Completas</Text>
+            </View>
+            <View style={styles.achievementStat}>
+              <Text style={styles.achievementStatNumber}>{totalScore}</Text>
+              <Text style={styles.achievementStatLabel}>Pontos Totais</Text>
+            </View>
+          </View>
+
+          {averageScore > 0 && (
+            <View style={styles.averageContainer}>
+              <Text style={styles.averageLabel}>Média Geral:</Text>
+              <View style={[styles.averageBadge, { backgroundColor: getScoreColor(averageScore) }]}>
+                <Text style={styles.averageNumber}>{averageScore}</Text>
+              </View>
+            </View>
+          )}
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalClasses}</Text>
-          <Text style={styles.statLabel}>Aulas</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{averageScore}</Text>
-          <Text style={styles.statLabel}>Média Geral</Text>
+
+        {/* Cards de Estatísticas Detalhadas */}
+        <View style={styles.detailedStats}>
+          <View style={styles.detailedStatCard}>
+            <Text style={styles.detailedStatIcon}>🏅</Text>
+            <Text style={styles.detailedStatNumber}>{sportsWithScores}/{totalSports}</Text>
+            <Text style={styles.detailedStatLabel}>Esportes com Medalhas</Text>
+          </View>
+          <View style={styles.detailedStatCard}>
+            <Text style={styles.detailedStatIcon}>📚</Text>
+            <Text style={styles.detailedStatNumber}>{totalClasses}</Text>
+            <Text style={styles.detailedStatLabel}>Aulas Participadas</Text>
+          </View>
+          <View style={styles.detailedStatCard}>
+            <Text style={styles.detailedStatIcon}>🎯</Text>
+            <Text style={styles.detailedStatNumber}>{totalScore}</Text>
+            <Text style={styles.detailedStatLabel}>Pontos Conquistados</Text>
+          </View>
         </View>
       </View>
     );
@@ -167,8 +287,8 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>Minhas Pontuações</Text>
-            <Text style={styles.subtitle}>Acompanhe seu desempenho nos esportes</Text>
+            <Text style={styles.title}>🏆 Pontuações</Text>
+            <Text style={styles.subtitle}>Seu progresso em todos os esportes</Text>
           </View>
           <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
@@ -197,11 +317,12 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
           </View>
         ) : (
           <View style={styles.emptyStateContainer}>
+            <Text style={styles.emptyStateIcon}>🏅</Text>
             <Text style={styles.emptyStateText}>
-              Você ainda não possui pontuações registradas.
+              Suas medalhas aparecerão aqui!
             </Text>
             <Text style={styles.emptyStateSubtext}>
-              Participe das aulas para começar a acumular pontos!
+              Participe das aulas para conquistar medalhas em todos os esportes! 🏆
             </Text>
             <TouchableOpacity style={styles.retryButton} onPress={loadSportsScores}>
               <Text style={styles.retryButtonText}>Atualizar</Text>
@@ -276,9 +397,14 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     backgroundColor: '#364859',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   retryButtonText: {
     color: '#FFFFFF',
@@ -291,45 +417,253 @@ const styles = StyleSheet.create({
     marginTop: 50,
     paddingHorizontal: 20,
   },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
   emptyStateText: {
-    fontSize: 18,
-    color: '#666',
+    fontSize: 20,
+    color: '#364859',
     textAlign: 'center',
     marginBottom: 10,
     fontFamily: 'Poppins',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
     fontFamily: 'Poppins',
+    lineHeight: 24,
   },
   content: {
     paddingHorizontal: 20,
   },
   statsContainer: {
+    marginBottom: 25,
+  },
+  // Card Principal de Conquistas
+  achievementCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 25,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#F9BB55',
+  },
+  achievementHeader: {
     flexDirection: 'row',
-    paddingVertical: 15,
-    gap: 15,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  achievementTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+  },
+  levelBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  levelIcon: {
+    fontSize: 24,
+  },
+  achievementContent: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  levelText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+    marginBottom: 5,
+  },
+  levelSubtext: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  achievementStats: {
+    flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 20,
   },
-  statCard: {
+  achievementStat: {
+    alignItems: 'center',
+  },
+  achievementStatNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+  },
+  achievementStatLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Poppins',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  averageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  averageLabel: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  averageBadge: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  averageNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Poppins',
+  },
+  // Cards de Estatísticas Detalhadas
+  detailedStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  detailedStatCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     alignItems: 'center',
     flex: 1,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  detailedStatIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  detailedStatNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+    marginBottom: 4,
+  },
+  detailedStatLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontFamily: 'Poppins',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  // Lista de Esportes
+  sportsList: {
+    gap: 15,
+  },
+  sportCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  sportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  sportIconContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
+  sportIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  sportIconText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Poppins',
+  },
+  medalBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
     shadowRadius: 3,
-    elevation: 3,
+    elevation: 5,
+  },
+  medalIcon: {
+    fontSize: 14,
+  },
+  sportInfo: {
+    flex: 1,
+  },
+  sportName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    fontFamily: 'Poppins',
+    marginBottom: 4,
+  },
+  achievementLevel: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  sportStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+    paddingVertical: 15,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+  },
+  statItem: {
+    alignItems: 'center',
   },
   statNumber: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#364859',
     fontFamily: 'Poppins',
@@ -338,149 +672,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontFamily: 'Poppins',
-    marginTop: 5,
-  },
-  sportsList: {
-    gap: 15,
-  },
-  sportCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  sportHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sportInfo: {
-    flex: 1,
-  },
-  sportName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#364859',
-    fontFamily: 'Poppins',
-    marginBottom: 5,
-  },
-  sportStats: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: 'Poppins',
-  },
-  totalScoreBadge: {
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 60,
-  },
-  totalScoreText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Poppins',
-  },
-  totalScoreLabel: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontFamily: 'Poppins',
     marginTop: 2,
   },
-  scoresList: {
+  progressContainer: {
     marginTop: 10,
   },
-  scoresTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#364859',
-    fontFamily: 'Poppins',
-    marginBottom: 10,
+  progressBar: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
   },
-  scoreItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
   },
-  scoreInfo: {
-    flex: 1,
-    marginRight: 15,
-  },
-  className: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    fontFamily: 'Poppins',
-    marginBottom: 2,
-  },
-  classDetails: {
+  progressText: {
     fontSize: 12,
     color: '#666',
     fontFamily: 'Poppins',
-    marginBottom: 2,
+    textAlign: 'center',
   },
-  teacherName: {
-    fontSize: 12,
-    color: '#888',
-    fontFamily: 'Poppins',
-    marginBottom: 5,
-  },
-  scoreNotes: {
-    fontSize: 11,
-    color: '#666',
-    fontFamily: 'Poppins',
-    fontStyle: 'italic',
-  },
-  scoreValue: {
-    alignItems: 'center',
-  },
-  scoreBadge: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  scoreNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    fontFamily: 'Poppins',
-  },
-  scoreLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    fontFamily: 'Poppins',
-    marginBottom: 2,
-  },
-  scoreDate: {
-    fontSize: 9,
-    color: '#888',
-    fontFamily: 'Poppins',
-  },
-  noScoresContainer: {
+  emptySportContainer: {
     alignItems: 'center',
     paddingVertical: 20,
   },
-  noScoresText: {
+  emptySportText: {
     fontSize: 14,
-    color: '#666',
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontFamily: 'Poppins',
+    marginBottom: 5,
+  },
+  emptySportSubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
     textAlign: 'center',
     fontFamily: 'Poppins',
     fontStyle: 'italic',

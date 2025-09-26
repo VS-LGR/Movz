@@ -237,6 +237,11 @@ class ApiService {
     return this.request('/scores/student/sports');
   }
 
+  // Buscar dados de presença do aluno
+  async getStudentAttendance() {
+    return this.request('/scores/student/attendance');
+  }
+
   // ===== CHAT =====
 
   async sendMessage(message) {

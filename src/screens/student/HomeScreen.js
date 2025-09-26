@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,74 @@ import {
   Dimensions,
   SafeAreaView,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import apiService from '../../services/apiService';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
+  const [sportsScores, setSportsScores] = useState([]);
+  const [attendanceData, setAttendanceData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const sportsScores = [
-    { score: '90', label: 'Esporte' },
-    { score: '100', label: 'Esporte' },
-    { score: '30', label: 'Esporte' },
-  ];
+  useEffect(() => {
+    loadStudentData();
+  }, []);
 
-  const attendanceDays = [
-    { day: 'seg', present: true },
-    { day: 'ter', present: true },
-    { day: 'qua', present: false },
-    { day: 'qui', present: false },
-    { day: 'sex', present: false },
-  ];
+  const loadStudentData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Buscar pontuações dos esportes
+      const scoresResponse = await apiService.getStudentSportsScores();
+      if (scoresResponse.success) {
+        // Pegar os top 3 esportes com melhor pontuação
+        const topSports = scoresResponse.data
+          .sort((a, b) => b.averageScore - a.averageScore)
+          .slice(0, 3)
+          .map(sport => ({
+            score: sport.averageScore.toString(),
+            label: sport.sport.name,
+            sportId: sport.sport.id
+          }));
+        setSportsScores(topSports);
+      }
+
+      // Buscar dados de presença
+      const attendanceResponse = await apiService.getStudentAttendance();
+      if (attendanceResponse.success) {
+        setAttendanceData(attendanceResponse.data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do aluno:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getAttendanceDays = () => {
+    if (!attendanceData || !attendanceData.recentAttendance) {
+      return [
+        { day: 'seg', present: false },
+        { day: 'ter', present: false },
+        { day: 'qua', present: false },
+        { day: 'qui', present: false },
+        { day: 'sex', present: false },
+      ];
+    }
+
+    // Converter dados de presença para formato de dias da semana
+    const days = ['seg', 'ter', 'qua', 'qui', 'sex'];
+    return days.map((day, index) => {
+      const attendanceRecord = attendanceData.recentAttendance[index];
+      return {
+        day,
+        present: attendanceRecord ? attendanceRecord.isPresent : false
+      };
+    });
+  };
 
   const medals = [
     { month: 'Março', image: require('../../assets/images/Medalha_2.svg') },
@@ -105,24 +153,37 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         {/* Attendance Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Presença nas aulas</Text>
-          <View style={styles.attendanceContainer}>
-            {attendanceDays.map((day, index) => (
-              <View key={index} style={styles.dayContainer}>
-                <View style={[styles.dayCircle, day.present && styles.dayCirclePresent]}>
-                  {day.present && (
-                    <View style={styles.checkmark}>
-                      <View style={styles.checkmarkOuter} />
-                      <View style={styles.checkmarkInner} />
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#F9BB55" />
+              <Text style={styles.loadingText}>Carregando dados...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.attendanceContainer}>
+                {getAttendanceDays().map((day, index) => (
+                  <View key={index} style={styles.dayContainer}>
+                    <View style={[styles.dayCircle, day.present && styles.dayCirclePresent]}>
+                      {day.present && (
+                        <View style={styles.checkmark}>
+                          <View style={styles.checkmarkOuter} />
+                          <View style={styles.checkmarkInner} />
+                        </View>
+                      )}
                     </View>
-                  )}
-                </View>
-                <Text style={styles.dayLabel}>{day.day}</Text>
+                    <Text style={styles.dayLabel}>{day.day}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-          <Text style={styles.attendanceStreak}>
-            Você está a 30 dias sem faltar as aulas
-          </Text>
+              <Text style={styles.attendanceStreak}>
+                {attendanceData ? (
+                  `Taxa de presença: ${attendanceData.attendanceRate}% • Sequência: ${attendanceData.streak} aulas`
+                ) : (
+                  'Carregando dados de presença...'
+                )}
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Medals Card */}
@@ -393,6 +454,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000',
     textAlign: 'center',
+    fontFamily: 'Poppins',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 10,
     fontFamily: 'Poppins',
   },
   medalBannerContainer: {

@@ -383,32 +383,30 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
       });
     }
 
-    // Buscar esportes do aluno
-    const userSports = await prisma.userSport.findMany({
+    // Buscar todos os esportes ativos (não apenas os inscritos)
+    const allSports = await prisma.sport.findMany({
       where: {
-        userId,
         isActive: true
       },
-      include: {
-        sport: {
-          select: {
-            id: true,
-            name: true,
-            icon: true,
-            color: true
-          }
-        }
+      select: {
+        id: true,
+        name: true,
+        icon: true,
+        color: true
+      },
+      orderBy: {
+        name: 'asc'
       }
     });
 
     // Para cada esporte, buscar pontuações das aulas
     const sportsWithScores = await Promise.all(
-      userSports.map(async (userSport) => {
+      allSports.map(async (sport) => {
         // Buscar pontuações das aulas para este esporte
         const classScores = await prisma.classScore.findMany({
           where: {
             studentId: userId,
-            sportId: userSport.sportId
+            sportId: sport.id
           },
           include: {
             class: {
@@ -437,7 +435,7 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
         const totalClasses = classScores.length;
 
         return {
-          sport: userSport.sport,
+          sport: sport,
           totalScore,
           averageScore,
           totalClasses,
@@ -453,6 +451,138 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao buscar pontuações do aluno:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar dados de presença do aluno
+router.get('/student/attendance', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Verificar se é aluno
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true }
+    });
+
+    if (!user || user.userType !== 'STUDENT') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
+      });
+    }
+
+    // Buscar a turma do aluno
+    const classStudent = await prisma.classStudent.findFirst({
+      where: {
+        studentId: userId,
+        isActive: true
+      },
+      include: {
+        class: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!classStudent) {
+      return res.json({
+        success: true,
+        data: {
+          attendanceRate: 0,
+          totalClasses: 0,
+          presentClasses: 0,
+          absentClasses: 0,
+          recentAttendance: [],
+          streak: 0
+        },
+        message: 'Aluno não está em nenhuma turma ativa'
+      });
+    }
+
+    // Buscar aulas da turma do aluno
+    const classClasses = await prisma.teacherClass.findMany({
+      where: {
+        classId: classStudent.classId,
+        isCompleted: true
+      },
+      orderBy: {
+        date: 'desc'
+      },
+      take: 30 // Últimas 30 aulas
+    });
+
+    // Buscar presenças do aluno (simulando com base nas pontuações)
+    // Se o aluno tem pontuação na aula, significa que esteve presente
+    const attendanceData = await Promise.all(
+      classClasses.map(async (classItem) => {
+        const hasScore = await prisma.classScore.findFirst({
+          where: {
+            classId: classStudent.classId,
+            studentId: userId,
+            createdAt: {
+              gte: classItem.date,
+              lt: new Date(classItem.date.getTime() + 24 * 60 * 60 * 1000) // Dentro do mesmo dia
+            }
+          }
+        });
+
+        return {
+          date: classItem.date,
+          isPresent: !!hasScore,
+          classSubject: classItem.subject,
+          teacherName: classStudent.class.teacher.name
+        };
+      })
+    );
+
+    // Calcular estatísticas
+    const totalClasses = attendanceData.length;
+    const presentClasses = attendanceData.filter(a => a.isPresent).length;
+    const absentClasses = totalClasses - presentClasses;
+    const attendanceRate = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
+
+    // Calcular sequência de presenças
+    let streak = 0;
+    for (let i = 0; i < attendanceData.length; i++) {
+      if (attendanceData[i].isPresent) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        attendanceRate,
+        totalClasses,
+        presentClasses,
+        absentClasses,
+        recentAttendance: attendanceData.slice(0, 7), // Últimos 7 dias
+        streak,
+        classInfo: {
+          name: classStudent.class.name,
+          school: classStudent.class.school,
+          grade: classStudent.class.grade,
+          teacher: classStudent.class.teacher.name
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar presença do aluno:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
