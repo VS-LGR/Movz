@@ -72,7 +72,7 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
         { id: 'scores', title: 'Pontuações', y: 339, height: 42, screen: 'studentScores' },
         { id: 'ranking', title: 'Ranking', y: 408, height: 42, screen: 'ranking' },
         { id: 'chat', title: 'Chat', y: 477, height: 41, screen: 'chat' },
-        { id: 'tutorial', title: 'Tutorial', y: 546, height: 42, screen: 'tutorial' },
+        { id: 'tutorial', title: 'Treinos', y: 546, height: 42, screen: 'tutorial' },
         { id: 'logout', title: 'Sair', y: 615, height: 42, screen: 'logout' },
       ];
     }
@@ -164,10 +164,7 @@ const styles = StyleSheet.create({
     width: 168,
     height: '100%',
     backgroundColor: '#F19341', // Solid orange color
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    boxShadow: '0 0 4px rgba(0, 0, 0, 0.2)',
     elevation: 8,
   },
   // Half circle - connected to left side of rectangle
@@ -181,11 +178,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28, // Only top-left corner rounded
     borderBottomLeftRadius: 28, // Only bottom-left corner rounded
     // No right radius to create perfect connection with rectangle
-    // Custom shadow only on rounded parts
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 }, // Only left shadow
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    // Shadow only on the left curved edge - no shadow on straight right side
+    boxShadow: '-3px 0 4px rgba(0, 0, 0, 0.15)',
     elevation: 8, // Same as rectangle for continuity
   },
   // Close button in half circle - clean and centered
