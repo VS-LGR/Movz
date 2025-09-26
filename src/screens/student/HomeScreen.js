@@ -55,26 +55,11 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
     }
   };
 
-  const getAttendanceDays = () => {
-    if (!attendanceData || !attendanceData.recentAttendance) {
-      return [
-        { day: 'seg', present: false },
-        { day: 'ter', present: false },
-        { day: 'qua', present: false },
-        { day: 'qui', present: false },
-        { day: 'sex', present: false },
-      ];
-    }
-
-    // Converter dados de presença para formato de dias da semana
-    const days = ['seg', 'ter', 'qua', 'qui', 'sex'];
-    return days.map((day, index) => {
-      const attendanceRecord = attendanceData.recentAttendance[index];
-      return {
-        day,
-        present: attendanceRecord ? attendanceRecord.isPresent : false
-      };
-    });
+  const getAttendanceColor = (rate) => {
+    if (rate >= 90) return '#4CAF50'; // Verde
+    if (rate >= 70) return '#FF9800'; // Laranja
+    if (rate >= 50) return '#FFC107'; // Amarelo
+    return '#D9493C'; // Vermelho
   };
 
   const medals = [
@@ -152,37 +137,49 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
 
         {/* Attendance Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Presença nas aulas</Text>
+          <View style={styles.attendanceCardHeader}>
+            <Text style={styles.cardTitle}>📊 Presenças</Text>
+            <TouchableOpacity 
+              style={styles.seeMoreButton}
+              onPress={() => onNavigate('attendance')}
+            >
+              <Text style={styles.seeMoreText}>Ver mais</Text>
+            </TouchableOpacity>
+          </View>
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color="#F9BB55" />
               <Text style={styles.loadingText}>Carregando dados...</Text>
             </View>
           ) : (
-            <>
-              <View style={styles.attendanceContainer}>
-                {getAttendanceDays().map((day, index) => (
-                  <View key={index} style={styles.dayContainer}>
-                    <View style={[styles.dayCircle, day.present && styles.dayCirclePresent]}>
-                      {day.present && (
-                        <View style={styles.checkmark}>
-                          <View style={styles.checkmarkOuter} />
-                          <View style={styles.checkmarkInner} />
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.dayLabel}>{day.day}</Text>
-                  </View>
-                ))}
+            <View style={styles.attendanceSummary}>
+              <View style={styles.attendancePercentageContainer}>
+                <View style={[
+                  styles.attendancePercentageBadge, 
+                  { backgroundColor: getAttendanceColor(attendanceData?.attendanceRate || 0) }
+                ]}>
+                  <Text style={styles.attendancePercentage}>
+                    {attendanceData?.attendanceRate || 0}%
+                  </Text>
+                </View>
+                <Text style={styles.attendancePercentageLabel}>Taxa de Presença</Text>
               </View>
-              <Text style={styles.attendanceStreak}>
-                {attendanceData ? (
-                  `Taxa de presença: ${attendanceData.attendanceRate}% • Sequência: ${attendanceData.streak} aulas`
-                ) : (
-                  'Carregando dados de presença...'
-                )}
-              </Text>
-            </>
+              
+              <View style={styles.attendanceQuickStats}>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatNumber}>{attendanceData?.presentClasses || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Presentes</Text>
+                </View>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatNumber}>{attendanceData?.absentClasses || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Faltas</Text>
+                </View>
+                <View style={styles.quickStatItem}>
+                  <Text style={styles.quickStatNumber}>{attendanceData?.totalClasses || 0}</Text>
+                  <Text style={styles.quickStatLabel}>Total</Text>
+                </View>
+              </View>
+            </View>
           )}
         </View>
 
@@ -455,6 +452,66 @@ const styles = StyleSheet.create({
     color: '#000',
     textAlign: 'center',
     fontFamily: 'Poppins',
+  },
+  attendanceCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  attendanceSummary: {
+    alignItems: 'center',
+  },
+  attendancePercentageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  attendancePercentageBadge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  attendancePercentage: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontFamily: 'Poppins',
+  },
+  attendancePercentageLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Poppins',
+    textAlign: 'center',
+  },
+  attendanceQuickStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  quickStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickStatNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#364859',
+    fontFamily: 'Poppins',
+    marginBottom: 4,
+  },
+  quickStatLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Poppins',
+    textAlign: 'center',
   },
   loadingContainer: {
     alignItems: 'center',

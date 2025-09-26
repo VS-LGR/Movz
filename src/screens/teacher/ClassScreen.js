@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   attendanceToggleAbsent: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
   },
   attendanceToggleText: {
     fontSize: 12,

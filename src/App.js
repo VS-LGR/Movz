@@ -6,6 +6,7 @@ import LoginScreen from './screens/auth/LoginScreen';
 import HomeScreen from './screens/student/HomeScreen';
 import MyClassScreen from './screens/student/MyClassScreen';
 import StudentScoresScreen from './screens/student/StudentScoresScreen';
+import AttendanceScreen from './screens/student/AttendanceScreen';
 import RankingScreen from './screens/student/RankingScreen';
 import TutorialScreen from './screens/student/TutorialScreen';
 import ChatScreen from './screens/student/ChatScreen';
@@ -362,6 +363,16 @@ export default function App() {
       case 'studentScores':
         return (
           <StudentScoresScreen
+            isMenuVisible={isMenuVisible}
+            setIsMenuVisible={setIsMenuVisible}
+            onNavigate={handleNavigate}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        );
+      case 'attendance':
+        return (
+          <AttendanceScreen
             isMenuVisible={isMenuVisible}
             setIsMenuVisible={setIsMenuVisible}
             onNavigate={handleNavigate}

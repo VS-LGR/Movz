@@ -59,7 +59,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     if (score >= 90) return '#4CAF50'; // Verde
     if (score >= 70) return '#FF9800'; // Laranja
     if (score >= 50) return '#FFC107'; // Amarelo
-    return '#F44336'; // Vermelho
+    return '#D9493C'; // Vermelho
   };
 
   const getScoreLabel = (score) => {
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: 'red',
+    color: '#D9493C',
     textAlign: 'center',
     marginBottom: 15,
     fontFamily: 'Poppins',

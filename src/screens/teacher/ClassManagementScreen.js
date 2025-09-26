@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2196F3',
   },
   deleteButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
   },
   actionButtonText: {
     fontSize: 12,
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
     justifyContent: 'center',
     alignItems: 'center',
   },

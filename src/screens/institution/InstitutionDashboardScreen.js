@@ -1420,7 +1420,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   removeButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,

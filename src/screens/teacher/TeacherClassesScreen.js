@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9800',
   },
   deleteButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
   },
   actionButtonText: {
     fontSize: 11,

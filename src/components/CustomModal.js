@@ -36,7 +36,7 @@ const CustomModal = ({
       case 'error':
         return {
           icon: '❌',
-          iconColor: '#F44336',
+          iconColor: '#D9493C',
           titleColor: '#D32F2F',
         };
       default:
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   dangerButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#D9493C',
   },
   successButton: {
     backgroundColor: '#4CAF50',
