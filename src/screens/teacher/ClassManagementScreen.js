@@ -178,7 +178,7 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
   const confirmDeleteClass = async (classId) => {
     try {
       setIsLoading(true);
-      const response = await apiService.deleteClass(classId);
+      const response = await apiService.deleteTurma(classId);
 
       if (response.success) {
         Alert.alert('Sucesso', 'Turma removida com sucesso!');

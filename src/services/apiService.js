@@ -331,11 +331,12 @@ class ApiService {
     });
   }
 
-  async deleteClass(classId) {
+  async deleteTurma(classId) {
     return this.request(`/class-management/classes/${classId}`, {
       method: 'DELETE',
     });
   }
+
 
   async getAvailableStudents(classId = null, search = '') {
     const params = new URLSearchParams();
