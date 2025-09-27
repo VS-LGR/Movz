@@ -229,7 +229,10 @@ router.get('/users/search', authenticateToken, requireInstitution, async (req, r
     const user = await prisma.user.findFirst({
       where: {
         cpf,
-        institutionId: req.user.institutionId,
+        OR: [
+          { institutionId: null }, // Usuários não vinculados a nenhuma instituição
+          { institutionId: req.user.institutionId } // Usuários da mesma instituição
+        ],
         isActive: true
       },
       select: {

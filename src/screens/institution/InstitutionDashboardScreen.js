@@ -13,10 +13,14 @@ import {
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import CustomModal from '../../components/CustomModal';
+import CustomAlert from '../../components/CustomAlert';
+import useCustomAlert from '../../hooks/useCustomAlert';
+import { normalizeCPF } from '../../utils/cpfUtils';
 import ClassDetailsScreen from './ClassDetailsScreen';
 
 const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
+  const { alert, showError, showWarning, showSuccess, hideAlert } = useCustomAlert();
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,15 +63,11 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
   useEffect(() => {
     const initializeData = async () => {
       // Configurar token de autenticação
-      const token = localStorage.getItem('token');
-      console.log('🔑 Token encontrado:', token ? 'Sim' : 'Não');
-      
+      const token = localStorage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
-        console.log('✅ Token configurado no apiService');
       } else {
-        console.log('❌ Token não encontrado no localStorage');
-        Alert.alert('Erro', 'Token de autenticação não encontrado. Faça login novamente.');
+        showError('🔐 Token Não Encontrado', 'Sua sessão expirou. Faça login novamente para continuar.');
         return;
       }
       
@@ -240,30 +240,45 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       setIsLoading(true);
       
       // Verificar se o token está configurado
-      const token = localStorage.getItem('token');
-      console.log('🔑 Token atual:', token ? 'Presente' : 'Ausente');
+      const token = localStorage.getItem('authToken');
       
       if (!token) {
-        Alert.alert('Erro', 'Token de autenticação não encontrado. Faça login novamente.');
+        showError('🔐 Token Não Encontrado', 'Sua sessão expirou. Faça login novamente para continuar.');
         return;
       }
       
       // Garantir que o token está configurado no apiService
       apiService.setToken(token);
       
-      console.log('🔍 Buscando usuário com CPF:', cpfSearch);
-      const response = await apiService.searchUserByCPF(cpfSearch);
-      console.log('📡 Resposta da API:', response);
+      // Normalizar CPF removendo formatação
+      const normalizedCPF = normalizeCPF(cpfSearch);
+      
+      if (normalizedCPF.length !== 11) {
+        showWarning('⚠️ CPF Inválido', 'O CPF deve ter 11 dígitos. Verifique se foi digitado corretamente.');
+        return;
+      }
+      
+      const response = await apiService.searchUserByCPF(normalizedCPF);
       
       if (response.success) {
         setFoundUser(response.data);
       } else {
         setFoundUser(null);
-        Alert.alert('Usuário não encontrado', 'Nenhum usuário encontrado com este CPF');
+        showWarning('👤 Usuário Não Encontrado', 'Nenhum usuário disponível encontrado com este CPF. Verifique se o CPF está correto e se o usuário não está já vinculado a outra instituição.');
       }
     } catch (error) {
       console.error('Erro ao buscar usuário:', error);
-      Alert.alert('Erro', 'Erro ao buscar usuário');
+      
+      // Tratar diferentes tipos de erro
+      if (error.message.includes('Failed to fetch')) {
+        showError('🌐 Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
+      } else if (error.message.includes('404')) {
+        showWarning('👤 Usuário Não Encontrado', 'Nenhum usuário disponível encontrado com este CPF.');
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        showError('🔐 Acesso Negado', 'Sua sessão expirou. Faça login novamente para continuar.');
+      } else {
+        showError('❌ Erro na Busca', 'Ocorreu um erro ao buscar o usuário. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -275,18 +290,28 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       const response = await apiService.addUserToInstitution(userId);
       
       if (response.success) {
-        Alert.alert('Sucesso', 'Usuário adicionado à instituição!');
+        showSuccess('✅ Usuário Adicionado', 'O usuário foi adicionado à instituição com sucesso!');
         setShowAddUserModal(false);
         setFoundUser(null);
         setCpfSearch('');
         loadUsers();
         loadStats();
       } else {
-        Alert.alert('Erro', response.message || 'Erro ao adicionar usuário');
+        showError('❌ Erro ao Adicionar', response.message || 'Não foi possível adicionar o usuário à instituição.');
       }
     } catch (error) {
       console.error('Erro ao adicionar usuário:', error);
-      Alert.alert('Erro', 'Erro ao adicionar usuário');
+      
+      // Tratar diferentes tipos de erro
+      if (error.message.includes('Failed to fetch')) {
+        showError('🌐 Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
+      } else if (error.message.includes('400')) {
+        showWarning('⚠️ Dados Inválidos', 'Os dados fornecidos são inválidos. Verifique as informações e tente novamente.');
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        showError('🔐 Acesso Negado', 'Sua sessão expirou. Faça login novamente para continuar.');
+      } else {
+        showError('❌ Erro ao Adicionar', 'Ocorreu um erro inesperado ao adicionar o usuário. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -312,7 +337,6 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       });
       
       const response = await apiService.addStudentToInstitutionClass(selectedClassId, selectedStudentId);
-      console.log('📡 Resposta da API:', response);
       
       if (response.success) {
         Alert.alert('Sucesso', 'Aluno adicionado à turma com sucesso!');
@@ -425,11 +449,9 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
   const handleCreateClass = async () => {
     const { name, teacherId, school, grade } = newClass;
 
-    console.log('🔵 Dados da turma a ser criada:', newClass);
-    console.log('🔵 Campos obrigatórios:', { name, teacherId, school, grade });
 
     if (!name.trim() || !teacherId || !school.trim() || !grade.trim()) {
-      Alert.alert('Erro', 'Todos os campos obrigatórios devem ser preenchidos');
+      showError('❌ Campos Obrigatórios', 'Todos os campos obrigatórios devem ser preenchidos.');
       return;
     }
 
@@ -437,13 +459,18 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       setIsLoading(true);
       
       // Buscar professor por CPF para obter o ID
-      // Remover formatação do CPF (pontos e hífen)
-      const cleanCPF = teacherId.replace(/\D/g, '');
-      console.log('🔍 Buscando professor por CPF:', cleanCPF);
-      const teacherResponse = await apiService.searchUserByCPF(cleanCPF);
+      // Normalizar CPF removendo formatação
+      const normalizedCPF = normalizeCPF(teacherId);
+      
+      if (normalizedCPF.length !== 11) {
+        showWarning('⚠️ CPF Inválido', 'O CPF do professor deve ter 11 dígitos. Verifique se foi digitado corretamente.');
+        return;
+      }
+      
+      const teacherResponse = await apiService.searchUserByCPF(normalizedCPF);
       
       if (!teacherResponse.success || !teacherResponse.data) {
-        Alert.alert('Erro', 'Professor não encontrado com este CPF');
+        showWarning('👨‍🏫 Professor Não Encontrado', 'Nenhum professor encontrado com este CPF. Verifique se o CPF está correto e se o professor está cadastrado na instituição.');
         return;
       }
       
@@ -451,18 +478,16 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       
       // Verificar se é um professor
       if (teacher.userType !== 'TEACHER') {
-        Alert.alert('Erro', 'O usuário encontrado não é um professor');
+        showError('❌ Tipo de Usuário Incorreto', 'O usuário encontrado não é um professor. Verifique o CPF digitado.');
         return;
       }
       
       // Verificar se o professor pertence à instituição
       if (teacher.institutionId !== currentUser.id) {
-        Alert.alert('Erro', 'Este professor não pertence à sua instituição');
+        showError('❌ Professor Não Vinculado', 'Este professor não pertence à sua instituição. Adicione o professor à instituição primeiro.');
         return;
       }
       
-      console.log('✅ Professor encontrado:', teacher.name);
-      console.log('🆔 ID do professor:', teacher.id);
       
       // Preparar dados da turma com o ID do professor
       const classData = {
@@ -473,22 +498,30 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
         grade: newClass.grade
       };
       
-      console.log('🔵 Enviando dados para API:', classData);
       const response = await apiService.createInstitutionClass(classData);
-      console.log('🔵 Resposta da API:', response);
       
       if (response.success) {
-        Alert.alert('Sucesso', 'Turma criada com sucesso!');
+        showSuccess('✅ Turma Criada', 'A turma foi criada com sucesso!');
         setShowCreateClassModal(false);
         setNewClass({ name: '', description: '', teacherId: '', school: '', grade: '' });
         loadClasses();
         loadStats();
       } else {
-        Alert.alert('Erro', response.message || 'Erro ao criar turma');
+        showError('❌ Erro ao Criar Turma', response.message || 'Não foi possível criar a turma. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro ao criar turma:', error);
-      Alert.alert('Erro', 'Erro ao criar turma');
+      
+      // Tratar diferentes tipos de erro
+      if (error.message.includes('Failed to fetch')) {
+        showError('🌐 Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
+      } else if (error.message.includes('400')) {
+        showWarning('⚠️ Dados Inválidos', 'Os dados fornecidos são inválidos. Verifique as informações e tente novamente.');
+      } else if (error.message.includes('401') || error.message.includes('403')) {
+        showError('🔐 Acesso Negado', 'Sua sessão expirou. Faça login novamente para continuar.');
+      } else {
+        showError('❌ Erro ao Criar Turma', 'Ocorreu um erro inesperado ao criar a turma. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1114,11 +1147,9 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
       </Modal>
 
       {/* Modal de Confirmação */}
-      {console.log('🔴 Renderizando modal - visible:', modalVisible, 'config:', modalConfig)}
       <CustomModal
         visible={modalVisible}
         onClose={() => {
-          console.log('🔴 Modal onClose chamado');
           setModalVisible(false);
         }}
         title={modalConfig.title}
@@ -1139,6 +1170,15 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
             onPress: modalConfig.onConfirm
           }
         ]}
+      />
+      
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
       />
     </SafeAreaView>
   );

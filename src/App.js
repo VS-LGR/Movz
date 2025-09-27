@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import Storage from './utils/storage'; // Custom storage wrapper
 import apiService from './services/apiService';
+import useCustomAlert from './hooks/useCustomAlert';
+import CustomAlert from './components/CustomAlert';
 import LoginScreen from './screens/auth/LoginScreen';
 import HomeScreen from './screens/student/HomeScreen';
 import MyClassScreen from './screens/student/MyClassScreen';
@@ -29,6 +31,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const { alert, showError, hideAlert } = useCustomAlert();
 
   // Verificar status de autenticação ao carregar o app
   useEffect(() => {
@@ -37,41 +40,16 @@ export default function App() {
 
   const checkAuthStatus = async () => {
     try {
-      const token = await Storage.getItem('authToken');
-      const userType = await Storage.getItem('userType');
-      const userData = await Storage.getItem('currentUser');
-
-      if (token && userType && userData) {
-        // Configurar token primeiro
-        apiService.setToken(token);
-        
-        // Verificar se o token ainda é válido
-        const response = await apiService.verifyToken();
-        if (response.success) {
-          setCurrentUser(JSON.parse(userData));
-          setIsAuthenticated(true);
-          
-          // Navegar para a tela apropriada baseada no tipo de usuário
-          switch (userType) {
-            case 'STUDENT':
-              setCurrentScreen('home');
-              break;
-            case 'TEACHER':
-              setCurrentScreen('teacherClasses');
-              break;
-            case 'INSTITUTION':
-              setCurrentScreen('institutionDashboard');
-              break;
-            default:
-              setCurrentScreen('login');
-          }
-        } else {
-          // Token inválido, limpar dados
-          await clearAuthData();
-        }
-      }
+      // Sempre iniciar na página de login
+      setCurrentScreen('login');
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      
+      // Limpar dados de autenticação antigos
+      await clearAuthData();
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
+      showError('⚠️ Erro de Inicialização', 'Ocorreu um erro ao inicializar o aplicativo. Tente recarregar a página.');
       await clearAuthData();
     }
   };
@@ -90,7 +68,6 @@ export default function App() {
     try {
       // Garantir que userType não seja undefined
       const finalUserType = userType || userData.userType || 'STUDENT';
-      console.log('🔵 Tentando login:', { email: userData.email, userType: finalUserType, originalUserType: userType });
       
       let response;
       
@@ -101,7 +78,6 @@ export default function App() {
         response = await apiService.login(userData.email, userData.password, finalUserType);
       }
       
-      console.log('🔵 Resposta do login:', response);
       
       if (response.success) {
         const { token, user, institution } = response.data;
@@ -132,10 +108,25 @@ export default function App() {
             setCurrentScreen('home');
         }
       } else {
-        throw new Error(response.message || 'Erro no login');
+        // Mostrar erro específico baseado na resposta
+        const errorMessage = response.message || 'Erro no login';
+        showError('❌ Erro no Login', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Tratar diferentes tipos de erro
+      if (error.message.includes('Failed to fetch')) {
+        showError('🌐 Erro de Conexão', 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
+      } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        showError('🔐 Credenciais Inválidas', 'Email ou senha incorretos. Verifique seus dados e tente novamente.');
+      } else if (error.message.includes('500') || error.message.includes('Internal Server Error')) {
+        showError('⚠️ Erro do Servidor', 'Ocorreu um erro interno. Tente novamente em alguns minutos.');
+      } else {
+        showError('❌ Erro no Login', error.message || 'Ocorreu um erro inesperado. Tente novamente.');
+      }
+      
       throw error;
     }
   };
@@ -145,7 +136,7 @@ export default function App() {
       // Se institutionData já contém os dados da instituição (vem do login bem-sucedido)
       if (institutionData.id && institutionData.name) {
         // Configurar token do localStorage
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
         if (token) {
           apiService.setToken(token);
           // Também salvar no Storage para consistência
@@ -249,7 +240,6 @@ export default function App() {
   };
 
   const handleNavigate = (screen, params = null) => {
-    console.log('🔵 Navegando para:', screen, 'com parâmetros:', params);
     if (screen === 'logout') {
       handleLogout();
     } else {
@@ -519,6 +509,13 @@ export default function App() {
     <>
       <StatusBar style="auto" />
       {renderScreen()}
+      <CustomAlert
+        visible={alert.visible}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+        onClose={hideAlert}
+      />
     </>
   );
 }

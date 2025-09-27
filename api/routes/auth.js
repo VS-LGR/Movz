@@ -224,8 +224,53 @@ router.post('/login', async (req, res) => {
 // Verificar token
 router.get('/verify', authenticateToken, async (req, res) => {
   try {
+    // Verificar se é instituição ou usuário
+    if (req.user.userType === 'INSTITUTION') {
+      const institution = await prisma.institution.findUnique({
+        where: { id: req.user.institutionId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          cnpj: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          description: true,
+          createdAt: true
+        }
+      });
+
+      if (!institution) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token inválido - instituição não encontrada'
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          ...institution,
+          userType: 'INSTITUTION'
+        }
+      });
+    }
+
+    // Para usuários normais
+    const userId = req.user.userId || req.user.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token inválido - ID do usuário não encontrado'
+      });
+    }
+    
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
+      where: { id: userId },
       select: {
         id: true,
         name: true,
@@ -235,14 +280,15 @@ router.get('/verify', authenticateToken, async (req, res) => {
         class: true,
         avatar: true,
         userType: true,
+        institutionId: true,
         createdAt: true
       }
     });
 
     if (!user) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: 'Usuário não encontrado'
+        message: 'Token inválido - usuário não encontrado'
       });
     }
 

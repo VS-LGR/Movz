@@ -27,7 +27,6 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
 
   // Debug: Log quando userType muda
   useEffect(() => {
-    console.log('🔵 LoginScreen - userType mudou para:', userType);
   }, [userType]);
 
   // Mostrar mensagem de sucesso quando vier do cadastro
@@ -42,8 +41,6 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
   }, [showSuccessMessage, onSuccessMessageShown, showSuccess]);
 
   const handleLogin = async () => {
-    console.log('🔵 LoginScreen - userType atual:', userType);
-    console.log('🔵 LoginScreen - email:', email);
     
     if (!email.trim() || !password.trim()) {
       showError('❌ Campos Obrigatórios', 'Por favor, preencha todos os campos');
@@ -53,7 +50,6 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
     setIsLoading(true);
 
     try {
-      console.log('🔵 LoginScreen - Chamando onLogin com:', { email, password, userType });
       await onLogin({ email, password, userType }, userType);
     } catch (error) {
       showError('❌ Erro no Login', error.message || 'Erro ao fazer login');
