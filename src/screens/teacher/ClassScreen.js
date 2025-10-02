@@ -49,7 +49,29 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     console.log('🔵 ClassScreen - subject:', classData.subject);
     loadStudents();
     loadSports();
+    checkAttendanceStatus(); // Verificar se chamada já foi realizada
   }, []);
+
+  // Verificar se a chamada já foi realizada
+  const checkAttendanceStatus = async () => {
+    if (!classData?.id) return;
+    
+    try {
+      console.log('🔵 ClassScreen - Verificando status da chamada para aula:', classData.id);
+      const response = await apiService.getClassAttendance(classData.id, classData.date);
+      
+      if (response.success && response.data.attendances && response.data.attendances.length > 0) {
+        console.log('🔵 ClassScreen - Chamada já foi realizada, atualizando estado');
+        setAttendanceTaken(true);
+      } else {
+        console.log('🔵 ClassScreen - Chamada ainda não foi realizada');
+        setAttendanceTaken(false);
+      }
+    } catch (error) {
+      console.error('🔴 ClassScreen - Erro ao verificar status da chamada:', error);
+      setAttendanceTaken(false);
+    }
+  };
 
   const loadStudents = async () => {
     try {
@@ -475,14 +497,24 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       <View style={styles.actionButtonsContainer}>
         {/* Botão de Lista de Presença */}
         <TouchableOpacity 
-          style={[styles.actionButton, styles.attendanceButton]}
+          style={[
+            styles.actionButton, 
+            styles.attendanceButton,
+            attendanceTaken && styles.attendanceButtonCompleted
+          ]}
           onPress={() => {
             console.log('🔵 ClassScreen - Navegando para attendanceList com classData:', classData);
             onNavigate('attendanceList', { classData });
           }}
           disabled={loading}
         >
-          <Text style={styles.actionButtonText}>📋 Lista de Presença</Text>
+          <Text style={styles.actionButtonText}>
+            {(() => {
+              const text = attendanceTaken ? '✅ Chamada Realizada' : '📋 Lista de Presença';
+              console.log('🔵 ClassScreen - Botão Lista de Presença:', text, 'attendanceTaken:', attendanceTaken);
+              return text;
+            })()}
+          </Text>
         </TouchableOpacity>
 
         {/* Botão de Pontuação */}
@@ -937,6 +969,9 @@ const styles = StyleSheet.create({
   },
   attendanceButton: {
     backgroundColor: '#2196F3',
+  },
+  attendanceButtonCompleted: {
+    backgroundColor: '#4CAF50', // Verde para indicar que foi realizada
   },
   scoringButton: {
     backgroundColor: '#F9BB55',

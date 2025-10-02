@@ -45,6 +45,7 @@ const AttendanceListScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
   // REMOVIDO: Seletor de data desnecessário - a data vem da aula criada
   const [loading, setLoading] = useState(false);
   const [attendanceTaken, setAttendanceTaken] = useState(false);
+  const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, absent: 0, total: 0 });
 
   useEffect(() => {
     // Obter dados da turma dos parâmetros de navegação
@@ -68,6 +69,55 @@ const AttendanceListScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
     }
   }, [classData]);
 
+  useEffect(() => {
+    if (classData) {
+      console.log('🔵 AttendanceListScreen - Verificando presenças existentes para classData:', classData);
+      checkExistingAttendance(); // Verificar se já existem presenças salvas
+    }
+  }, [classData?.id, classData?.date]); // Dependências específicas
+
+  const checkExistingAttendance = async () => {
+    if (!classData?.id) {
+      console.log('🔴 AttendanceListScreen - classData.id não encontrado para verificar presenças');
+      return;
+    }
+
+    try {
+      console.log('🔵 AttendanceListScreen - Verificando presenças existentes para aula:', classData.id);
+      const response = await apiService.getClassAttendance(classData.id, classData.date);
+      console.log('🔵 AttendanceListScreen - Resposta da API de presenças existentes:', response);
+
+      if (response.success && response.data.attendances && response.data.attendances.length > 0) {
+        console.log('🔵 AttendanceListScreen - Presenças encontradas na API:', response.data.attendances);
+        console.log('🔵 AttendanceListScreen - Presenças já existem, marcando como realizada');
+        setAttendanceTaken(true);
+        
+        // Carregar as presenças existentes
+        const existingAttendance = {};
+        response.data.attendances.forEach(att => {
+          existingAttendance[att.studentId] = att.isPresent ? 'present' : 'absent';
+        });
+        setAttendanceData(existingAttendance);
+        setAttendanceSummary(response.data.summary);
+        console.log('🔵 AttendanceListScreen - Estado atualizado:', {
+          attendanceTaken: true,
+          attendanceData: existingAttendance,
+          summary: response.data.summary
+        });
+        
+        // Forçar re-render imediatamente
+        console.log('🔵 AttendanceListScreen - Forçando re-render após atualização do estado');
+      } else {
+        console.log('🔵 AttendanceListScreen - Nenhuma presença encontrada na API ou erro, inicializando como não realizada.');
+        console.log('🔵 AttendanceListScreen - API Response Data:', response.data);
+        setAttendanceTaken(false);
+      }
+    } catch (error) {
+      console.error('🔴 AttendanceListScreen - Erro ao verificar presenças existentes:', error);
+      setAttendanceTaken(false);
+    }
+  };
+
   const loadStudents = async () => {
     if (!classData?.classId) {
       console.log('🔴 AttendanceListScreen - classData.classId não encontrado:', classData);
@@ -88,13 +138,16 @@ const AttendanceListScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
         console.log('🔵 AttendanceListScreen - Alunos extraídos:', studentsData);
         
         setStudents(studentsData);
-        // Inicializar todos como presentes por padrão
-        const initialAttendance = {};
-        studentsData.forEach(student => {
-          initialAttendance[student.id] = 'present';
-        });
-        setAttendanceData(initialAttendance);
-        console.log('🔵 AttendanceListScreen - AttendanceData inicializado:', initialAttendance);
+        
+        // Só inicializar como presentes se não há presenças existentes
+        if (!attendanceTaken) {
+          const initialAttendance = {};
+          studentsData.forEach(student => {
+            initialAttendance[student.id] = 'present';
+          });
+          setAttendanceData(initialAttendance);
+          console.log('🔵 AttendanceListScreen - AttendanceData inicializado:', initialAttendance);
+        }
       } else {
         console.error('🔴 AttendanceListScreen - Erro na resposta da API:', response);
         showError('❌ Erro', 'Erro ao carregar alunos da turma');
@@ -325,16 +378,22 @@ const AttendanceListScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
 
         {/* Action Button */}
         <View style={styles.actionSection}>
+          {console.log('🔵 AttendanceListScreen - Render - attendanceTaken state:', attendanceTaken)}
           <TouchableOpacity
             style={[
               styles.takeAttendanceButton,
-              loading && styles.takeAttendanceButtonDisabled
+              loading && styles.takeAttendanceButtonDisabled,
+              attendanceTaken && styles.takeAttendanceButtonCompleted
             ]}
             onPress={takeAttendance}
             disabled={loading}
           >
-            <Text style={styles.takeAttendanceButtonText}>
-              {loading ? 'Salvando...' : attendanceTaken ? 'Atualizar Chamada' : 'Realizar Chamada'}
+            <Text style={styles.takeAttendanceButtonText} key={`button-${attendanceTaken}`}>
+              {(() => {
+                const text = loading ? 'Salvando...' : attendanceTaken ? 'Chamada Realizada' : 'Realizar Chamada';
+                console.log('🔵 AttendanceListScreen - Button text:', text, 'attendanceTaken:', attendanceTaken, 'loading:', loading);
+                return text;
+              })()}
             </Text>
           </TouchableOpacity>
         </View>
@@ -558,6 +617,9 @@ const styles = StyleSheet.create({
   },
   takeAttendanceButtonDisabled: {
     backgroundColor: '#D9D9D9',
+  },
+  takeAttendanceButtonCompleted: {
+    backgroundColor: '#4CAF50', // Verde para indicar que foi realizada
   },
   takeAttendanceButtonText: {
     fontSize: 16,

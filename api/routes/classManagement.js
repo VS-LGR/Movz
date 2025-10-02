@@ -1351,29 +1351,70 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
 // Obter lista de presença de uma turma (NOVA FUNCIONALIDADE)
 router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, async (req, res) => {
   try {
-    const { classId } = req.params;
+    const { classId } = req.params; // Pode ser teacherClass.id ou class.id
     const { lessonDate } = req.query;
 
-    // Verificar se a turma pertence ao professor
-    const existingClass = await prisma.class.findFirst({
+    console.log('🔵 GetAttendance - classId recebido:', classId);
+    console.log('🔵 GetAttendance - lessonDate recebido:', lessonDate);
+
+    // Primeiro, verificar se é um teacherClass.id
+    let teacherClass = null;
+    let actualClassId = null;
+    let existingClass = null;
+
+    // Tentar buscar como teacherClass primeiro
+    teacherClass = await prisma.teacherClass.findFirst({
       where: {
         id: classId,
-        teacherId: req.user.userId,
-        isActive: true
+        teacherId: req.user.userId
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            school: true,
+            grade: true,
+            isActive: true
+          }
+        }
       }
     });
 
+    if (teacherClass) {
+      console.log('🔵 GetAttendance - Encontrado como teacherClass:', teacherClass.id);
+      actualClassId = teacherClass.classId;
+      existingClass = teacherClass.class;
+    } else {
+      // Se não for teacherClass, tentar como class diretamente
+      existingClass = await prisma.class.findFirst({
+        where: {
+          id: classId,
+          teacherId: req.user.userId,
+          isActive: true
+        }
+      });
+      
+      if (existingClass) {
+        console.log('🔵 GetAttendance - Encontrado como class:', existingClass.id);
+        actualClassId = classId;
+      }
+    }
+
     if (!existingClass) {
+      console.log('🔴 GetAttendance - Nenhuma turma encontrada para classId:', classId);
       return res.status(404).json({
         success: false,
         message: 'Turma não encontrada'
       });
     }
 
+    console.log('🔵 GetAttendance - Usando actualClassId:', actualClassId);
+
     // Buscar alunos da turma
     const classStudents = await prisma.classStudent.findMany({
       where: {
-        classId,
+        classId: actualClassId, // ← CORREÇÃO: Usar actualClassId
         isActive: true
       },
       include: {
@@ -1388,6 +1429,8 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
       }
     });
 
+    console.log('🔵 GetAttendance - Alunos encontrados:', classStudents.length);
+
     // Se uma data específica foi fornecida, buscar presenças dessa data
     if (lessonDate) {
       const targetDate = new Date(lessonDate);
@@ -1396,26 +1439,47 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
       const endOfDay = new Date(targetDate);
       endOfDay.setHours(23, 59, 59, 999);
 
+      console.log('🔵 GetAttendance - Buscando presenças para data:', {
+        lessonDate,
+        targetDate: targetDate.toISOString(),
+        startOfDay: startOfDay.toISOString(),
+        endOfDay: endOfDay.toISOString()
+      });
+
       const attendances = await prisma.attendance.findMany({
         where: {
-          classId,
+          classId: actualClassId, // ← CORREÇÃO: Usar actualClassId
           lessonDate: {
             gte: startOfDay,
             lt: endOfDay
           }
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
         }
       });
+
+      console.log('🔵 GetAttendance - Presenças encontradas:', attendances.length);
 
       // Combinar alunos com suas presenças
       const attendanceList = classStudents.map(classStudent => {
         const attendance = attendances.find(a => a.studentId === classStudent.student.id);
         return {
+          studentId: classStudent.student.id,
           student: classStudent.student,
           isPresent: attendance ? attendance.isPresent : null, // null = não registrado
           notes: attendance ? attendance.notes : null,
           registeredAt: attendance ? attendance.createdAt : null
         };
       });
+
+      console.log('🔵 GetAttendance - Lista de presença montada:', attendanceList.length);
 
       res.json({
         success: true,
@@ -1427,7 +1491,7 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
             grade: existingClass.grade
           },
           lessonDate: targetDate,
-          attendanceList,
+          attendances: attendanceList.filter(a => a.isPresent !== null), // Apenas presenças registradas
           summary: {
             total: attendanceList.length,
             present: attendanceList.filter(a => a.isPresent === true).length,
@@ -1438,6 +1502,14 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
       });
     } else {
       // Retornar apenas a lista de alunos sem presenças específicas
+      const attendanceList = classStudents.map(classStudent => ({
+        studentId: classStudent.student.id,
+        student: classStudent.student,
+        isPresent: null,
+        notes: null,
+        registeredAt: null
+      }));
+
       res.json({
         success: true,
         data: {
@@ -1447,8 +1519,14 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
             school: existingClass.school,
             grade: existingClass.grade
           },
-          students: classStudents.map(cs => cs.student),
-          totalStudents: classStudents.length
+          lessonDate: null,
+          attendances: [],
+          summary: {
+            total: attendanceList.length,
+            present: 0,
+            absent: 0,
+            notRegistered: attendanceList.length
+          }
         }
       });
     }
