@@ -21,6 +21,23 @@ const { width, height } = Dimensions.get('window');
 const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
 
+  // Função para formatar data corretamente
+  const formatDate = (date) => {
+    if (typeof date === 'string') {
+      // Converter string YYYY-MM-DD para formato brasileiro DD/MM/YYYY
+      const [year, month, day] = date.split('-');
+      return `${day}/${month}/${year}`;
+    } else if (date instanceof Date) {
+      // Fallback para objetos Date
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+    return 'Data inválida';
+  };
+
   const [attendanceData, setAttendanceData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,14 +51,24 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
     setIsLoading(true);
     setError(null);
     try {
+      console.log('🔵 StudentAttendance - Carregando dados de presença...');
       const response = await apiService.getStudentAttendance();
+      console.log('🔵 StudentAttendance - Resposta da API:', response);
+      
       if (response.success) {
+        console.log('🔵 StudentAttendance - Dados recebidos:', response.data);
+        console.log('🔵 StudentAttendance - Total de aulas:', response.data.totalClasses);
+        console.log('🔵 StudentAttendance - Presentes:', response.data.presentClasses);
+        console.log('🔵 StudentAttendance - Faltas:', response.data.absentClasses);
+        console.log('🔵 StudentAttendance - Histórico:', response.data.recentAttendance?.length || 0, 'registros');
+        
         setAttendanceData(response.data);
       } else {
+        console.error('🔴 StudentAttendance - Erro na resposta:', response.message);
         setError(response.message || 'Erro ao carregar dados de presença');
       }
     } catch (err) {
-      console.error('Erro ao carregar presenças:', err);
+      console.error('🔴 StudentAttendance - Erro ao carregar presenças:', err);
       setError('Não foi possível carregar suas presenças. Tente novamente.');
     } finally {
       setIsLoading(false);
@@ -190,7 +217,7 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
                 </View>
                 <View style={styles.attendanceItemInfo}>
                   <Text style={styles.attendanceDate}>
-                    {new Date(attendance.date).toLocaleDateString('pt-BR')}
+                    {formatDate(attendance.date)}
                   </Text>
                   <Text style={styles.attendanceSubject}>{attendance.classSubject}</Text>
                   <Text style={styles.attendanceTeacher}>Prof. {attendance.teacherName}</Text>
@@ -233,11 +260,27 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
           <View style={styles.headerLeft}>
             <Text style={styles.title}>📊 Presenças</Text>
             <Text style={styles.subtitle}>Acompanhe sua frequência nas aulas</Text>
+            {attendanceData && (
+              <Text style={styles.debugInfo}>
+                🔍 Debug: {attendanceData.totalClasses} aulas | {attendanceData.recentAttendance?.length || 0} no histórico
+              </Text>
+            )}
           </View>
-          <HamburgerButton
-            onPress={() => setIsMenuVisible(true)}
-            style={styles.menuButton}
-          />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              <Text style={styles.refreshButtonText}>
+                {refreshing ? '🔄' : '🔄'}
+              </Text>
+            </TouchableOpacity>
+            <HamburgerButton
+              onPress={() => setIsMenuVisible(true)}
+              style={styles.menuButton}
+            />
+          </View>
         </View>
 
         {isLoading ? (
@@ -292,6 +335,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 5,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  debugInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  refreshButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  refreshButtonText: {
+    fontSize: 18,
+    color: '#000',
   },
   headerLeft: {
     flex: 1,

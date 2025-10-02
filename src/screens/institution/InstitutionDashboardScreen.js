@@ -58,6 +58,7 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
   const [studentsInInstitution, setStudentsInInstitution] = useState([]);
   const [showClassDetails, setShowClassDetails] = useState(false);
   const [selectedClassIdForDetails, setSelectedClassIdForDetails] = useState(null);
+  const [isRefreshingStudents, setIsRefreshingStudents] = useState(false);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -219,14 +220,18 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
 
   const loadStudentsInInstitution = async () => {
     try {
+      setIsRefreshingStudents(true);
       const response = await apiService.getInstitutionUsers();
       if (response.success) {
         // Filtrar apenas alunos
         const students = response.data.filter(user => user.userType === 'STUDENT');
         setStudentsInInstitution(students);
+        console.log('🔄 Lista de alunos atualizada:', students.length, 'alunos encontrados');
       }
     } catch (error) {
       console.error('Erro ao carregar alunos da instituição:', error);
+    } finally {
+      setIsRefreshingStudents(false);
     }
   };
 
@@ -820,6 +825,12 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{currentUser?.name}</Text>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={onLogout}
+          >
+            <Text style={styles.logoutButtonText}>🚪 Sair</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Tabs */}
@@ -1027,7 +1038,21 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
             
             {/* Seleção de Aluno */}
             <View style={styles.selectionContainer}>
-              <Text style={styles.selectionTitle}>Selecione o Aluno:</Text>
+              <View style={styles.selectionHeader}>
+                <Text style={styles.selectionTitle}>Selecione o Aluno:</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.refreshButton,
+                    isRefreshingStudents && styles.refreshButtonDisabled
+                  ]}
+                  onPress={loadStudentsInInstitution}
+                  disabled={isLoading || isRefreshingStudents}
+                >
+                  <Text style={styles.refreshButtonText}>
+                    {isRefreshingStudents ? '⏳ Atualizando...' : '🔄 Atualizar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <ScrollView style={[
                 styles.studentPicker,
                 { maxHeight: isMobile ? 150 : 200 }
@@ -1196,7 +1221,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
     paddingTop: 10,
   },
@@ -1204,6 +1229,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
+    fontFamily: 'Poppins',
+    flex: 1,
+  },
+  logoutButton: {
+    backgroundColor: '#f44336',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 15,
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
     fontFamily: 'Poppins',
   },
   tabs: {
@@ -1880,12 +1919,35 @@ const styles = StyleSheet.create({
   selectionContainer: {
     marginVertical: 15,
   },
+  selectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   selectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
     fontFamily: 'Poppins',
-    marginBottom: 10,
+    flex: 1,
+  },
+  refreshButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 10,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Poppins',
+  },
+  refreshButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   studentPicker: {
     maxHeight: 200,

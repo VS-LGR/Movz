@@ -37,6 +37,8 @@ model User {
   classStudents  ClassStudent[]
   classScores    ClassScore[]
   teacherScores  ClassScore[] @relation("ClassScoreTeacher")
+  attendances    Attendance[]
+  teacherAttendances Attendance[] @relation("AttendanceTeacher")
 
   @@map("users")
 }
@@ -144,7 +146,7 @@ model TeacherClass {
   id          String   @id @default(cuid())
   teacherId   String
   classId     String?  // ID da turma associada à aula
-  date        DateTime
+  date        String   // Data como string para evitar problemas de fuso horário
   school      String
   grade       String
   subject     String?
@@ -178,6 +180,7 @@ model Class {
   institution Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   students    ClassStudent[]
   scores      ClassScore[]
+  attendances Attendance[]
   teacherClasses TeacherClass[]
 
   @@map("classes")
@@ -206,6 +209,7 @@ model ClassScore {
   score       Int      // Pontuação dada pelo professor (0-100)
   notes       String?  // Observações do professor
   teacherId   String   // Professor que deu a pontuação
+  lessonDate  DateTime @default(now()) // Data da aula específica
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -215,8 +219,29 @@ model ClassScore {
   sport    Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
   teacher  User  @relation("ClassScoreTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
 
-  @@unique([classId, studentId, sportId])
+  // Permitir múltiplas pontuações por esporte (removido unique constraint)
   @@map("class_scores")
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  classId     String
+  studentId   String
+  isPresent   Boolean  @default(true)
+  lessonDate  DateTime @default(now()) // Data da aula
+  notes       String?  // Observações sobre a presença
+  teacherId   String   // Professor que registrou a presença
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  class    Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student  User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher  User  @relation("AttendanceTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Evitar presenças duplicadas no mesmo dia
+  @@unique([classId, studentId, lessonDate])
+  @@map("attendances")
 }
 
 enum ContentType {

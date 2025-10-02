@@ -367,6 +367,9 @@ router.get('/users', authenticateToken, requireInstitution, async (req, res) => 
   try {
     const { userType, search } = req.query;
 
+    console.log('🔵 InstitutionUsers - Parâmetros recebidos:', { userType, search });
+    console.log('🔵 InstitutionUsers - InstitutionId do usuário:', req.user.institutionId);
+
     let whereClause = {
       institutionId: req.user.institutionId,
       isActive: true
@@ -384,6 +387,8 @@ router.get('/users', authenticateToken, requireInstitution, async (req, res) => 
       ];
     }
 
+    console.log('🔵 InstitutionUsers - Filtros aplicados:', whereClause);
+
     const users = await prisma.user.findMany({
       where: whereClause,
       select: {
@@ -393,12 +398,24 @@ router.get('/users', authenticateToken, requireInstitution, async (req, res) => 
         cpf: true,
         age: true,
         userType: true,
-        createdAt: true
+        createdAt: true,
+        institutionId: true,
+        isActive: true
       },
       orderBy: {
         name: 'asc'
       }
     });
+
+    console.log('🔵 InstitutionUsers - Usuários encontrados:', users.length);
+    console.log('🔵 InstitutionUsers - Detalhes dos usuários:', users.map(u => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      userType: u.userType,
+      institutionId: u.institutionId,
+      isActive: u.isActive
+    })));
 
     res.json({
       success: true,

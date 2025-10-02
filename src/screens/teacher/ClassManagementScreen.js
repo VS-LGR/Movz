@@ -205,12 +205,19 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
 
   const loadAvailableStudents = async (classId, search = '') => {
     try {
+      console.log('🔵 ClassManagementScreen - Carregando alunos disponíveis:', { classId, search });
       const response = await apiService.getAvailableStudents(classId, search);
+      console.log('🔵 ClassManagementScreen - Resposta da API:', response);
+      
       if (response.success) {
+        console.log('🔵 ClassManagementScreen - Alunos encontrados:', response.data.length);
+        console.log('🔵 ClassManagementScreen - Dados dos alunos:', response.data);
         setAvailableStudents(response.data);
+      } else {
+        console.error('🔴 ClassManagementScreen - Erro na resposta:', response.message);
       }
     } catch (error) {
-      console.error('Erro ao carregar alunos:', error);
+      console.error('🔴 ClassManagementScreen - Erro ao carregar alunos:', error);
     }
   };
 

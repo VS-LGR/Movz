@@ -185,8 +185,16 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
       setIsLoading(true);
       console.log('Iniciando requisição para API...');
       
+      // CORREÇÃO DEFINITIVA: Usar string de data para evitar problemas de fuso horário
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0'); // +1 porque getMonth() retorna 0-11
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      
+      // Criar string de data no formato YYYY-MM-DD
+      const dateString = `${year}-${month}-${day}`;
+      
       const classData = {
-        date: selectedDate.toISOString(),
+        date: dateString, // Usar string ao invés de Date object
         school: selectedClass.school,
         grade: selectedClass.grade,
         classId: selectedClass.id, // ID da turma selecionada
@@ -194,6 +202,11 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
         time: `${startTime} - ${endTime}`,
         notes: notes.trim() || null
       };
+      
+      console.log('🔵 CreateClass - Data original:', selectedDate);
+      console.log('🔵 CreateClass - Ano:', year, 'Mês:', month, 'Dia:', day);
+      console.log('🔵 CreateClass - Data string:', dateString);
+      console.log('🔵 CreateClass - Dados finais:', classData);
 
       console.log('Dados da aula a serem enviados:', classData);
 

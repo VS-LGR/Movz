@@ -50,11 +50,12 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
     };
 
     if (month && year) {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      // CORREÇÃO: Como date agora é string, usar filtro de string
+      const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDateStr = `${year}-${month.toString().padStart(2, '0')}-31`;
       whereClause.date = {
-        gte: startDate,
-        lte: endDate
+        gte: startDateStr,
+        lte: endDateStr
       };
     }
 
@@ -66,7 +67,26 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
     // Converter para formato de objeto com data como chave
     const classesByDate = {};
     classes.forEach(cls => {
-      const dateStr = cls.date.toISOString().split('T')[0];
+      // CORREÇÃO: Forçar conversão para string
+      let dateStr;
+      if (typeof cls.date === 'string') {
+        dateStr = cls.date;
+      } else if (cls.date instanceof Date) {
+        // Se for Date, converter para string YYYY-MM-DD
+        dateStr = cls.date.toISOString().split('T')[0];
+      } else {
+        // Fallback: tentar converter para string
+        dateStr = String(cls.date);
+      }
+      
+      console.log('🔵 API Classes - Processando aula:', {
+        id: cls.id,
+        originalDate: cls.date,
+        originalType: typeof cls.date,
+        dateStr: dateStr,
+        dateStrType: typeof dateStr
+      });
+      
       classesByDate[dateStr] = {
         id: cls.id,
         classId: cls.classId, // ID da turma associada
@@ -74,7 +94,8 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
         grade: cls.grade,
         subject: cls.subject,
         isCompleted: cls.isCompleted,
-        notes: cls.notes
+        notes: cls.notes,
+        date: dateStr // CORREÇÃO: Sempre retornar como string
       };
     });
 
@@ -104,47 +125,72 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       });
     }
 
-    const classDate = new Date(date);
-    
-    // Verificar se já existe uma aula nesta data
-    const existingClass = await prisma.teacherClass.findFirst({
-      where: {
-        teacherId: req.user.userId,
-        date: classDate
-      }
-    });
-
-    let classData;
-    if (existingClass) {
-      // Atualizar aula existente
-      classData = await prisma.teacherClass.update({
-        where: { id: existingClass.id },
-        data: {
-          school,
-          grade,
-          subject: subject || null,
-          notes: notes || null,
-          classId: classId || null
-        }
+    // CORREÇÃO DEFINITIVA: Usar string de data diretamente para evitar problemas de fuso horário
+    let classDate;
+    if (typeof date === 'string' && date.includes('-')) {
+      // Se é string no formato YYYY-MM-DD, usar diretamente
+      classDate = date; // Manter como string
+      
+      // DEBUG: Verificar se a data está sendo mantida corretamente
+      console.log('🔵 CreateClass - DEBUG Data:', {
+        input: date,
+        type: typeof date,
+        kept: classDate,
+        length: classDate.length
       });
     } else {
-      // Criar nova aula
-      classData = await prisma.teacherClass.create({
-        data: {
-          teacherId: req.user.userId,
-          classId: classId || null,
-          date: classDate,
-          school,
-          grade,
-          subject: subject || null,
-          notes: notes || null
-        }
-      });
+      classDate = new Date(date);
     }
+    
+    // CORREÇÃO: Sempre criar nova aula - permitir múltiplas aulas no mesmo dia
+    console.log('🔵 CreateClass - Data recebida:', date);
+    console.log('🔵 CreateClass - Data mantida:', classDate);
+    console.log('🔵 CreateClass - Tipo da data:', typeof classDate);
+    console.log('🔵 CreateClass - Professor:', req.user.userId);
+    console.log('🔵 CreateClass - Turma:', classId);
+    console.log('🔵 CreateClass - Assunto:', subject);
+    
+    // DEBUG: Verificar dados antes de criar
+    const createData = {
+      teacherId: req.user.userId,
+      classId: classId || null,
+      date: classDate,
+      school,
+      grade,
+      subject: subject || null,
+      notes: notes || null
+    };
+    
+    console.log('🔵 CreateClass - Dados para criação:', createData);
+    console.log('🔵 CreateClass - Tipo do campo date:', typeof createData.date);
+    
+    let classData;
+    try {
+      classData = await prisma.teacherClass.create({
+        data: createData
+      });
+      console.log('🔵 CreateClass - Aula criada com ID:', classData.id);
+    } catch (createError) {
+      console.error('🔴 CreateClass - Erro ao criar aula:', createError);
+      console.error('🔴 CreateClass - Erro detalhado:', {
+        message: createError.message,
+        code: createError.code,
+        meta: createError.meta
+      });
+      throw createError;
+    }
+
+    console.log('🔵 CreateClass - Aula criada com sucesso:', {
+      id: classData.id,
+      date: classData.date,
+      dateType: typeof classData.date,
+      subject: classData.subject,
+      teacherId: classData.teacherId
+    });
 
     res.status(201).json({
       success: true,
-      message: existingClass ? 'Aula atualizada com sucesso' : 'Aula criada com sucesso',
+      message: 'Aula criada com sucesso',
       data: classData
     });
 
@@ -246,11 +292,12 @@ router.get('/stats', authenticateToken, requireTeacher, async (req, res) => {
     };
 
     if (month && year) {
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      // CORREÇÃO: Como date agora é string, usar filtro de string
+      const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDateStr = `${year}-${month.toString().padStart(2, '0')}-31`;
       whereClause.date = {
-        gte: startDate,
-        lte: endDate
+        gte: startDateStr,
+        lte: endDateStr
       };
     }
 

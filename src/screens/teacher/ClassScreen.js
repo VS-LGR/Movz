@@ -35,7 +35,6 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [selectedSport, setSelectedSport] = useState(null);
   const [score, setScore] = useState('');
   const [notes, setNotes] = useState('');
-  const [attendanceData, setAttendanceData] = useState({}); // { studentId: 'present' | 'absent' }
   const [scoresData, setScoresData] = useState({}); // { studentId: { sportId: { score, notes } } }
   
   // Estados para avaliação em lote
@@ -227,12 +226,6 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     );
   };
 
-  const toggleAttendance = (studentId) => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: prev[studentId] === 'present' ? 'absent' : 'present'
-    }));
-  };
 
   const handleBatchSaveScores = async () => {
     try {
@@ -276,44 +269,65 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       // Salvar pontuação para todos os alunos selecionados
       const scorePromises = selectedStudents.map(async (studentId) => {
         try {
+          console.log('🔵 ClassScreen - Salvando pontuação:', {
+            classId: classData.classId,
+            studentId,
+            sportId: classSport.id,
+            score: scoreValue,
+            notes: batchNotes.trim() || null,
+            lessonDate: classData.date
+          });
+          
           const response = await apiService.saveClassScore(
             classData.classId,
             studentId,
             classSport.id,
             scoreValue,
-            batchNotes.trim() || null
+            batchNotes.trim() || null,
+            classData.date
           );
           
+          console.log('🔵 ClassScreen - Resposta da API:', response);
+          
           if (!response.success) {
-            console.error(`Erro ao salvar pontuação do aluno ${studentId}:`, response.message);
+            console.error(`🔴 Erro ao salvar pontuação do aluno ${studentId}:`, response.message);
+            throw new Error(response.message || 'Erro ao salvar pontuação');
           }
         } catch (error) {
-          console.error(`Erro ao salvar pontuação do aluno ${studentId}:`, error);
+          console.error(`🔴 Erro ao salvar pontuação do aluno ${studentId}:`, error);
+          throw error;
         }
       });
 
       await Promise.all(scorePromises);
 
-      // Salvar presença de todos os alunos
-      const attendancePromises = students.map(async (student) => {
-        const status = attendanceData[student.id] || 'present';
-        
-        try {
-          const response = await apiService.saveAttendance(classData.classId, {
-            studentId: student.id,
-            isPresent: status === 'present',
-            date: classData.date
-          });
-          
-          if (!response.success) {
-            console.error(`Erro ao salvar presença do aluno ${student.name}:`, response.message);
-          }
-        } catch (error) {
-          console.error(`Erro ao salvar presença do aluno ${student.name}:`, error);
-        }
+      // Salvar presença de todos os alunos usando a nova API em lote
+      const attendances = students.map(student => ({
+        studentId: student.id,
+        isPresent: true // Por padrão, todos presentes quando há pontuação
+      }));
+
+      console.log('🔵 ClassScreen - Salvando presenças:', {
+        classId: classData.id, // ← CORREÇÃO: Usar ID da aula específica
+        attendances,
+        lessonDate: classData.date
       });
 
-      await Promise.all(attendancePromises);
+      try {
+        const attendanceResponse = await apiService.saveBatchAttendance(
+          classData.id, // ← CORREÇÃO: Usar ID da aula específica
+          attendances, 
+          classData.date
+        );
+        
+        console.log('🔵 ClassScreen - Resposta da API de presença:', attendanceResponse);
+        
+        if (!attendanceResponse.success) {
+          console.error('🔴 Erro ao salvar presenças:', attendanceResponse.message);
+        }
+      } catch (error) {
+        console.error('🔴 Erro ao salvar presenças:', error);
+      }
 
       showSuccess('Sucesso! 🎉', `Pontuações e presenças salvas para ${selectedStudents.length} aluno(s) no esporte ${classSport.name}!`);
       
@@ -321,7 +335,6 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       setSelectedStudents([]);
       setBatchScore('');
       setBatchNotes('');
-      setAttendanceData({});
       setShowScoringModal(false);
       setAttendanceTaken(true);
       
@@ -458,14 +471,29 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         {workoutSections.map(renderWorkoutCard)}
       </View>
 
-      {/* Botão de Pontuação */}
-      <TouchableOpacity 
-        style={styles.scoringButton}
-        onPress={handleOpenScoring}
-        disabled={loading}
-      >
-        <Text style={styles.scoringButtonText}>Avaliar Alunos</Text>
-      </TouchableOpacity>
+      {/* Botões de Ação */}
+      <View style={styles.actionButtonsContainer}>
+        {/* Botão de Lista de Presença */}
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.attendanceButton]}
+          onPress={() => {
+            console.log('🔵 ClassScreen - Navegando para attendanceList com classData:', classData);
+            onNavigate('attendanceList', { classData });
+          }}
+          disabled={loading}
+        >
+          <Text style={styles.actionButtonText}>📋 Lista de Presença</Text>
+        </TouchableOpacity>
+
+        {/* Botão de Pontuação */}
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.scoringButton]}
+          onPress={handleOpenScoring}
+          disabled={loading}
+        >
+          <Text style={styles.actionButtonText}>⭐ Avaliar Alunos</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Botão de Conclusão */}
       <TouchableOpacity 
@@ -546,17 +574,6 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
                     </View>
                     
                     {/* Toggle de presença */}
-                    <TouchableOpacity
-                      style={[
-                        styles.attendanceToggle,
-                        attendanceData[student.id] === 'absent' && styles.attendanceToggleAbsent
-                      ]}
-                      onPress={() => toggleAttendance(student.id)}
-                    >
-                      <Text style={styles.attendanceToggleText}>
-                        {attendanceData[student.id] === 'absent' ? 'F' : 'P'}
-                      </Text>
-                    </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
@@ -626,7 +643,6 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
                   setSelectedStudents([]);
                   setBatchScore('');
                   setBatchNotes('');
-                  setAttendanceData({});
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -906,17 +922,27 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
   },
-  // Estilos do modal de pontuação
-  scoringButton: {
-    backgroundColor: '#F9BB55',
-    marginHorizontal: 20,
+  // Estilos dos botões de ação
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
     marginBottom: 15,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
   },
-  scoringButtonText: {
-    fontSize: 18,
+  attendanceButton: {
+    backgroundColor: '#2196F3',
+  },
+  scoringButton: {
+    backgroundColor: '#F9BB55',
+  },
+  actionButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#000',
   },
@@ -1066,23 +1092,6 @@ const styles = StyleSheet.create({
   },
   studentInfo: {
     flex: 1,
-  },
-  attendanceToggle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 6,
-  },
-  attendanceToggleAbsent: {
-    backgroundColor: '#D9493C',
-  },
-  attendanceToggleText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   summaryContainer: {
     backgroundColor: '#F8F9FA',

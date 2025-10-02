@@ -306,12 +306,26 @@ class ApiService {
     return this.request(`/class-management/classes/${classId}/students`);
   }
 
-  // Salvar presença de alunos
+  // Salvar presença individual de aluno
   async saveAttendance(classId, attendanceData) {
     return this.request(`/class-management/classes/${classId}/attendance`, {
       method: 'POST',
       body: JSON.stringify(attendanceData),
     });
+  }
+
+  // Salvar presenças em lote (NOVA FUNCIONALIDADE)
+  async saveBatchAttendance(classId, attendances, lessonDate = null) {
+    return this.request(`/class-management/classes/${classId}/attendance/batch`, {
+      method: 'POST',
+      body: JSON.stringify({ attendances, lessonDate }),
+    });
+  }
+
+  // Obter lista de presença de uma turma (NOVA FUNCIONALIDADE)
+  async getClassAttendance(classId, lessonDate = null) {
+    const params = lessonDate ? `?lessonDate=${lessonDate}` : '';
+    return this.request(`/class-management/classes/${classId}/attendance${params}`);
   }
 
   async completeClass(classId, isCompleted = true) {
@@ -383,10 +397,18 @@ class ApiService {
 
   // ===== PONTUAÇÕES DE AULAS =====
 
-  async saveClassScore(classId, studentId, sportId, score, notes = null) {
+  async saveClassScore(classId, studentId, sportId, score, notes = null, lessonDate = null) {
     return this.request(`/class-management/classes/${classId}/scores`, {
       method: 'POST',
-      body: JSON.stringify({ studentId, sportId, score, notes }),
+      body: JSON.stringify({ studentId, sportId, score, notes, lessonDate }),
+    });
+  }
+
+  // Salvar pontuações em lote (NOVA FUNCIONALIDADE)
+  async saveBatchClassScores(classId, scores, lessonDate = null) {
+    return this.request(`/class-management/classes/${classId}/scores/batch`, {
+      method: 'POST',
+      body: JSON.stringify({ scores, lessonDate }),
     });
   }
 

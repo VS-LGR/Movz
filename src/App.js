@@ -23,6 +23,7 @@ import TeacherScheduleScreen from './screens/teacher/TeacherScheduleScreen';
 import ClassManagementScreen from './screens/teacher/ClassManagementScreen';
 import CreateClassScreen from './screens/teacher/CreateClassScreen';
 import ClassScreen from './screens/teacher/ClassScreen';
+import AttendanceListScreen from './screens/teacher/AttendanceListScreen';
 import AchievementsScreen from './screens/student/AchievementsScreen';
 import MedalsScreen from './screens/student/MedalsScreen';
 
@@ -483,6 +484,16 @@ export default function App() {
       case 'teacherProfile':
         return (
           <TeacherClassesScreen
+            isMenuVisible={isMenuVisible}
+            setIsMenuVisible={setIsMenuVisible}
+            onNavigate={handleNavigate}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        );
+      case 'attendanceList':
+        return (
+          <AttendanceListScreen
             isMenuVisible={isMenuVisible}
             setIsMenuVisible={setIsMenuVisible}
             onNavigate={handleNavigate}

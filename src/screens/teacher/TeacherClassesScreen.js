@@ -61,17 +61,33 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
       
       if (response.success) {
         // Converter objeto para array e ordenar por data
-        const classesArray = Object.entries(response.data).map(([date, classData]) => ({
-          id: classData.id,
-          classId: classData.classId, // ID da turma associada
-          date: new Date(date),
-          school: classData.school,
-          grade: classData.grade,
-          subject: classData.subject,
-          time: classData.time,
-          notes: classData.notes,
-          isCompleted: classData.isCompleted
-        })).sort((a, b) => a.date - b.date);
+        console.log('🔵 loadClasses - Dados recebidos do backend:', response.data);
+        const classesArray = Object.entries(response.data).map(([date, classData]) => {
+          console.log('🔵 loadClasses - Processando aula:', {
+            dateKey: date,
+            classData: classData,
+            dateType: typeof date
+          });
+          return {
+            id: classData.id,
+            classId: classData.classId, // ID da turma associada
+            date: date, // CORREÇÃO: Manter como string ao invés de converter para Date
+            school: classData.school,
+            grade: classData.grade,
+            subject: classData.subject,
+            time: classData.time,
+            notes: classData.notes,
+            isCompleted: classData.isCompleted
+          };
+        });
+        
+        // Ordenar por data (mais recente primeiro) - CORREÇÃO: trabalhar com strings
+        classesArray.sort((a, b) => {
+          // Converter strings para Date apenas para comparação
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB - dateA;
+        });
         
         setClasses(classesArray);
       }
@@ -127,11 +143,35 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
   };
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    // CORREÇÃO: date agora é uma string no formato YYYY-MM-DD
+    console.log('🔵 formatDate - Input:', date, 'Type:', typeof date);
+    
+    if (typeof date === 'string') {
+      // Converter string YYYY-MM-DD para formato brasileiro DD/MM/YYYY
+      const [year, month, day] = date.split('-');
+      const result = `${day}/${month}/${year}`;
+      console.log('🔵 formatDate - String conversion:', {
+        input: date,
+        year, month, day,
+        result
+      });
+      return result;
+    } else if (date instanceof Date) {
+      // Fallback para objetos Date (caso ainda existam)
+      const result = date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      console.log('🔵 formatDate - Date conversion:', {
+        input: date,
+        result
+      });
+      return result;
+    } else {
+      console.log('🔵 formatDate - Invalid input:', date);
+      return 'Data inválida';
+    }
   };
 
   const formatTime = (time) => {

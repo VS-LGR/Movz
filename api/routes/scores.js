@@ -511,52 +511,158 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
       });
     }
 
-    // Buscar aulas da turma do aluno
-    const classClasses = await prisma.teacherClass.findMany({
-      where: {
-        classId: classStudent.classId,
-        isCompleted: true
-      },
-      orderBy: {
-        date: 'desc'
-      },
-      take: 30 // Últimas 30 aulas
-    });
+            // Buscar aulas da turma do aluno (todas as aulas, mas filtrar apenas as que têm presenças)
+            const classClasses = await prisma.teacherClass.findMany({
+              where: {
+                classId: classStudent.classId
+                // Buscar todas as aulas da turma
+              },
+              orderBy: {
+                date: 'desc'
+              },
+              take: 100 // Últimas 100 aulas para histórico completo
+            });
 
-    // Buscar presenças do aluno (simulando com base nas pontuações)
-    // Se o aluno tem pontuação na aula, significa que esteve presente
+    console.log('🔵 StudentAttendance - DEBUG: Buscando todas as aulas da turma');
+    console.log('🔵 StudentAttendance - DEBUG: Filtro aplicado: todas as aulas (filtrar apenas as com presenças)');
+    console.log('🔵 StudentAttendance - DEBUG: Total de aulas encontradas:', classClasses.length);
+
+    console.log('🔵 StudentAttendance - DEBUG: Aluno:', userId);
+    console.log('🔵 StudentAttendance - DEBUG: Turma:', classStudent.classId);
+    console.log('🔵 StudentAttendance - DEBUG: Total de aulas encontradas:', classClasses.length);
+    console.log('🔵 StudentAttendance - DEBUG: Aulas:', classClasses.map(c => ({
+      id: c.id,
+      date: c.date,
+      subject: c.subject,
+      isCompleted: c.isCompleted
+    })));
+
+    // DEBUG: Verificar se há presenças salvas no banco para este aluno
+    const allAttendancesForStudent = await prisma.attendance.findMany({
+      where: {
+        studentId: userId
+      },
+      include: {
+        class: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    console.log('🔵 StudentAttendance - DEBUG: Todas as presenças do aluno no banco:', allAttendancesForStudent.length);
+    console.log('🔵 StudentAttendance - DEBUG: Detalhes das presenças:', allAttendancesForStudent.map(a => ({
+      id: a.id,
+      classId: a.classId,
+      className: a.class?.name,
+      isPresent: a.isPresent,
+      lessonDate: a.lessonDate,
+      createdAt: a.createdAt
+    })));
+
+    // Buscar presenças do aluno usando o modelo Attendance (CORRIGIDO)
     const attendanceData = await Promise.all(
-      classClasses.map(async (classItem) => {
-        const hasScore = await prisma.classScore.findFirst({
+              classClasses.map(async (classItem) => {
+                // CORREÇÃO: Buscar presença usando o classId da turma e a data da aula (sem hora)
+                // Como classItem.date agora é string, usar diretamente
+                const classDateStr = typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString().split('T')[0];
+                const classDate = new Date(classDateStr);
+                const startOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate());
+                const endOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate() + 1);
+        
+        const attendance = await prisma.attendance.findFirst({
           where: {
-            classId: classStudent.classId,
+            classId: classStudent.classId, // ← CORREÇÃO: Usar ID da turma
             studentId: userId,
-            createdAt: {
-              gte: classItem.date,
-              lt: new Date(classItem.date.getTime() + 24 * 60 * 60 * 1000) // Dentro do mesmo dia
+            lessonDate: {
+              gte: startOfDay,
+              lt: endOfDay // Dentro do mesmo dia (00:00 até 23:59)
             }
           }
         });
 
-        return {
-          date: classItem.date,
-          isPresent: !!hasScore,
-          classSubject: classItem.subject,
-          teacherName: classStudent.class.teacher.name
-        };
+                console.log('🔵 StudentAttendance - Aula:', {
+                  aulaId: classItem.id,
+                  aulaDate: classItem.date,
+                  aulaDateType: typeof classItem.date,
+                  aulaDateISO: typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString(),
+                  aulaDateOnly: typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString().split('T')[0],
+                  aulaSubject: classItem.subject,
+                  classId: classStudent.classId,
+                  studentId: userId,
+          searchRange: {
+            startOfDay: startOfDay,
+            endOfDay: endOfDay
+          },
+          attendance: attendance ? {
+            isPresent: attendance.isPresent,
+            notes: attendance.notes,
+            lessonDate: attendance.lessonDate,
+            lessonDateISO: attendance.lessonDate.toISOString()
+          } : 'Sem registro'
+        });
+
+        // CORREÇÃO: Retornar apenas aulas que têm presenças registradas
+        if (attendance) {
+          return {
+            date: classItem.date,
+            isPresent: attendance.isPresent,
+            classSubject: classItem.subject,
+            teacherName: classStudent.class.teacher.name,
+            notes: attendance.notes
+          };
+        }
+        return null; // Não retornar aulas sem presenças
       })
     );
 
-    // Calcular estatísticas
-    const totalClasses = attendanceData.length;
-    const presentClasses = attendanceData.filter(a => a.isPresent).length;
+    // Filtrar apenas aulas com presenças registradas
+    const attendanceDataFiltered = attendanceData.filter(item => item !== null);
+
+    // Calcular estatísticas apenas das aulas com presenças
+    const totalClasses = attendanceDataFiltered.length;
+    const presentClasses = attendanceDataFiltered.filter(a => a.isPresent).length;
     const absentClasses = totalClasses - presentClasses;
     const attendanceRate = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
 
-    // Calcular sequência de presenças
+    console.log('🔵 StudentAttendance - DEBUG: Estatísticas calculadas:');
+    console.log('🔵 StudentAttendance - DEBUG: Total de aulas com presenças:', totalClasses);
+    console.log('🔵 StudentAttendance - DEBUG: Presentes:', presentClasses);
+    console.log('🔵 StudentAttendance - DEBUG: Faltas:', absentClasses);
+    console.log('🔵 StudentAttendance - DEBUG: Taxa de presença:', attendanceRate + '%');
+    console.log('🔵 StudentAttendance - DEBUG: Dados de presença:', attendanceDataFiltered.map(a => ({
+      date: a.date,
+      isPresent: a.isPresent,
+      subject: a.classSubject
+    })));
+    
+    // DEBUG: Verificar se há presenças salvas no banco
+    const allAttendances = await prisma.attendance.findMany({
+      where: {
+        studentId: userId
+      },
+      include: {
+        class: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
+    console.log('🔵 StudentAttendance - DEBUG: Todas as presenças do aluno no banco:', allAttendances.length);
+    console.log('🔵 StudentAttendance - DEBUG: Detalhes das presenças:', allAttendances.map(a => ({
+      id: a.id,
+      classId: a.classId,
+      className: a.class?.name,
+      isPresent: a.isPresent,
+      lessonDate: a.lessonDate,
+      createdAt: a.createdAt
+    })));
+
+    // Calcular sequência de presenças (usar dados filtrados)
     let streak = 0;
-    for (let i = 0; i < attendanceData.length; i++) {
-      if (attendanceData[i].isPresent) {
+    for (let i = 0; i < attendanceDataFiltered.length; i++) {
+      if (attendanceDataFiltered[i].isPresent) {
         streak++;
       } else {
         break;
@@ -570,7 +676,7 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
         totalClasses,
         presentClasses,
         absentClasses,
-        recentAttendance: attendanceData.slice(0, 7), // Últimos 7 dias
+        recentAttendance: attendanceDataFiltered.slice(0, 7), // Últimos 7 dias com presenças
         streak,
         classInfo: {
           name: classStudent.class.name,
