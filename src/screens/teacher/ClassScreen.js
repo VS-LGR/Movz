@@ -323,35 +323,46 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
 
       await Promise.all(scorePromises);
 
-      // Salvar presença de todos os alunos usando a nova API em lote
-      const attendances = students.map(student => ({
-        studentId: student.id,
-        isPresent: true // Por padrão, todos presentes quando há pontuação
-      }));
+      // CORREÇÃO: Só salvar presenças se a chamada ainda não foi realizada
+      if (!attendanceTaken) {
+        // Salvar presença de todos os alunos usando a nova API em lote
+        const attendances = students.map(student => ({
+          studentId: student.id,
+          isPresent: true // Por padrão, todos presentes quando há pontuação
+        }));
 
-      console.log('🔵 ClassScreen - Salvando presenças:', {
-        classId: classData.id, // ← CORREÇÃO: Usar ID da aula específica
-        attendances,
-        lessonDate: classData.date
-      });
+        console.log('🔵 ClassScreen - Salvando presenças:', {
+          classId: classData.id, // ← CORREÇÃO: Usar ID da aula específica
+          attendances,
+          lessonDate: classData.date
+        });
 
-      try {
-        const attendanceResponse = await apiService.saveBatchAttendance(
-          classData.id, // ← CORREÇÃO: Usar ID da aula específica
-          attendances, 
-          classData.date
-        );
-        
-        console.log('🔵 ClassScreen - Resposta da API de presença:', attendanceResponse);
-        
-        if (!attendanceResponse.success) {
-          console.error('🔴 Erro ao salvar presenças:', attendanceResponse.message);
+        try {
+          const attendanceResponse = await apiService.saveBatchAttendance(
+            classData.id, // ← CORREÇÃO: Usar ID da aula específica
+            attendances, 
+            classData.date
+          );
+          
+          console.log('🔵 ClassScreen - Resposta da API de presença:', attendanceResponse);
+          
+          if (!attendanceResponse.success) {
+            console.error('🔴 Erro ao salvar presenças:', attendanceResponse.message);
+          } else {
+            setAttendanceTaken(true); // Marcar chamada como realizada
+          }
+        } catch (error) {
+          console.error('🔴 Erro ao salvar presenças:', error);
         }
-      } catch (error) {
-        console.error('🔴 Erro ao salvar presenças:', error);
+      } else {
+        console.log('🔵 ClassScreen - Chamada já realizada, não alterando presenças');
       }
 
-      showSuccess('Sucesso! 🎉', `Pontuações e presenças salvas para ${selectedStudents.length} aluno(s) no esporte ${classSport.name}!`);
+      if (attendanceTaken) {
+        showSuccess('Sucesso! 🎉', `Pontuações salvas para ${selectedStudents.length} aluno(s) no esporte ${classSport.name}!`);
+      } else {
+        showSuccess('Sucesso! 🎉', `Pontuações e presenças salvas para ${selectedStudents.length} aluno(s) no esporte ${classSport.name}!`);
+      }
       
       // Limpar estados
       setSelectedStudents([]);

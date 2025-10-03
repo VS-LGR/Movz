@@ -157,9 +157,12 @@ model TeacherClass {
   updatedAt   DateTime @updatedAt
 
   // Relacionamentos
-  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  class   Class? @relation(fields: [classId], references: [id], onDelete: SetNull)
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class       Class?       @relation(fields: [classId], references: [id], onDelete: SetNull)
+  attendances Attendance[]
 
+  // Constraint única: uma turma só pode ter uma aula por dia
+  @@unique([classId, date], name: "class_date_unique")
   @@map("teacher_classes")
 }
 
@@ -224,23 +227,25 @@ model ClassScore {
 }
 
 model Attendance {
-  id          String   @id @default(cuid())
-  classId     String
-  studentId   String
-  isPresent   Boolean  @default(true)
-  lessonDate  DateTime @default(now()) // Data da aula
-  notes       String?  // Observações sobre a presença
-  teacherId   String   // Professor que registrou a presença
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  classId        String   // ID da turma (para compatibilidade)
+  teacherClassId String?  // ID da aula específica (NOVO CAMPO)
+  studentId      String
+  isPresent      Boolean  @default(true)
+  lessonDate     DateTime @default(now()) // Data da aula
+  notes          String?  // Observações sobre a presença
+  teacherId      String   // Professor que registrou a presença
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relacionamentos
-  class    Class @relation(fields: [classId], references: [id], onDelete: Cascade)
-  student  User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher  User  @relation("AttendanceTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacherClass TeacherClass? @relation(fields: [teacherClassId], references: [id], onDelete: Cascade)
+  student      User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher      User         @relation("AttendanceTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
 
-  // Evitar presenças duplicadas no mesmo dia
-  @@unique([classId, studentId, lessonDate])
+  // Evitar presenças duplicadas na mesma aula específica (quando teacherClassId existe)
+  @@unique([teacherClassId, studentId], name: "attendance_teacher_class_unique")
   @@map("attendances")
 }
 

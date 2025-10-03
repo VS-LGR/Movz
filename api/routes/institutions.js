@@ -511,32 +511,28 @@ router.get('/classes/:classId/details', authenticateToken, requireInstitution, a
       }
     });
 
-    // Calcular estatísticas de presença
+    // Calcular estatísticas de presença - CORREÇÃO: usar todos os registros, não apenas aulas formais
     const totalSessions = classSessions.length;
     const studentAttendanceData = await Promise.all(
       classData.students.map(async (classStudent) => {
         const studentId = classStudent.student.id;
         
-        // Contar presenças (baseado em pontuações)
-        const presentSessions = await Promise.all(
-          classSessions.map(async (session) => {
-            const hasScore = await prisma.classScore.findFirst({
-              where: {
-                classId: classId,
-                studentId: studentId,
-                createdAt: {
-                  gte: session.date,
-                  lt: new Date(session.date.getTime() + 24 * 60 * 60 * 1000)
-                }
-              }
-            });
-            return !!hasScore;
-          })
-        );
+        // Contar presenças usando TODOS os registros de Attendance - CORREÇÃO: não limitar às aulas criadas
+        const allAttendanceRecords = await prisma.attendance.findMany({
+          where: {
+            classId: classId,
+            studentId: studentId
+          },
+          orderBy: {
+            lessonDate: 'desc'
+          }
+        });
 
-        const presentCount = presentSessions.filter(p => p).length;
-        const absentCount = totalSessions - presentCount;
-        const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
+        // Calcular estatísticas baseadas em TODOS os registros de presença
+        const presentCount = allAttendanceRecords.filter(record => record.isPresent).length;
+        const absentCount = allAttendanceRecords.filter(record => !record.isPresent).length;
+        const totalRecords = allAttendanceRecords.length;
+        const attendanceRate = totalRecords > 0 ? Math.round((presentCount / totalRecords) * 100) : 0;
 
         return {
           studentId,
@@ -568,30 +564,50 @@ router.get('/classes/:classId/details', authenticateToken, requireInstitution, a
       ? Math.round(studentAttendanceData.reduce((sum, student) => sum + student.attendanceRate, 0) / studentAttendanceData.length)
       : 0;
 
-    // Estatísticas por esporte
+    // Estatísticas por esporte - CORREÇÃO: somar pontuações por aluno e esporte
     const sportStats = {};
+    
+    // Agrupar pontuações por esporte e aluno
+    const scoresBySportAndStudent = {};
     classScores.forEach(score => {
       const sportName = score.sport.name;
+      const studentId = score.studentId;
+      const key = `${sportName}-${studentId}`;
+      
+      if (!scoresBySportAndStudent[key]) {
+        scoresBySportAndStudent[key] = {
+          sportName,
+          studentId,
+          totalScore: 0,
+          count: 0
+        };
+      }
+      scoresBySportAndStudent[key].totalScore += score.score;
+      scoresBySportAndStudent[key].count++;
+    });
+
+    // Calcular estatísticas por esporte
+    Object.values(scoresBySportAndStudent).forEach(studentSport => {
+      const sportName = studentSport.sportName;
       if (!sportStats[sportName]) {
         sportStats[sportName] = {
           totalScores: 0,
           totalStudents: 0,
           averageScore: 0,
-          scores: []
+          studentScores: []
         };
       }
-      sportStats[sportName].totalScores++;
-      sportStats[sportName].scores.push(score.score);
+      sportStats[sportName].studentScores.push(studentSport.totalScore);
     });
 
     // Calcular médias por esporte
     Object.keys(sportStats).forEach(sportName => {
       const sport = sportStats[sportName];
-      sport.averageScore = Math.round(sport.scores.reduce((sum, score) => sum + score, 0) / sport.scores.length);
-      sport.totalStudents = new Set(classScores
-        .filter(score => score.sport.name === sportName)
-        .map(score => score.studentId)
-      ).size;
+      sport.totalStudents = sport.studentScores.length;
+      sport.totalScores = sport.studentScores.reduce((sum, score) => sum + score, 0);
+      sport.averageScore = sport.totalStudents > 0 
+        ? Math.round(sport.totalScores / sport.totalStudents)
+        : 0;
     });
 
     res.json({

@@ -1282,10 +1282,9 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
 
         const result = await prisma.attendance.upsert({
           where: {
-            classId_studentId_lessonDate: {
-              classId: actualClassId, // ← CORREÇÃO: Usar actualClassId (ID da turma)
-              studentId: attendanceData.studentId,
-              lessonDate: lessonDateObj
+            attendance_teacher_class_unique: {
+              teacherClassId: classId, // ← CORREÇÃO: Usar teacherClassId (ID da aula específica)
+              studentId: attendanceData.studentId
             }
           },
           update: {
@@ -1295,6 +1294,7 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
           },
           create: {
             classId: actualClassId, // ← CORREÇÃO: Usar actualClassId (ID da turma)
+            teacherClassId: classId, // ← NOVO: ID da aula específica
             studentId: attendanceData.studentId,
             isPresent: attendanceData.isPresent,
             lessonDate: lessonDateObj,

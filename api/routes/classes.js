@@ -5,6 +5,21 @@ const prisma = require('../prisma');
 
 const router = express.Router();
 
+// Função para formatar data
+const formatDate = (date) => {
+  if (typeof date === 'string') {
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year}`;
+  } else if (date instanceof Date) {
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
+  return 'Data inválida';
+};
+
 // Middleware para verificar token JWT
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -64,9 +79,9 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
       orderBy: { date: 'asc' }
     });
 
-    // Converter para formato de objeto com data como chave
-    const classesByDate = {};
-    classes.forEach(cls => {
+    // CORREÇÃO: Retornar array de aulas ao invés de objeto agrupado por data
+    // Isso permite múltiplas aulas no mesmo dia (de turmas diferentes)
+    const classesArray = classes.map(cls => {
       // CORREÇÃO: Forçar conversão para string
       let dateStr;
       if (typeof cls.date === 'string') {
@@ -87,7 +102,7 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
         dateStrType: typeof dateStr
       });
       
-      classesByDate[dateStr] = {
+      return {
         id: cls.id,
         classId: cls.classId, // ID da turma associada
         school: cls.school,
@@ -101,7 +116,7 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
 
     res.json({
       success: true,
-      data: classesByDate
+      data: classesArray
     });
 
   } catch (error) {
@@ -142,13 +157,31 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       classDate = new Date(date);
     }
     
-    // CORREÇÃO: Sempre criar nova aula - permitir múltiplas aulas no mesmo dia
-    console.log('🔵 CreateClass - Data recebida:', date);
-    console.log('🔵 CreateClass - Data mantida:', classDate);
-    console.log('🔵 CreateClass - Tipo da data:', typeof classDate);
-    console.log('🔵 CreateClass - Professor:', req.user.userId);
-    console.log('🔵 CreateClass - Turma:', classId);
-    console.log('🔵 CreateClass - Assunto:', subject);
+            // NOVO ESQUEMA: Permitir múltiplas aulas no mesmo dia, mas uma turma por dia
+            console.log('🔵 CreateClass - Data recebida:', date);
+            console.log('🔵 CreateClass - Data mantida:', classDate);
+            console.log('🔵 CreateClass - Tipo da data:', typeof classDate);
+            console.log('🔵 CreateClass - Professor:', req.user.userId);
+            console.log('🔵 CreateClass - Turma:', classId);
+            console.log('🔵 CreateClass - Assunto:', subject);
+
+            // Verificar se já existe uma aula para esta turma nesta data
+            if (classId) {
+              const existingClassOnDate = await prisma.teacherClass.findFirst({
+                where: {
+                  classId: classId,
+                  date: classDate
+                }
+              });
+
+              if (existingClassOnDate) {
+                console.log('🔴 CreateClass - Já existe uma aula para esta turma nesta data:', existingClassOnDate.id);
+                return res.status(409).json({
+                  success: false,
+                  message: `Já existe uma aula para esta turma no dia ${formatDate(classDate)}. Uma turma só pode ter uma aula por dia.`
+                });
+              }
+            }
     
     // DEBUG: Verificar dados antes de criar
     const createData = {

@@ -60,26 +60,52 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
       const response = await apiService.getTeacherClasses();
       
       if (response.success) {
-        // Converter objeto para array e ordenar por data
+        // CORREÇÃO: API agora retorna array diretamente
         console.log('🔵 loadClasses - Dados recebidos do backend:', response.data);
-        const classesArray = Object.entries(response.data).map(([date, classData]) => {
-          console.log('🔵 loadClasses - Processando aula:', {
-            dateKey: date,
-            classData: classData,
-            dateType: typeof date
+        
+        // Verificar se é array ou objeto (compatibilidade)
+        let classesArray;
+        if (Array.isArray(response.data)) {
+          // API retorna array diretamente
+          classesArray = response.data.map(classData => {
+            console.log('🔵 loadClasses - Processando aula:', {
+              id: classData.id,
+              classData: classData,
+              dateType: typeof classData.date
+            });
+            return {
+              id: classData.id,
+              classId: classData.classId, // ID da turma associada
+              date: classData.date, // CORREÇÃO: Manter como string ao invés de converter para Date
+              school: classData.school,
+              grade: classData.grade,
+              subject: classData.subject,
+              time: classData.time,
+              notes: classData.notes,
+              isCompleted: classData.isCompleted
+            };
           });
-          return {
-            id: classData.id,
-            classId: classData.classId, // ID da turma associada
-            date: date, // CORREÇÃO: Manter como string ao invés de converter para Date
-            school: classData.school,
-            grade: classData.grade,
-            subject: classData.subject,
-            time: classData.time,
-            notes: classData.notes,
-            isCompleted: classData.isCompleted
-          };
-        });
+        } else {
+          // Fallback: converter objeto para array (compatibilidade)
+          classesArray = Object.entries(response.data).map(([date, classData]) => {
+            console.log('🔵 loadClasses - Processando aula (fallback):', {
+              dateKey: date,
+              classData: classData,
+              dateType: typeof date
+            });
+            return {
+              id: classData.id,
+              classId: classData.classId, // ID da turma associada
+              date: date, // CORREÇÃO: Manter como string ao invés de converter para Date
+              school: classData.school,
+              grade: classData.grade,
+              subject: classData.subject,
+              time: classData.time,
+              notes: classData.notes,
+              isCompleted: classData.isCompleted
+            };
+          });
+        }
         
         // Ordenar por data (mais recente primeiro) - CORREÇÃO: trabalhar com strings
         classesArray.sort((a, b) => {
