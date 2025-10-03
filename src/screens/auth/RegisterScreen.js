@@ -13,12 +13,11 @@ import {
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
-import SideMenu from '../../components/SideMenu';
 import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
-const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegister, onNavigateToLogin }) => {
+const RegisterScreen = ({ onNavigate, onRegister, onNavigateToLogin }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
   
   const [formData, setFormData] = useState({
@@ -358,20 +357,6 @@ const RegisterScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, onRegiste
         </View>
       </ScrollView>
       
-      {/* Side Menu */}
-      <SideMenu 
-        isVisible={isMenuVisible} 
-        onClose={() => setIsMenuVisible(false)}
-        onNavigate={onNavigate}
-      />
-      
-      <CustomAlert
-        visible={alert.visible}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={hideAlert}
-      />
     </SafeAreaView>
   );
 };

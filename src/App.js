@@ -292,8 +292,6 @@ export default function App() {
       case 'register':
         return (
           <RegisterScreen
-            isMenuVisible={isMenuVisible}
-            setIsMenuVisible={setIsMenuVisible}
             onNavigate={handleNavigate}
             onRegister={handleRegister}
             onNavigateToLogin={handleNavigateToLogin}

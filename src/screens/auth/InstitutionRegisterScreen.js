@@ -361,13 +361,6 @@ const InstitutionRegisterScreen = ({ onNavigate, onLogin }) => {
         </View>
       </View>
       
-      <CustomAlert
-        visible={alert.visible}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onClose={hideAlert}
-      />
     </SafeAreaView>
   );
 };
