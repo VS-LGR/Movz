@@ -395,7 +395,7 @@ const TeacherClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cur
 
         {/* Create Class Button */}
         <TouchableOpacity style={styles.createButton} onPress={handleCreateClass}>
-          <Text style={styles.createButtonText}>+ Nova Aula</Text>
+          <Text style={styles.createButtonText}>› Nova Aula</Text>
         </TouchableOpacity>
 
         {/* Classes List */}

@@ -1475,7 +1475,8 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
           student: classStudent.student,
           isPresent: attendance ? attendance.isPresent : null, // null = não registrado
           notes: attendance ? attendance.notes : null,
-          registeredAt: attendance ? attendance.createdAt : null
+          registeredAt: attendance ? attendance.createdAt : null,
+          teacherClassId: attendance ? attendance.teacherClassId : null // CORREÇÃO: Incluir teacherClassId
         };
       });
 

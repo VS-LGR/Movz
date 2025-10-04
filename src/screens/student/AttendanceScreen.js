@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   mainStatNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#364859',
+    color: '#2FD4CD',
     fontFamily: 'Poppins',
   },
   mainStatLabel: {

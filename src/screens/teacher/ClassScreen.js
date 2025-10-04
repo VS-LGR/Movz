@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Dimensions,
   TextInput,
   Modal,
+  Animated,
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
@@ -29,8 +30,17 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [expandedCard, setExpandedCard] = useState('aquecimento');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showScoringModal, setShowScoringModal] = useState(false);
+  
+  // Animações para os cards
+  const cardAnimations = useRef({
+    aquecimento: new Animated.Value(0),
+    treino: new Animated.Value(0),
+    alongamento: new Animated.Value(0),
+    desaquecimento: new Animated.Value(0), // CORREÇÃO: Adicionar animação para desaquecimento
+  }).current;
   const [students, setStudents] = useState([]);
   const [sports, setSports] = useState([]);
+  const [currentSport, setCurrentSport] = useState(null); // Esporte atual da aula
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedSport, setSelectedSport] = useState(null);
   const [score, setScore] = useState('');
@@ -52,6 +62,102 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     checkAttendanceStatus(); // Verificar se chamada já foi realizada
   }, []);
 
+  // Identificar esporte atual quando sports carregarem
+  useEffect(() => {
+    if (sports.length > 0 && classData.subject) {
+      identifyCurrentSport();
+    }
+  }, [sports, classData.subject]);
+
+  // Função para identificar o esporte atual da aula
+  const identifyCurrentSport = () => {
+    if (!classData.subject || sports.length === 0) return;
+    
+    // Extrair nome do esporte do subject (formato: "Nome do Esporte - Tipo da Aula")
+    const subjectParts = classData.subject.split(' - ');
+    const sportName = subjectParts[0];
+    
+    // Encontrar o esporte correspondente
+    const sport = sports.find(s => 
+      s.name.toLowerCase() === sportName.toLowerCase()
+    );
+    
+    if (sport) {
+      console.log('🔵 ClassScreen - Esporte identificado:', sport);
+      setCurrentSport(sport);
+    } else {
+      console.log('🔴 ClassScreen - Esporte não encontrado:', sportName);
+    }
+  };
+
+  // Função para animar os cards
+  const animateCard = (cardId, isExpanding) => {
+    const animation = cardAnimations[cardId];
+    if (!animation) {
+      console.log('🔴 ClassScreen - Animação não encontrada para cardId:', cardId);
+      return;
+    }
+
+    console.log('🔵 ClassScreen - Animando card:', cardId, 'isExpanding:', isExpanding);
+    
+    Animated.timing(animation, {
+      toValue: isExpanding ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  // Funções para informações dinâmicas baseadas no esporte
+  const getDynamicClassTitle = () => {
+    if (!currentSport) return 'Treino de Vôlei'; // Fallback
+    
+    const subjectParts = classData.subject?.split(' - ') || [];
+    const classType = subjectParts[1] || 'TREINO';
+    
+    return `${currentSport.name} - ${classType}`;
+  };
+
+  const getDynamicXP = () => {
+    if (!currentSport) return 60; // Fallback
+    
+    // XP baseado no tipo de aula
+    const subjectParts = classData.subject?.split(' - ') || [];
+    const classType = subjectParts[1] || 'TREINO';
+    
+    switch (classType.toUpperCase()) {
+      case 'AQUECIMENTO':
+        return 20;
+      case 'TREINO':
+        return 60;
+      case 'PRATICA':
+        return 80;
+      case 'COMPETICAO':
+        return 100;
+      default:
+        return 60;
+    }
+  };
+
+  const getDynamicDuration = () => {
+    if (!currentSport) return '60min'; // Fallback
+    
+    const subjectParts = classData.subject?.split(' - ') || [];
+    const classType = subjectParts[1] || 'TREINO';
+    
+    switch (classType.toUpperCase()) {
+      case 'AQUECIMENTO':
+        return '30min';
+      case 'TREINO':
+        return '60min';
+      case 'PRATICA':
+        return '90min';
+      case 'COMPETICAO':
+        return '120min';
+      default:
+        return '60min';
+    }
+  };
+
   // Verificar se a chamada já foi realizada
   const checkAttendanceStatus = async () => {
     if (!classData?.id) return;
@@ -60,9 +166,21 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       console.log('🔵 ClassScreen - Verificando status da chamada para aula:', classData.id);
       const response = await apiService.getClassAttendance(classData.id, classData.date);
       
+      // CORREÇÃO: Verificar se as presenças são da aula específica
+      // A API retorna presenças da turma na data, mas precisamos verificar se são da aula específica
       if (response.success && response.data.attendances && response.data.attendances.length > 0) {
-        console.log('🔵 ClassScreen - Chamada já foi realizada, atualizando estado');
-        setAttendanceTaken(true);
+        // Verificar se todas as presenças são da aula específica (teacherClass.id)
+        const allAttendancesFromThisClass = response.data.attendances.every(attendance => 
+          attendance.teacherClassId === classData.id
+        );
+        
+        if (allAttendancesFromThisClass) {
+          console.log('🔵 ClassScreen - Chamada já foi realizada para esta aula específica');
+          setAttendanceTaken(true);
+        } else {
+          console.log('🔵 ClassScreen - Presenças encontradas são de outras aulas da mesma turma');
+          setAttendanceTaken(false);
+        }
       } else {
         console.log('🔵 ClassScreen - Chamada ainda não foi realizada');
         setAttendanceTaken(false);
@@ -427,29 +545,101 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     }
   };
 
-  const renderWorkoutCard = (section) => (
-    <TouchableOpacity
-      key={section.id}
-      style={[
-        styles.workoutCard,
-        expandedCard === section.id && styles.expandedCard
-      ]}
-      onPress={() => setExpandedCard(expandedCard === section.id ? null : section.id)}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleContainer}>
-          <Text style={styles.cardTitle}>{section.title}</Text>
-          <Text style={styles.cardDuration}>{section.duration}</Text>
+  const renderWorkoutCard = (section) => {
+    const isExpanded = expandedCard === section.id;
+    const animation = cardAnimations[section.id];
+    
+    console.log('🔵 ClassScreen - Renderizando card:', section.id, 'animation:', !!animation);
+    
+    // Verificação de segurança para a animação
+    if (!animation) {
+      console.log('🔴 ClassScreen - Usando fallback para card:', section.id);
+      return (
+        <TouchableOpacity
+          key={section.id}
+          style={[
+            styles.workoutCard,
+            isExpanded && styles.expandedCard
+          ]}
+          onPress={() => setExpandedCard(isExpanded ? null : section.id)}
+        >
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleContainer}>
+              <Text style={styles.cardTitle}>{section.title}</Text>
+              <Text style={styles.cardDuration}>{section.duration}</Text>
+            </View>
+            <View style={styles.expandIcon}>
+              <Text style={styles.expandIconText}>
+                {isExpanded ? '⌄' : '>'}
+              </Text>
+            </View>
+          </View>
+          
+          {isExpanded && (
+            <View style={styles.exercisesList}>
+              {section.exercises.map((exercise, index) => (
+                <View key={index} style={styles.exerciseItem}>
+                  <View style={styles.exerciseInfo}>
+                    <Text style={styles.exerciseName}>{exercise.name}</Text>
+                    <Text style={styles.exerciseReps}>{exercise.repetitions}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </TouchableOpacity>
+      );
+    }
+    
+    return (
+      <TouchableOpacity
+        key={section.id}
+        style={[
+          styles.workoutCard,
+          isExpanded && styles.expandedCard
+        ]}
+        onPress={() => {
+          const newExpandedCard = isExpanded ? null : section.id;
+          setExpandedCard(newExpandedCard);
+          animateCard(section.id, !isExpanded);
+        }}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleContainer}>
+            <Text style={styles.cardTitle}>{section.title}</Text>
+            <Text style={styles.cardDuration}>{section.duration}</Text>
+          </View>
+          <View style={styles.expandIcon}>
+            <Animated.Text 
+              style={[
+                styles.expandIconText,
+                {
+                  transform: [{
+                    rotate: animation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '90deg']
+                    })
+                  }]
+                }
+              ]}
+            >
+              >
+            </Animated.Text>
+          </View>
         </View>
-        <View style={styles.expandIcon}>
-          <Text style={styles.expandIconText}>
-            {expandedCard === section.id ? '−' : '+'}
-          </Text>
-        </View>
-      </View>
-      
-      {expandedCard === section.id && (
-        <View style={styles.exercisesList}>
+        
+        <Animated.View 
+          style={[
+            styles.exercisesList,
+            {
+              opacity: animation,
+              maxHeight: animation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 200]
+              })
+            }
+          ]}
+        >
           {section.exercises.map((exercise, index) => (
             <View key={index} style={styles.exerciseItem}>
               <View style={styles.exerciseInfo}>
@@ -458,13 +648,25 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
               </View>
             </View>
           ))}
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScrollView style={styles.container}>
+      {/* Background com imagem do esporte */}
+      {currentSport?.icon && (
+        <View style={styles.sportBackgroundContainer}>
+          <Image 
+            source={{ uri: currentSport.icon }} 
+            style={styles.sportBackgroundImage}
+            tintColor={currentSport.color || '#F9BB55'}
+            resizeMode="contain"
+          />
+        </View>
+      )}
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -481,14 +683,24 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         
         <Text style={styles.title}>Início da Aula</Text>
         <Text style={styles.subtitle}>
-          Vamos começar a aula da {classData?.class || '5ª série'}?
+          Vamos começar a aula da {classData?.grade || 'turma'}?
         </Text>
         
         <View style={styles.divider} />
         
-        <Text style={styles.classTitle}>{classData?.sport || 'Treino de Vôlei'}</Text>
+        <View style={styles.classTitleContainer}>
+          {currentSport?.icon && (
+            <Image 
+              source={{ uri: currentSport.icon }} 
+            style={styles.classTitleIcon}
+            tintColor={currentSport.color || '#F9BB55'}
+              resizeMode="contain"
+            />
+          )}
+          <Text style={styles.classTitle}>{getDynamicClassTitle()}</Text>
+        </View>
         <Text style={styles.classInfo}>
-          Duração: {classData?.duration || '60min'} Esse treino vale {classData?.xp || '60'}xp para seus alunos
+          Duração: {getDynamicDuration()} • Esse treino vale <Text style={styles.xpNumber}>{getDynamicXP()}xp</Text> para seus alunos
         </Text>
       </View>
 
@@ -729,9 +941,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E8EDED',
   },
+  sportBackgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: width > 768 ? '50%' : '60%', // Responsivo para desktop/tablet
+    height: '35%',
+    zIndex: 0,
+    opacity: 0.06,
+  },
+  sportBackgroundImage: {
+    width: '100%',
+    height: '100%',
+  },
   header: {
     padding: 20,
     paddingTop: 40,
+    position: 'relative',
+    zIndex: 1,
   },
   headerTop: {
     flexDirection: 'row',
@@ -769,18 +996,35 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     marginBottom: 20,
   },
+  classTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  classTitleIcon: {
+    width: width > 768 ? 48 : 40, // Responsivo
+    height: width > 768 ? 48 : 40,
+    marginRight: 12,
+  },
   classTitle: {
-    fontSize: 36,
+    fontSize: width > 768 ? 36 : 32, // Responsivo
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 10,
+    textShadow: '1px 1px 2px rgba(0, 0, 0, 0.1)',
   },
   classInfo: {
     fontSize: 18,
-    color: '#000',
+    color: '#333',
     textAlign: 'center',
     marginBottom: 20,
+    fontWeight: '500',
+    lineHeight: 24,
+  },
+  xpNumber: {
+    color: '#2FD4CD',
+    fontWeight: 'bold',
   },
   attendanceButton: {
     backgroundColor: '#B5B5B5',
@@ -807,17 +1051,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginBottom: 15,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   expandedCard: {
-    shadowOpacity: 0.2,
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
     elevation: 5,
   },
   cardHeader: {
@@ -840,23 +1078,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   expandIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F9BB55',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 12,
+    minWidth: 40,
+    minHeight: 40,
   },
   expandIconText: {
-    fontSize: 18,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#F9BB55',
+    textAlign: 'center',
+    lineHeight: 32,
   },
   exercisesList: {
     marginTop: 15,
     paddingTop: 15,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
+    overflow: 'hidden',
   },
   exerciseItem: {
     flexDirection: 'row',

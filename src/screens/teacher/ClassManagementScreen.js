@@ -312,7 +312,7 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
             style={styles.addStudentButton}
             onPress={() => handleAddStudent(classItem)}
           >
-            <Text style={styles.addStudentButtonText}>+ Adicionar</Text>
+            <Text style={styles.addStudentButtonText}>› Adicionar</Text>
           </TouchableOpacity>
         </View>
 
@@ -391,7 +391,7 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
 
         {/* Botão Criar Turma */}
         <TouchableOpacity style={styles.createButton} onPress={handleCreateClass}>
-          <Text style={styles.createButtonText}>+ Nova Turma</Text>
+          <Text style={styles.createButtonText}>› Nova Turma</Text>
         </TouchableOpacity>
 
         {/* Lista de Turmas */}
@@ -521,7 +521,7 @@ const ClassManagementScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
                       <Text style={styles.studentModalSchool}>{student.school}</Text>
                     )}
                   </View>
-                  <Text style={styles.addIcon}>+</Text>
+                  <Text style={styles.addIcon}>›</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

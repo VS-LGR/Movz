@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   xpValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111426',
+    color: '#2FD4CD',
     fontFamily: 'Poppins',
   },
   progressBarContainer: {
@@ -473,10 +473,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
     elevation: 4,
   },
   attendancePercentage: {
