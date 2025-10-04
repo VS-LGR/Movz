@@ -51,6 +51,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
   const [selectedStudents, setSelectedStudents] = useState([]); // Array de IDs dos alunos selecionados
   const [batchScore, setBatchScore] = useState('');
   const [batchNotes, setBatchNotes] = useState('');
+  const [selectedSportForScoring, setSelectedSportForScoring] = useState(null); // Esporte específico para pontuação
   const { alert, showSuccess, showError, hideAlert } = useCustomAlert();
 
   // Carregar dados iniciais
@@ -88,6 +89,14 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     } else {
       console.log('🔴 ClassScreen - Esporte não encontrado:', sportName);
     }
+  };
+
+  // Função para verificar se é "Aula Livre"
+  const isFreeClass = () => {
+    if (!classData.subject) return false;
+    const subjectParts = classData.subject.split(' - ');
+    const sportName = subjectParts[0];
+    return sportName === 'Aula Livre';
   };
 
   // Função para animar os cards
@@ -392,18 +401,31 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         return;
       }
 
-      // Buscar o esporte da aula automaticamente
-      // O esporte está no campo 'subject' no formato "Nome do Esporte - Tipo da Aula"
-      const subjectParts = classData.subject?.split(' - ') || [];
-      const sportName = subjectParts[0]; // Primeira parte é o nome do esporte
+      // Determinar o esporte para pontuação
+      let classSport;
       
-      const classSport = sports.find(sport => 
-        sport.name.toLowerCase() === sportName?.toLowerCase()
-      );
+      if (isFreeClass()) {
+        // Para "Aula Livre", usar o esporte selecionado pelo professor
+        if (!selectedSportForScoring) {
+          showError('❌ Erro', 'Selecione um esporte para continuar');
+          return;
+        }
+        classSport = selectedSportForScoring;
+        console.log('🔵 ClassScreen - Usando esporte selecionado para "Aula Livre":', classSport.name);
+      } else {
+        // Para outros esportes, usar o esporte da aula automaticamente
+        const subjectParts = classData.subject?.split(' - ') || [];
+        const sportName = subjectParts[0]; // Primeira parte é o nome do esporte
+        
+        classSport = sports.find(sport => 
+          sport.name.toLowerCase() === sportName?.toLowerCase()
+        );
 
-      if (!classSport) {
-        showError('❌ Erro', `Esporte "${sportName}" da aula não encontrado`);
-        return;
+        if (!classSport) {
+          showError('❌ Erro', `Esporte "${sportName}" da aula não encontrado`);
+          return;
+        }
+        console.log('🔵 ClassScreen - Usando esporte da aula:', classSport.name);
       }
 
       // Salvar pontuação para todos os alunos selecionados
@@ -486,6 +508,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       setSelectedStudents([]);
       setBatchScore('');
       setBatchNotes('');
+      setSelectedSportForScoring(null); // Limpar seleção de esporte
       setShowScoringModal(false);
       setAttendanceTaken(true);
       
@@ -836,15 +859,48 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
 
             {/* Esporte da Aula */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Esporte da Aula</Text>
-              <View style={styles.sportDisplayContainer}>
-                <Text style={styles.sportDisplayText}>
-                  🏆 {(() => {
-                    const subjectParts = classData.subject?.split(' - ') || [];
-                    return subjectParts[0] || 'Esporte não definido';
-                  })()}
-                </Text>
-              </View>
+              <Text style={styles.inputLabel}>
+                {isFreeClass() ? 'Esporte para Pontuação *' : 'Esporte da Aula'}
+              </Text>
+              {isFreeClass() ? (
+                <View style={styles.sportSelectorContainer}>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={true}
+                    style={styles.sportSelectorScroll}
+                    contentContainerStyle={styles.sportSelectorContent}
+                  >
+                    {sports.filter(sport => sport.name !== 'Aula Livre').map((sport) => (
+                      <TouchableOpacity
+                        key={sport.id}
+                        style={[
+                          styles.sportSelectorCard,
+                          selectedSportForScoring?.id === sport.id && styles.sportSelectorCardSelected
+                        ]}
+                        onPress={() => setSelectedSportForScoring(sport)}
+                      >
+                        <Text style={styles.sportSelectorText} numberOfLines={1}>
+                          {sport.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {!selectedSportForScoring && (
+                    <Text style={styles.sportSelectorWarning}>
+                      ⚠️ Selecione um esporte para continuar
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.sportDisplayContainer}>
+                  <Text style={styles.sportDisplayText}>
+                    🏆 {(() => {
+                      const subjectParts = classData.subject?.split(' - ') || [];
+                      return subjectParts[0] || 'Esporte não definido';
+                    })()}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Pontuação */}
@@ -879,10 +935,13 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
                 📊 {selectedStudents.length} aluno(s) selecionado(s) para avaliação
               </Text>
               <Text style={styles.summaryText}>
-                🏆 Esporte: {(() => {
-                  const subjectParts = classData.subject?.split(' - ') || [];
-                  return subjectParts[0] || 'Não definido';
-                })()}
+                🏆 Esporte: {isFreeClass() 
+                  ? (selectedSportForScoring?.name || 'Não selecionado')
+                  : (() => {
+                      const subjectParts = classData.subject?.split(' - ') || [];
+                      return subjectParts[0] || 'Não definido';
+                    })()
+                }
               </Text>
               <Text style={styles.summaryText}>
                 📝 Presença será salva para todos os alunos
@@ -898,6 +957,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
                   setSelectedStudents([]);
                   setBatchScore('');
                   setBatchNotes('');
+                  setSelectedSportForScoring(null);
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -1235,10 +1295,10 @@ const styles = StyleSheet.create({
   scoringModalContent: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 20,
-    marginHorizontal: 10,
-    maxHeight: '90%',
-    width: '95%',
+    padding: 15,
+    marginHorizontal: 5,
+    maxHeight: '95%',
+    width: '98%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1249,14 +1309,14 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   scoringModalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 12,
   },
   inputLabel: {
     fontSize: 14,
@@ -1328,13 +1388,13 @@ const styles = StyleSheet.create({
   scoringModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 6,
   },
   scoringModalButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 6,
     alignItems: 'center',
   },
   saveButton: {
@@ -1382,13 +1442,53 @@ const styles = StyleSheet.create({
   summaryContainer: {
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+    padding: 8,
+    marginBottom: 8,
+    marginHorizontal: 0,
   },
   summaryText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
-    marginBottom: 3,
+    marginBottom: 2,
+    fontFamily: 'Poppins',
+    lineHeight: 14,
+  },
+  sportSelectorContainer: {
+    marginTop: 10,
+  },
+  sportSelectorScroll: {
+    maxHeight: 80,
+  },
+  sportSelectorContent: {
+    paddingHorizontal: 4,
+  },
+  sportSelectorCard: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginRight: 4,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    minWidth: 60,
+    maxWidth: 80,
+    alignItems: 'center',
+  },
+  sportSelectorCardSelected: {
+    backgroundColor: '#F9BB55',
+    borderColor: '#F9BB55',
+  },
+  sportSelectorText: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#333',
+    fontFamily: 'Poppins',
+    textAlign: 'center',
+  },
+  sportSelectorWarning: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    marginTop: 5,
     fontFamily: 'Poppins',
   },
   sportDisplayContainer: {

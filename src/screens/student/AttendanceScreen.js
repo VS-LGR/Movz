@@ -478,11 +478,14 @@ const styles = StyleSheet.create({
   },
   mainStatsDetails: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   mainStatItem: {
     alignItems: 'center',
+    flex: 1,
   },
   mainStatNumber: {
     fontSize: 24,

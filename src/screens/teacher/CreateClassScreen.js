@@ -32,6 +32,7 @@ const getSportIcon = (sportName) => {
     'Futebol': require('../../assets/images/futebol_sports.svg'),
     'Exercícios': require('../../assets/images/Exercise_sports.svg'),
     'Queimada': require('../../assets/images/queimada_sports.svg'),
+    'Aula Livre': require('../../assets/images/Exercise_sports.svg'),
   };
   return iconMap[sportName] || null;
 };

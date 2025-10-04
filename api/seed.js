@@ -94,6 +94,17 @@ async function main() {
         color: '#FF5722',
         isActive: true
       }
+    }),
+    prisma.sport.upsert({
+      where: { name: 'Aula Livre' },
+      update: { icon: 'src/assets/images/Exercise_sports.svg' },
+      create: {
+        name: 'Aula Livre',
+        description: 'Aula livre para prática de múltiplos esportes',
+        icon: 'src/assets/images/Exercise_sports.svg',
+        color: '#9C27B0',
+        isActive: true
+      }
     })
   ]);
 
