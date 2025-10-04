@@ -458,6 +458,139 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
   }
 });
 
+// Buscar ranking da turma do aluno
+router.get('/student/ranking', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Verificar se é aluno
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userType: true }
+    });
+
+    if (!user || user.userType !== 'STUDENT') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
+      });
+    }
+
+    // Buscar a turma do aluno
+    const classStudent = await prisma.classStudent.findFirst({
+      where: {
+        studentId: userId,
+        isActive: true
+      },
+      include: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            school: true,
+            grade: true
+          }
+        }
+      }
+    });
+
+    if (!classStudent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Aluno não está matriculado em nenhuma turma'
+      });
+    }
+
+    // Buscar todos os alunos da turma
+    const allClassStudents = await prisma.classStudent.findMany({
+      where: {
+        classId: classStudent.classId,
+        isActive: true
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    // Calcular pontuação total de cada aluno
+    const rankingData = await Promise.all(
+      allClassStudents.map(async (classStudentItem) => {
+        const studentId = classStudentItem.student.id;
+        
+        // Buscar todas as pontuações do aluno em todos os esportes
+        const allScores = await prisma.classScore.findMany({
+          where: {
+            studentId: studentId,
+            classId: classStudent.classId
+          },
+          include: {
+            sport: {
+              select: {
+                name: true
+              }
+            }
+          }
+        });
+
+        // Somar todas as pontuações
+        const totalScore = allScores.reduce((sum, score) => sum + score.score, 0);
+        const totalClasses = allScores.length;
+
+        return {
+          studentId,
+          studentName: classStudentItem.student.name,
+          studentEmail: classStudentItem.student.email,
+          studentAvatar: classStudentItem.student.avatar,
+          totalScore,
+          totalClasses,
+          scores: allScores.map(score => ({
+            sportName: score.sport.name,
+            score: score.score,
+            date: score.createdAt
+          }))
+        };
+      })
+    );
+
+    // Ordenar por pontuação total (maior para menor)
+    rankingData.sort((a, b) => b.totalScore - a.totalScore);
+
+    // Adicionar posição no ranking
+    const rankingWithPosition = rankingData.map((student, index) => ({
+      ...student,
+      position: index + 1
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        classInfo: {
+          id: classStudent.class.id,
+          name: classStudent.class.name,
+          school: classStudent.class.school,
+          grade: classStudent.class.grade
+        },
+        ranking: rankingWithPosition,
+        currentStudentId: userId
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar ranking da turma:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
 // Buscar dados de presença do aluno
 router.get('/student/attendance', authenticateToken, async (req, res) => {
   try {

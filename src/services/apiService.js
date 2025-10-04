@@ -237,6 +237,11 @@ class ApiService {
     return this.request('/scores/student/sports');
   }
 
+  // Buscar ranking da turma do aluno
+  async getStudentRanking() {
+    return this.request('/scores/student/ranking');
+  }
+
   // Buscar dados de presença do aluno
   async getStudentAttendance() {
     return this.request('/scores/student/attendance');
