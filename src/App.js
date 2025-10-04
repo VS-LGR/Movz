@@ -4,6 +4,7 @@ import Storage from './utils/storage'; // Custom storage wrapper
 import apiService from './services/apiService';
 import useCustomAlert from './hooks/useCustomAlert';
 import CustomAlert from './components/CustomAlert';
+import { preloadImages } from './utils/imageCache';
 import LoginScreen from './screens/auth/LoginScreen';
 import HomeScreen from './screens/student/HomeScreen';
 import MyClassScreen from './screens/student/MyClassScreen';
@@ -26,6 +27,7 @@ import ClassScreen from './screens/teacher/ClassScreen';
 import AttendanceListScreen from './screens/teacher/AttendanceListScreen';
 import AchievementsScreen from './screens/student/AchievementsScreen';
 import MedalsScreen from './screens/student/MedalsScreen';
+import CardCustomizationScreen from './screens/student/CardCustomizationScreen';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
@@ -36,18 +38,49 @@ export default function App() {
 
   // Verificar status de autenticação ao carregar o app
   useEffect(() => {
+    // Pré-carregar imagens para melhor performance
+    preloadImages();
     checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
-      // Sempre iniciar na página de login
-      setCurrentScreen('login');
-      setIsAuthenticated(false);
-      setCurrentUser(null);
+      // Verificar se há token válido no localStorage
+      const token = await Storage.getItem('authToken');
+      const userType = await Storage.getItem('userType');
+      const currentUser = await Storage.getItem('currentUser');
       
-      // Limpar dados de autenticação antigos
-      await clearAuthData();
+      console.log('🔍 App - Verificando autenticação:');
+      console.log('  - Token:', token ? token.substring(0, 20) + '...' : 'null');
+      console.log('  - UserType:', userType);
+      console.log('  - CurrentUser:', currentUser ? 'present' : 'null');
+      
+      if (token && userType && currentUser) {
+        // Configurar token no apiService
+        apiService.setToken(token);
+        setCurrentUser(JSON.parse(currentUser));
+        setIsAuthenticated(true);
+        
+        // Navegar para a tela apropriada
+        switch (userType) {
+          case 'STUDENT':
+            setCurrentScreen('home');
+            break;
+          case 'TEACHER':
+            setCurrentScreen('teacherClasses');
+            break;
+          case 'INSTITUTION':
+            setCurrentScreen('institutionDashboard');
+            break;
+          default:
+            setCurrentScreen('home');
+        }
+        console.log('✅ App - Usuário autenticado automaticamente');
+      } else {
+        // Limpar dados de autenticação antigos
+        await clearAuthData();
+        console.log('❌ App - Nenhum token válido encontrado');
+      }
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
       showError('⚠️ Erro de Inicialização', 'Ocorreu um erro ao inicializar o aplicativo. Tente recarregar a página.');
@@ -372,6 +405,16 @@ export default function App() {
       case 'achievements':
         return (
           <AchievementsScreen
+            isMenuVisible={isMenuVisible}
+            setIsMenuVisible={setIsMenuVisible}
+            onNavigate={handleNavigate}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+        );
+      case 'card-customization':
+        return (
+          <CardCustomizationScreen
             isMenuVisible={isMenuVisible}
             setIsMenuVisible={setIsMenuVisible}
             onNavigate={handleNavigate}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import { getCachedImage } from '../../utils/imageCache';
 import apiService from '../../services/apiService';
+import ImagePlaceholder from '../../components/ImagePlaceholder';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const [sportsScores, setSportsScores] = useState([]);
   const [attendanceData, setAttendanceData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +30,15 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
   const loadStudentData = async () => {
     try {
       setIsLoading(true);
+      
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        return;
+      }
       
       // Buscar pontuações dos esportes
       const scoresResponse = await apiService.getStudentSportsScores();
@@ -48,6 +60,12 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
       if (attendanceResponse.success) {
         setAttendanceData(attendanceResponse.data);
       }
+
+      // Buscar dados do perfil (XP, medalhas, conquistas)
+      const profileResponse = await apiService.getStudentProfile();
+      if (profileResponse.success) {
+        setProfileData(profileResponse.data);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados do aluno:', error);
     } finally {
@@ -62,17 +80,9 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
     return '#D9493C'; // Vermelho
   };
 
-  const medals = [
-    { month: 'Março', image: require('../../assets/images/Medalha_2.svg') },
-    { month: 'Abril', image: require('../../assets/images/Medalha_4.svg') },
-    { month: 'Maio', image: require('../../assets/images/Medalha_5.svg') },
-  ];
-
-  const achievements = [
-    { month: 'Março', image: require('../../assets/images/aiAtivo 5medals.svg') },
-    { month: 'Abril', image: require('../../assets/images/aiAtivo 9medals.svg') },
-    { month: 'Maio', image: require('../../assets/images/aiAtivo 10medals.svg') },
-  ];
+  // Usar dados reais da API em vez de dados hardcoded
+  const medals = profileData?.medals?.unlocked || [];
+  const achievements = profileData?.achievements?.unlocked || [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -99,12 +109,31 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         <View style={styles.xpSection}>
           <View style={styles.xpHeader}>
             <Text style={styles.xpTitle}>Seu XP até agora</Text>
-            <Text style={styles.xpValue}>2.500</Text>
+            <Text style={styles.xpValue}>
+              {profileData ? profileData.student.totalXP.toLocaleString() : '0'}
+            </Text>
           </View>
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBackground} />
-            <View style={styles.progressBarFill} />
+            <View style={[
+              styles.progressBarFill,
+              { 
+                width: profileData 
+                  ? `${(profileData.xp.progress / 1000) * 100}%`
+                  : '0%'
+              }
+            ]} />
           </View>
+          {profileData && (
+            <View style={styles.xpInfo}>
+              <Text style={styles.xpLevelText}>
+                Nível {profileData.student.level} • {profileData.xp.progress}/1000 XP
+              </Text>
+              <Text style={styles.xpNextLevelText}>
+                Próximo nível: {profileData.xp.needed} XP
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Sports Score Card */}
@@ -186,17 +215,35 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         {/* Medals Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Suas medalhas</Text>
-          <View style={styles.medalBannerContainer}>
-            <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
-            <View style={styles.medalBanner}>
-              {medals.map((medal, index) => (
-                <View key={index} style={styles.medalContainer}>
-                  <Image source={medal.image} style={styles.medalIcon} resizeMode="contain" />
-                  <Text style={styles.medalMonth}>{medal.month}</Text>
-                </View>
-              ))}
+          {profileData && profileData.medals.unlocked.length > 0 ? (
+            <View style={styles.medalBannerContainer}>
+              <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
+              <View style={styles.medalBanner}>
+                {profileData.medals.unlocked.slice(0, 3).map((medal, index) => (
+                  <View key={medal.id} style={styles.medalContainer}>
+                    <View style={styles.medalIcon}>
+                      <Image 
+                        source={getCachedImage(medal.name, 'medal')} 
+                        style={styles.medalSvg}
+                        resizeMode="contain"
+                        onError={() => console.log('Erro ao carregar medalha:', medal.name)}
+                      />
+                    </View>
+                    <Text style={styles.medalMonth}>{medal.name}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.emptyMedalsContainer}>
+              <Text style={styles.emptyMedalsText}>
+                🏅 Nenhuma medalha conquistada ainda
+              </Text>
+              <Text style={styles.emptyMedalsSubtext}>
+                Continue praticando para desbloquear suas primeiras medalhas!
+              </Text>
+            </View>
+          )}
           <TouchableOpacity 
             style={styles.seeMoreButton}
             onPress={() => onNavigate('medals')}
@@ -208,17 +255,34 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         {/* Achievements Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Suas conquistas</Text>
-          <View style={styles.medalBannerContainer}>
-            <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
-            <View style={styles.medalBanner}>
-              {achievements.map((achievement, index) => (
-                <View key={index} style={styles.medalContainer}>
-                  <Image source={achievement.image} style={styles.medalIcon} resizeMode="contain" />
-                  <Text style={styles.medalMonth}>{achievement.month}</Text>
-                </View>
-              ))}
+          {profileData && profileData.achievements.unlocked.length > 0 ? (
+            <View style={styles.medalBannerContainer}>
+              <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
+              <View style={styles.medalBanner}>
+                {profileData.achievements.unlocked.slice(0, 3).map((achievement, index) => (
+                  <View key={achievement.id} style={styles.medalContainer}>
+                    <View style={styles.medalIcon}>
+                      <Image 
+                        source={getCachedImage(achievement.name, 'achievement')} 
+                        style={styles.medalSvg}
+                        resizeMode="contain"
+                      />
+                    </View>
+                    <Text style={styles.medalMonth}>{achievement.name}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.emptyMedalsContainer}>
+              <Text style={styles.emptyMedalsText}>
+                🏆 Nenhuma conquista desbloqueada ainda
+              </Text>
+              <Text style={styles.emptyMedalsSubtext}>
+                Complete exercícios para conquistar suas primeiras conquistas!
+              </Text>
+            </View>
+          )}
           <TouchableOpacity 
             style={styles.seeMoreButton}
             onPress={() => onNavigate('achievements')}
@@ -322,12 +386,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: '44%', // 133/304 * 100
     height: 12,
     backgroundColor: '#2ED4CC',
     borderRadius: 6,
     boxShadow: '0px 0px 12.3px 0px rgba(255, 255, 255, 0.32)',
     elevation: 8,
+  },
+  xpInfo: {
+    marginTop: 10,
+  },
+  xpLevelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2FD4CD',
+    fontFamily: 'Poppins',
+  },
+  xpNextLevelText: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Poppins',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -569,6 +646,39 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.4)',
     elevation: 8, // Para Android
     backgroundColor: 'transparent', // Remove background to show SVG
+  },
+  medalIconPlaceholder: {
+    width: 39,
+    height: 39,
+    borderRadius: 19.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  medalIconText: {
+    fontSize: 20,
+  },
+  medalSvg: {
+    width: 39,
+    height: 39,
+  },
+  emptyMedalsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyMedalsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 5,
+    fontFamily: 'Poppins',
+  },
+  emptyMedalsSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    fontFamily: 'Poppins',
   },
   medalMonth: {
     width: 32, // Largura exata do Figma (texto "Março")

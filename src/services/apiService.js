@@ -33,7 +33,12 @@ class ApiService {
     // Adicionar token se disponível
     if (this.token) {
       config.headers.Authorization = `Bearer ${this.token}`;
+      console.log('🔑 API Service - Token configurado:', this.token.substring(0, 20) + '...');
+    } else {
+      console.log('❌ API Service - Nenhum token configurado');
     }
+
+    console.log('🔍 API Service - Headers finais:', config.headers);
 
     try {
       const response = await fetch(url, config);
@@ -245,6 +250,28 @@ class ApiService {
   // Buscar dados de presença do aluno
   async getStudentAttendance() {
     return this.request('/scores/student/attendance');
+  }
+
+  // ===== PERSONALIZAÇÃO E XP =====
+
+  // Buscar perfil completo do aluno (XP, medalhas, conquistas, personalizações)
+  async getStudentProfile() {
+    return this.request('/customization/student/profile');
+  }
+
+  // Atualizar personalização do card
+  async updateCardCustomization(background, animation) {
+    return this.request('/customization/student/card', {
+      method: 'PUT',
+      body: JSON.stringify({ background, animation })
+    });
+  }
+
+  // Calcular e atualizar XP do aluno
+  async calculateStudentXP() {
+    return this.request('/customization/student/calculate-xp', {
+      method: 'POST'
+    });
   }
 
   // ===== CHAT =====

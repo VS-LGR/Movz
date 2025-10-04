@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -13,6 +14,7 @@ const chatRoutes = require('./routes/chat');
 const classRoutes = require('./routes/classes');
 const classManagementRoutes = require('./routes/classManagement');
 const institutionRoutes = require('./routes/institutions');
+const customizationRoutes = require('./routes/customization');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -23,11 +25,23 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://yourdomain.com'] 
     : ['http://localhost:19006', 'http://localhost:19007', 'http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Servir arquivos estáticos (SVGs, imagens, etc.)
+app.use('/assets', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Content-Type', 'image/svg+xml');
+  next();
+}, express.static(path.join(__dirname, '../src/assets')));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -48,6 +62,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/class-management', classManagementRoutes);
 app.use('/api/institutions', institutionRoutes);
+app.use('/api/customization', customizationRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -71,9 +71,10 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
         { id: 'myClass', title: 'Minha Turma', y: 269, height: 42, screen: 'myClass' },
         { id: 'scores', title: 'Pontuações', y: 339, height: 42, screen: 'studentScores' },
         { id: 'ranking', title: 'Ranking', y: 408, height: 42, screen: 'ranking' },
-        { id: 'chat', title: 'Chat', y: 477, height: 41, screen: 'chat' },
-        { id: 'tutorial', title: 'Treinos', y: 546, height: 42, screen: 'tutorial' },
-        { id: 'logout', title: 'Sair', y: 615, height: 42, screen: 'logout' },
+        { id: 'customization', title: 'Personalizar Card', y: 477, height: 42, screen: 'card-customization' },
+        { id: 'chat', title: 'Chat', y: 546, height: 41, screen: 'chat' },
+        { id: 'tutorial', title: 'Treinos', y: 615, height: 42, screen: 'tutorial' },
+        { id: 'logout', title: 'Sair', y: 684, height: 42, screen: 'logout' },
       ];
     }
   };

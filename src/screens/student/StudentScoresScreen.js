@@ -23,6 +23,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
 
   const [sportsData, setSportsData] = useState([]);
+  const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -35,11 +36,27 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     setIsLoading(true);
     setError(null);
     try {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+      
       const response = await apiService.getStudentSportsScores();
       if (response.success) {
         setSportsData(response.data);
       } else {
         setError(response.message || 'Erro ao carregar pontuações');
+      }
+
+      // Buscar dados do perfil para personalizações
+      const profileResponse = await apiService.getStudentProfile();
+      if (profileResponse.success) {
+        setProfileData(profileResponse.data);
       }
     } catch (err) {
       console.error('Erro ao carregar pontuações:', err);
@@ -67,6 +84,94 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     if (score >= 70) return 'Bom';
     if (score >= 50) return 'Regular';
     return 'Precisa Melhorar';
+  };
+
+  const getCardStyle = () => {
+    if (!profileData) return styles.sportCard;
+
+    const background = profileData.student.cardBackground;
+    const animation = profileData.student.cardAnimation;
+
+    let cardStyle = { ...styles.sportCard };
+
+    // Aplicar fundo personalizado baseado nos nomes corretos
+    switch (background) {
+      case 'default':
+        cardStyle.backgroundColor = '#E8EDED';
+        cardStyle.borderColor = '#D0D0D0';
+        break;
+      case 'champion':
+        cardStyle.backgroundColor = '#FFD700';
+        cardStyle.borderColor = '#FFA500';
+        break;
+      case 'legend':
+        cardStyle.backgroundColor = '#8B5CF6';
+        cardStyle.borderColor = '#7C3AED';
+        break;
+      case 'golden':
+        cardStyle.backgroundColor = '#F59E0B';
+        cardStyle.borderColor = '#D97706';
+        break;
+      case 'starry':
+        cardStyle.backgroundColor = '#1E3A8A';
+        cardStyle.borderColor = '#1E40AF';
+        break;
+      case 'ocean':
+        cardStyle.backgroundColor = '#0EA5E9';
+        cardStyle.borderColor = '#0284C7';
+        break;
+      case 'forest':
+        cardStyle.backgroundColor = '#10B981';
+        cardStyle.borderColor = '#059669';
+        break;
+      case 'fire':
+        cardStyle.backgroundColor = '#EF4444';
+        cardStyle.borderColor = '#DC2626';
+        break;
+      case 'ice':
+        cardStyle.backgroundColor = '#06B6D4';
+        cardStyle.borderColor = '#0891B2';
+        break;
+      case 'rainbow':
+        cardStyle.backgroundColor = '#EC4899';
+        cardStyle.borderColor = '#DB2777';
+        break;
+      default:
+        cardStyle.backgroundColor = '#FFFFFF';
+        cardStyle.borderColor = '#E0E0E0';
+    }
+
+    return cardStyle;
+  };
+
+  const getCardAnimationStyle = () => {
+    if (!profileData) return {};
+
+    const animation = profileData.student.cardAnimation;
+
+    switch (animation) {
+      case 'none':
+        return {};
+      case 'brilho':
+        return {
+          boxShadow: '0px 0px 20px rgba(249, 187, 85, 0.5)',
+          elevation: 8,
+        };
+      case 'sparkle':
+        return {
+          boxShadow: '0px 0px 25px rgba(255, 215, 0, 0.8)',
+          elevation: 10,
+        };
+      case 'arco-íris':
+        return {
+          borderWidth: 3,
+          borderColor: '#EC4899',
+          boxShadow: '0px 0px 15px rgba(236, 72, 153, 0.6)',
+          elevation: 6,
+        };
+      default:
+        return {};
+    }
   };
 
   const getMedalIcon = (score) => {
@@ -101,10 +206,11 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       <TouchableOpacity 
         key={sportData.sport.id} 
         style={[
-          styles.sportCard,
+          getCardStyle(),
+          getCardAnimationStyle(),
           { 
             opacity: hasScores ? 1 : 0.7,
-            borderColor: medalColor,
+            borderColor: hasScores ? medalColor : '#E0E0E0',
             borderWidth: hasScores ? 2 : 1
           }
         ]}

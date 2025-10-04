@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,110 +8,89 @@ import {
   Dimensions,
   SafeAreaView,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import apiService from '../../services/apiService';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
 const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
-  const [userMedals, setUserMedals] = useState([]);
-  const [allMedals, setAllMedals] = useState([]);
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Dados das medalhas disponíveis
-  const availableMedals = [
-    {
-      id: 1,
-      name: 'Primeiro Passo',
-      description: 'Complete seu primeiro treino',
-      icon: require('../../assets/images/Medalha_1.svg'),
-      requirement: '1 treino completado',
-      category: 'Iniciante',
-      rarity: 'Comum',
-      color: '#FFD700'
-    },
-    {
-      id: 2,
-      name: 'Maratonista',
-      description: 'Complete 10 treinos',
-      icon: require('../../assets/images/Medalha_2.svg'),
-      requirement: '10 treinos completados',
-      category: 'Resistência',
-      rarity: 'Rara',
-      color: '#C0C0C0'
-    },
-    {
-      id: 3,
-      name: 'Campeão',
-      description: 'Complete 50 treinos',
-      icon: require('../../assets/images/Medalha_3.svg'),
-      requirement: '50 treinos completados',
-      category: 'Elite',
-      rarity: 'Épica',
-      color: '#FF6B6B'
-    },
-    {
-      id: 4,
-      name: 'Lenda',
-      description: 'Complete 100 treinos',
-      icon: require('../../assets/images/Medalha_4.svg'),
-      requirement: '100 treinos completados',
-      category: 'Lenda',
-      rarity: 'Lendária',
-      color: '#9B59B6'
-    },
-    {
-      id: 5,
-      name: 'Velocista',
-      description: 'Complete 5 treinos em um dia',
-      icon: require('../../assets/images/Medalha_5.svg'),
-      requirement: '5 treinos em 1 dia',
-      category: 'Velocidade',
-      rarity: 'Rara',
-      color: '#3498DB'
-    },
-    {
-      id: 6,
-      name: 'Consistente',
-      description: 'Treine por 7 dias seguidos',
-      icon: require('../../assets/images/Medalha_6.svg'),
-      requirement: '7 dias consecutivos',
-      category: 'Consistência',
-      rarity: 'Épica',
-      color: '#2ECC71'
-    }
-  ];
-
-  // Simular medalhas obtidas pelo usuário (em produção, viria da API)
   useEffect(() => {
-    // Simular algumas medalhas já obtidas
-    const obtainedMedals = [1, 2, 5]; // IDs das medalhas obtidas
-    setUserMedals(obtainedMedals);
-    setAllMedals(availableMedals);
+    loadMedalsData();
   }, []);
 
-  const isMedalObtained = (medalId) => {
-    return userMedals.includes(medalId);
+  const loadMedalsData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+      
+      const response = await apiService.getStudentProfile();
+      if (response.success) {
+        setProfileData(response.data);
+      } else {
+        setError(response.message || 'Erro ao carregar medalhas');
+      }
+    } catch (err) {
+      console.error('Erro ao carregar medalhas:', err);
+      setError('Não foi possível carregar as medalhas. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadMedalsData();
+  };
+
+  const isMedalObtained = (medal) => {
+    if (!profileData) return false;
+    return profileData.medals.unlocked.some(unlockedMedal => unlockedMedal.id === medal.id);
   };
 
   const getRarityColor = (rarity) => {
     switch (rarity) {
-      case 'Comum': return '#95A5A6';
-      case 'Rara': return '#3498DB';
-      case 'Épica': return '#9B59B6';
-      case 'Lendária': return '#F39C12';
+      case 'common': return '#95A5A6';
+      case 'rare': return '#3498DB';
+      case 'epic': return '#9B59B6';
+      case 'legendary': return '#F39C12';
       default: return '#95A5A6';
     }
   };
 
+  // Usar useMemo para otimizar o cálculo das medalhas
+  const medalsData = useMemo(() => {
+    if (!profileData?.medals?.all) return [];
+    return profileData.medals.all;
+  }, [profileData?.medals?.all]);
+
   const renderMedalCard = (medal) => {
-    const obtained = isMedalObtained(medal.id);
+    const obtained = isMedalObtained(medal);
     
     return (
       <View key={medal.id} style={[styles.medalCard, obtained && styles.medalCardObtained]}>
         <View style={styles.medalIconContainer}>
           <Image 
-            source={medal.icon} 
-            style={[styles.medalIcon, !obtained && styles.medalIconLocked]} 
+            source={getCachedImage(medal.name, 'medal')} 
+            style={[styles.medalIcon, !obtained && styles.medalIconLocked]}
             resizeMode="contain"
           />
           {obtained && (
@@ -145,8 +124,32 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
     );
   };
 
-  const obtainedCount = userMedals.length;
-  const totalCount = allMedals.length;
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F9BB55" />
+          <Text style={styles.loadingText}>Carregando medalhas...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadMedalsData}>
+            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const obtainedCount = profileData?.medals?.stats?.unlocked || 0;
+  const totalCount = profileData?.medals?.stats?.total || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -176,20 +179,26 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
             <View 
               style={[
                 styles.progressFill, 
-                { width: `${(obtainedCount / totalCount) * 100}%` }
+                { width: `${totalCount > 0 ? (obtainedCount / totalCount) * 100 : 0}%` }
               ]} 
             />
           </View>
           <Text style={styles.progressText}>
-            {Math.round((obtainedCount / totalCount) * 100)}% completo
+            {totalCount > 0 ? Math.round((obtainedCount / totalCount) * 100) : 0}% completo
           </Text>
         </View>
       </View>
 
       {/* Medals Grid */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F9BB55']} />
+        }
+      >
         <View style={styles.medalsGrid}>
-          {allMedals.map(renderMedalCard)}
+          {medalsData.map(renderMedalCard)}
         </View>
       </ScrollView>
       
@@ -210,6 +219,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E9EDEE',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#D9493C',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Poppins',
+  },
+  retryButton: {
+    backgroundColor: '#F9BB55',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontFamily: 'Poppins',
   },
   header: {
     flexDirection: 'row',

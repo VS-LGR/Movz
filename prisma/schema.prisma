@@ -25,6 +25,12 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  
+  // Sistema de XP e Personalização
+  totalXP      Int      @default(0)
+  level        Int      @default(1)
+  cardBackground String? @default("default")
+  cardAnimation  String? @default("none")
 
   // Relacionamentos
   institution    Institution? @relation(fields: [institutionId], references: [id])
@@ -39,6 +45,8 @@ model User {
   teacherScores  ClassScore[] @relation("ClassScoreTeacher")
   attendances    Attendance[]
   teacherAttendances Attendance[] @relation("AttendanceTeacher")
+  userAchievements UserAchievement[]
+  userMedals      UserMedal[]
 
   @@map("users")
 }
@@ -291,4 +299,94 @@ enum UserType {
   STUDENT
   TEACHER
   INSTITUTION
+}
+
+// Sistema de Medalhas e Conquistas
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  category    String
+  rarity      String
+  color       String
+  requirement String
+  xpReward    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model Medal {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  icon        String
+  category    String
+  rarity      String
+  color       String
+  requirement String
+  xpReward    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  userMedals UserMedal[]
+
+  @@map("medals")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  isActive      Boolean  @default(true)
+
+  // Relacionamentos
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model UserMedal {
+  id        String   @id @default(cuid())
+  userId    String
+  medalId   String
+  unlockedAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  // Relacionamentos
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medal Medal @relation(fields: [medalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, medalId])
+  @@map("user_medals")
+}
+
+// Sistema de Personalização de Cards
+model CardCustomization {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  type        String   // "background" ou "animation"
+  rarity      String   // "common", "rare", "epic", "legendary"
+  unlockType  String   // "xp", "achievement", "medal", "score"
+  unlockValue Int      // Valor necessário para desbloquear
+  unlockTarget String? // ID específico (achievement, medal, etc.)
+  preview     String   // URL ou path da preview
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, type])
+  @@map("card_customizations")
 }

@@ -33,6 +33,16 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
     setIsLoading(true);
     setError(null);
     try {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+      
       console.log('🔵 RankingScreen - Carregando dados do ranking...');
       const response = await apiService.getStudentRanking();
       console.log('🔵 RankingScreen - Resposta da API:', response);

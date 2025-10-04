@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,210 +8,89 @@ import {
   Dimensions,
   SafeAreaView,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import apiService from '../../services/apiService';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
 const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
-  const [userAchievements, setUserAchievements] = useState([]);
-  const [allAchievements, setAllAchievements] = useState([]);
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Dados das conquistas disponíveis
-  const availableAchievements = [
-    {
-      id: 1,
-      name: 'Primeira Estrela',
-      description: 'Complete seu primeiro exercício',
-      icon: require('../../assets/images/aiAtivo 5medals.svg'),
-      requirement: '1 exercício completado',
-      category: 'Iniciante',
-      rarity: 'Comum',
-      color: '#FFD700'
-    },
-    {
-      id: 2,
-      name: 'Guerreiro',
-      description: 'Complete 5 exercícios em sequência',
-      icon: require('../../assets/images/aiAtivo 9medals.svg'),
-      requirement: '5 exercícios consecutivos',
-      category: 'Resistência',
-      rarity: 'Rara',
-      color: '#C0C0C0'
-    },
-    {
-      id: 3,
-      name: 'Mestre',
-      description: 'Complete 25 exercícios',
-      icon: require('../../assets/images/aiAtivo 10medals.svg'),
-      requirement: '25 exercícios completados',
-      category: 'Elite',
-      rarity: 'Épica',
-      color: '#FF6B6B'
-    },
-    {
-      id: 4,
-      name: 'Lenda Viva',
-      description: 'Complete 100 exercícios',
-      icon: require('../../assets/images/aiAtivo 11medals.svg'),
-      requirement: '100 exercícios completados',
-      category: 'Lenda',
-      rarity: 'Lendária',
-      color: '#9B59B6'
-    },
-    {
-      id: 5,
-      name: 'Relâmpago',
-      description: 'Complete 10 exercícios em 1 hora',
-      icon: require('../../assets/images/aiAtivo 12medals.svg'),
-      requirement: '10 exercícios em 1h',
-      category: 'Velocidade',
-      rarity: 'Rara',
-      color: '#3498DB'
-    },
-    {
-      id: 6,
-      name: 'Dedicação',
-      description: 'Treine por 30 dias seguidos',
-      icon: require('../../assets/images/aiAtivo 13medals.svg'),
-      requirement: '30 dias consecutivos',
-      category: 'Consistência',
-      rarity: 'Épica',
-      color: '#2ECC71'
-    },
-    {
-      id: 7,
-      name: 'Perfeccionista',
-      description: 'Complete 50 exercícios com nota máxima',
-      icon: require('../../assets/images/aiAtivo 14medals.svg'),
-      requirement: '50 exercícios perfeitos',
-      category: 'Precisão',
-      rarity: 'Épica',
-      color: '#E74C3C'
-    },
-    {
-      id: 8,
-      name: 'Explorador',
-      description: 'Complete exercícios de todos os esportes',
-      icon: require('../../assets/images/aiAtivo 15medals.svg'),
-      requirement: 'Todos os esportes',
-      category: 'Variedade',
-      rarity: 'Rara',
-      color: '#F39C12'
-    },
-    {
-      id: 9,
-      name: 'Campeão',
-      description: 'Fique em 1º lugar no ranking',
-      icon: require('../../assets/images/aiAtivo 19medals.svg'),
-      requirement: '1º lugar no ranking',
-      category: 'Competição',
-      rarity: 'Lendária',
-      color: '#8E44AD'
-    },
-    {
-      id: 10,
-      name: 'Invencível',
-      description: 'Mantenha o 1º lugar por 7 dias',
-      icon: require('../../assets/images/aiAtivo 20medals.svg'),
-      requirement: '7 dias no topo',
-      category: 'Domínio',
-      rarity: 'Lendária',
-      color: '#E67E22'
-    },
-    {
-      id: 11,
-      name: 'Mentor',
-      description: 'Ajude 10 colegas no chat',
-      icon: require('../../assets/images/aiAtivo 21medals.svg'),
-      requirement: '10 ajudas no chat',
-      category: 'Social',
-      rarity: 'Rara',
-      color: '#16A085'
-    },
-    {
-      id: 12,
-      name: 'Líder',
-      description: 'Seja o mais ativo por 1 mês',
-      icon: require('../../assets/images/aiAtivo 22medals.svg'),
-      requirement: 'Mais ativo por 30 dias',
-      category: 'Liderança',
-      rarity: 'Épica',
-      color: '#27AE60'
-    },
-    {
-      id: 13,
-      name: 'Estrategista',
-      description: 'Complete todos os tutoriais',
-      icon: require('../../assets/images/aiAtivo 23medals.svg'),
-      requirement: 'Todos os tutoriais',
-      category: 'Conhecimento',
-      rarity: 'Rara',
-      color: '#2980B9'
-    },
-    {
-      id: 14,
-      name: 'Fenômeno',
-      description: 'Quebre 5 recordes pessoais',
-      icon: require('../../assets/images/aiAtivo 24medals.svg'),
-      requirement: '5 recordes quebrados',
-      category: 'Superação',
-      rarity: 'Épica',
-      color: '#D35400'
-    },
-    {
-      id: 15,
-      name: 'Ídolo',
-      description: 'Seja mencionado 20 vezes no chat',
-      icon: require('../../assets/images/aiAtivo 25medals.svg'),
-      requirement: '20 menções positivas',
-      category: 'Reconhecimento',
-      rarity: 'Lendária',
-      color: '#C0392B'
-    },
-    {
-      id: 16,
-      name: 'Lenda Eterna',
-      description: 'Complete todas as conquistas',
-      icon: require('../../assets/images/aiAtivo 26medals.svg'),
-      requirement: 'Todas as conquistas',
-      category: 'Supremo',
-      rarity: 'Mítica',
-      color: '#8E44AD'
-    }
-  ];
-
-  // Simular conquistas obtidas pelo usuário (em produção, viria da API)
   useEffect(() => {
-    // Simular algumas conquistas já obtidas
-    const obtainedAchievements = [1, 2, 5, 8, 11]; // IDs das conquistas obtidas
-    setUserAchievements(obtainedAchievements);
-    setAllAchievements(availableAchievements);
+    loadAchievementsData();
   }, []);
 
-  const isAchievementObtained = (achievementId) => {
-    return userAchievements.includes(achievementId);
+  const loadAchievementsData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+      
+      const response = await apiService.getStudentProfile();
+      if (response.success) {
+        setProfileData(response.data);
+      } else {
+        setError(response.message || 'Erro ao carregar conquistas');
+      }
+    } catch (err) {
+      console.error('Erro ao carregar conquistas:', err);
+      setError('Não foi possível carregar as conquistas. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadAchievementsData();
+  };
+
+  const isAchievementObtained = (achievement) => {
+    if (!profileData) return false;
+    return profileData.achievements.unlocked.some(unlockedAchievement => unlockedAchievement.id === achievement.id);
   };
 
   const getRarityColor = (rarity) => {
     switch (rarity) {
-      case 'Comum': return '#95A5A6';
-      case 'Rara': return '#3498DB';
-      case 'Épica': return '#9B59B6';
-      case 'Lendária': return '#F39C12';
-      case 'Mítica': return '#E74C3C';
+      case 'common': return '#95A5A6';
+      case 'rare': return '#3498DB';
+      case 'epic': return '#9B59B6';
+      case 'legendary': return '#F39C12';
+      case 'mythic': return '#E74C3C';
       default: return '#95A5A6';
     }
   };
 
+  // Usar useMemo para otimizar o cálculo das conquistas
+  const achievementsData = useMemo(() => {
+    if (!profileData?.achievements?.all) return [];
+    return profileData.achievements.all;
+  }, [profileData?.achievements?.all]);
+
   const renderAchievementCard = (achievement) => {
-    const obtained = isAchievementObtained(achievement.id);
+    const obtained = isAchievementObtained(achievement);
     
     return (
       <View key={achievement.id} style={[styles.achievementCard, obtained && styles.achievementCardObtained]}>
         <View style={styles.achievementIconContainer}>
           <Image 
-            source={achievement.icon} 
+            source={getCachedImage(achievement.name, 'achievement')} 
             style={[styles.achievementIcon, !obtained && styles.achievementIconLocked]} 
             resizeMode="contain"
           />
@@ -246,8 +125,32 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
     );
   };
 
-  const obtainedCount = userAchievements.length;
-  const totalCount = allAchievements.length;
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#F9BB55" />
+          <Text style={styles.loadingText}>Carregando conquistas...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadAchievementsData}>
+            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const obtainedCount = profileData?.achievements?.stats?.unlocked || 0;
+  const totalCount = profileData?.achievements?.stats?.total || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -277,20 +180,26 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
             <View 
               style={[
                 styles.progressFill, 
-                { width: `${(obtainedCount / totalCount) * 100}%` }
+                { width: `${totalCount > 0 ? (obtainedCount / totalCount) * 100 : 0}%` }
               ]} 
             />
           </View>
           <Text style={styles.progressText}>
-            {Math.round((obtainedCount / totalCount) * 100)}% completo
+            {totalCount > 0 ? Math.round((obtainedCount / totalCount) * 100) : 0}% completo
           </Text>
         </View>
       </View>
 
       {/* Achievements Grid */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F9BB55']} />
+        }
+      >
         <View style={styles.achievementsGrid}>
-          {allAchievements.map(renderAchievementCard)}
+          {achievementsData.map(renderAchievementCard)}
         </View>
       </ScrollView>
       
@@ -311,6 +220,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E9EDEE',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Poppins',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#D9493C',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'Poppins',
+  },
+  retryButton: {
+    backgroundColor: '#F9BB55',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontFamily: 'Poppins',
   },
   header: {
     flexDirection: 'row',

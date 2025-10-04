@@ -51,6 +51,16 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
     setIsLoading(true);
     setError(null);
     try {
+      // Configurar token de autenticação
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        apiService.setToken(token);
+      } else {
+        console.error('Token não encontrado');
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+      
       console.log('🔵 StudentAttendance - Carregando dados de presença...');
       const response = await apiService.getStudentAttendance();
       console.log('🔵 StudentAttendance - Resposta da API:', response);
