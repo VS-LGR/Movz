@@ -10,11 +10,13 @@ import {
   RefreshControl,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
@@ -54,7 +56,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       if (response.success) {
         console.log('🔵 CardCustomizationScreen - Dados recebidos:', response.data);
         setProfileData(response.data);
-        setSelectedBackground(response.data.student.cardBackground || 'default');
+        setSelectedBackground(response.data.student.cardBanner || 'Banner Padrão');
         setSelectedAnimation(response.data.student.cardAnimation || 'none');
       } else {
         console.error('🔴 CardCustomizationScreen - Erro na resposta:', response.message);
@@ -83,7 +85,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     setIsUpdating(true);
     try {
       console.log('🔵 CardCustomizationScreen - Atualizando personalização...');
-      const response = await apiService.updateCardCustomization(selectedBackground, selectedAnimation);
+      const response = await apiService.updateCardCustomization(selectedBackground, selectedAnimation, selectedBackground);
       console.log('🔵 CardCustomizationScreen - Resposta da atualização:', response);
       
       if (response.success) {
@@ -144,12 +146,43 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     }
   };
 
+  const getBannerThemeColors = (bannerName) => {
+    // Cores temáticas baseadas no banner para melhor legibilidade
+    const themes = {
+      'Banner Padrão': { primary: '#F8F9FA', secondary: '#E9ECEF', text: '#1F2937', overlay: 'rgba(255,255,255,0.1)' },
+      'Banner Ouro': { primary: '#FFD700', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.6)', numbers: '#FFE55C' },
+      'Banner Fogo': { primary: '#FF6B35', secondary: '#FF8E53', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner NBA': { primary: '#1D428A', secondary: '#C8102E', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Futebol': { primary: '#228B22', secondary: '#32CD32', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Vôlei': { primary: '#FF4500', secondary: '#FF6347', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Basquete': { primary: '#FF8C00', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap 2': { primary: '#2F4F4F', secondary: '#708090', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Gato': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
+      'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+    };
+    return themes[bannerName] || themes['Banner Padrão'];
+  };
+
   const getCardStyle = () => {
     if (!selectedBackground) return {};
     
-    const backgroundColor = getBackgroundColor(selectedBackground);
+    // Se for um banner, usar cores temáticas com overlay
+    if (selectedBackground && selectedBackground !== 'Banner Padrão') {
+      const theme = getBannerThemeColors(selectedBackground);
+      return {
+        backgroundImage: `url(${getCachedImage(selectedBackground, 'banner')})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        position: 'relative',
+      };
+    }
+    
     return {
-      backgroundColor,
+      backgroundColor: '#F8F9FA', // Cor padrão lisa
     };
   };
 
@@ -163,6 +196,11 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
 
   const isCustomizationUnlocked = (customization) => {
     if (!profileData) return false;
+    
+    // Para admin, liberar tudo
+    if (profileData.student.email === 'admin@aluno.com') {
+      return true;
+    }
     
     switch (customization.unlockType) {
       case 'xp':
@@ -221,24 +259,112 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
           <Text style={styles.previewBannerSubtitle}>Como outros alunos te verão no ranking</Text>
         </View>
         <View style={[styles.previewBanner, cardStyle, animationStyle]}>
+          {selectedBackground && selectedBackground !== 'Banner Padrão' && (
+            <Image 
+              source={getCachedImage(selectedBackground, 'banner')}
+              style={styles.previewBannerBackground}
+              resizeMode="cover"
+            />
+          )}
+          {selectedBackground && selectedBackground !== 'Banner Padrão' && (
+            <View style={[
+              styles.previewBannerOverlay,
+              { backgroundColor: getBannerThemeColors(selectedBackground).overlay }
+            ]} />
+          )}
           <View style={styles.previewBannerContent}>
             <View style={styles.previewBannerLeft}>
-              <View style={styles.previewAvatar}>
-                <Text style={styles.previewAvatarText}>A</Text>
+              <View style={[
+                styles.previewAvatar,
+                selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                  backgroundColor: getBannerThemeColors(selectedBackground).primary
+                }
+              ]}>
+                <Text style={[
+                  styles.previewAvatarText,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text
+                  }
+                ]}>A</Text>
               </View>
               <View style={styles.previewUserInfo}>
-                <Text style={styles.previewUserName}>Admin Aluno</Text>
-                <Text style={styles.previewUserClass}>5ª Série A</Text>
+                <Text style={[
+                  styles.previewUserName,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text,
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#1F2937',
+                    fontWeight: 'bold'
+                  }
+                ]}>Admin Aluno</Text>
+                <Text style={[
+                  styles.previewUserClass,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text,
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#374151',
+                    fontWeight: '600'
+                  }
+                ]}>5ª Série A</Text>
               </View>
             </View>
             <View style={styles.previewBannerRight}>
               <View style={styles.previewStats}>
-                <Text style={styles.previewScoreLabel}>Pontuação Total</Text>
-                <Text style={styles.previewScoreValue}>1,250</Text>
+                <Text style={[
+                  styles.previewScoreLabel,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text,
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#374151',
+                    fontWeight: '600'
+                  }
+                ]}>Pontuação Total</Text>
+                <Text style={[
+                  styles.previewScoreValue,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                  color: (selectedBackground === 'Banner Void' || 
+                          selectedBackground === 'Banner Ouro' || 
+                          selectedBackground === 'Banner Rose Gold')
+                    ? getBannerThemeColors(selectedBackground).numbers || getBannerThemeColors(selectedBackground).text
+                    : getBannerThemeColors(selectedBackground).secondary,
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#1F2937',
+                    fontWeight: 'bold',
+                    fontSize: 24
+                  }
+                ]}>1,250</Text>
               </View>
               <View style={styles.previewLevel}>
-                <Text style={styles.previewLevelText}>Nível 5</Text>
-                <Text style={styles.previewXPText}>1,250 XP</Text>
+                <Text style={[
+                  styles.previewLevelText,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text,
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#1F2937',
+                    fontWeight: 'bold'
+                  }
+                ]}>Nível 5</Text>
+                <Text style={[
+                  styles.previewXPText,
+                  selectedBackground && selectedBackground !== 'Banner Padrão' && {
+                    color: getBannerThemeColors(selectedBackground).text,
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                  },
+                  selectedBackground === 'Banner Padrão' && {
+                    color: '#374151',
+                    fontWeight: '600'
+                  }
+                ]}>1,250 XP</Text>
               </View>
             </View>
           </View>
@@ -272,16 +398,27 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
             >
               <View style={styles.customizationCardContent}>
                 <View style={styles.customizationPreview}>
-                  {type === 'background' ? (
-                    <View style={[
-                      styles.backgroundPreview,
-                      { backgroundColor: getBackgroundColor(customization.name) }
-                    ]}>
-                      <Text style={styles.previewIcon}>🎨</Text>
+                  {type === 'BANNER' ? (
+                    <View style={styles.bannerPreview}>
+                      {customization.name !== 'Banner Padrão' ? (
+                        <Image 
+                          source={getCachedImage(customization.name, 'banner')}
+                          style={styles.bannerPreviewImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.bannerPreviewImage, { backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#E9ECEF' }]}>
+                          <Text style={styles.bannerPreviewText}>Padrão</Text>
+                        </View>
+                      )}
                     </View>
-                  ) : (
+                  ) : type === 'animation' ? (
                     <View style={styles.animationPreview}>
                       <Text style={styles.previewIcon}>✨</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.bannerPreview}>
+                      <Text style={styles.previewIcon}>🎨</Text>
                     </View>
                   )}
                   
@@ -408,9 +545,9 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
             {/* Customizações lado a lado */}
             <View style={styles.customizationsContainer}>
               {renderCustomizationSection(
-                '🎨 Fundos',
-                'background',
-                profileData.customizations.filter(c => c.type === 'background'),
+                '🏆 Fundos (Banners)',
+                'BANNER',
+                profileData.customizations.filter(c => c.type === 'BANNER'),
                 selectedBackground,
                 setSelectedBackground
               )}
@@ -633,6 +770,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  bannerPreview: {
+    width: '100%',
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  bannerPreviewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bannerPreviewText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 'auto',
+    marginBottom: 'auto',
+  },
   previewIcon: {
     fontSize: 32,
   },
@@ -818,6 +986,30 @@ const styles = StyleSheet.create({
   previewUserClass: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
+  },
+  previewBannerImage: {
+    width: 60,
+    height: 30,
+    marginTop: 5,
+  },
+  previewBannerBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  previewBannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
   previewBannerRight: {
     alignItems: 'flex-end',

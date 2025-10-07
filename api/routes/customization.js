@@ -65,6 +65,7 @@ router.get('/student/profile', authenticateToken, async (req, res) => {
         level: true,
         cardBackground: true,
         cardAnimation: true,
+        cardBanner: true,
         createdAt: true
       }
     });
@@ -166,7 +167,11 @@ router.get('/student/profile', authenticateToken, async (req, res) => {
 router.put('/student/card', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { background, animation } = req.body;
+    const { background, animation, banner } = req.body;
+    
+    console.log('🔵 Customization - Atualizando personalização do card');
+    console.log('🔵 Customization - Dados recebidos:', { background, animation, banner });
+    console.log('🔵 Customization - Body completo:', req.body);
 
     // Verificar se é aluno
     const user = await prisma.user.findUnique({
@@ -181,8 +186,11 @@ router.put('/student/card', authenticateToken, async (req, res) => {
       });
     }
 
-    // Verificar se as personalizações estão desbloqueadas
-    if (background) {
+    // Para admin, pular validações de desbloqueio
+    const isAdmin = req.user.email === 'admin@aluno.com';
+    
+    // Verificar se as personalizações estão desbloqueadas (apenas para usuários normais)
+    if (background && !isAdmin) {
       const bgCustomization = await prisma.cardCustomization.findFirst({
         where: { 
           name: background,
@@ -208,7 +216,7 @@ router.put('/student/card', authenticateToken, async (req, res) => {
       }
     }
 
-    if (animation) {
+    if (animation && !isAdmin) {
       const animCustomization = await prisma.cardCustomization.findFirst({
         where: { 
           name: animation,
@@ -234,10 +242,35 @@ router.put('/student/card', authenticateToken, async (req, res) => {
       }
     }
 
+    // Verificar se o banner está desbloqueado (apenas para usuários normais)
+    if (banner && !isAdmin) {
+      const bannerCustomization = await prisma.cardCustomization.findFirst({
+        where: { 
+          name: banner,
+          type: 'BANNER',
+          isActive: true
+        }
+      });
+
+      if (!bannerCustomization) {
+        return res.status(404).json({
+          success: false,
+          message: 'Banner não encontrado'
+        });
+      }
+
+      // TODO: Implementar validação de desbloqueio de banners para usuários normais
+      return res.status(403).json({
+        success: false,
+        message: 'Este banner ainda não foi desbloqueado'
+      });
+    }
+
     // Atualizar personalizações
     const updateData = {};
     if (background) updateData.cardBackground = background;
     if (animation) updateData.cardAnimation = animation;
+    if (banner) updateData.cardBanner = banner;
 
     await prisma.user.update({
       where: { id: userId },

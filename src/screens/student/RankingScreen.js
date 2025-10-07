@@ -9,11 +9,13 @@ import {
   SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
@@ -94,8 +96,35 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
     }
   };
 
+  const getBannerImage = (bannerName) => {
+    if (!bannerName || bannerName === 'Banner Padrão') {
+      return getCachedImage('Banner Padrão', 'banner');
+    }
+    return getCachedImage(bannerName, 'banner');
+  };
+
+  const getBannerThemeColors = (bannerName) => {
+    // Cores temáticas baseadas no banner para melhor legibilidade
+    const themes = {
+      'Banner Padrão': { primary: '#F8F9FA', secondary: '#E9ECEF', text: '#1F2937', overlay: 'rgba(255,255,255,0.1)' },
+      'Banner Ouro': { primary: '#FFD700', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.6)', numbers: '#FFE55C' },
+      'Banner Fogo': { primary: '#FF6B35', secondary: '#FF8E53', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner NBA': { primary: '#1D428A', secondary: '#C8102E', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Futebol': { primary: '#228B22', secondary: '#32CD32', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Vôlei': { primary: '#FF4500', secondary: '#FF6347', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Basquete': { primary: '#FF8C00', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap 2': { primary: '#2F4F4F', secondary: '#708090', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Gato': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
+      'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+    };
+    return themes[bannerName] || themes['Banner Padrão'];
+  };
+
   const renderHeader = () => (
-    <View style={styles.header}>
+        <View style={styles.header}>
       <View style={styles.headerLeft}>
         <Text style={styles.title}>🏆 Ranking</Text>
         <Text style={styles.subtitle}>Classificação da sua turma</Text>
@@ -115,11 +144,11 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
             {refreshing ? '🔄' : '🔄'}
           </Text>
         </TouchableOpacity>
-        <HamburgerButton
-          onPress={() => setIsMenuVisible(true)}
-          style={styles.menuButton}
-        />
-      </View>
+          <HamburgerButton
+            onPress={() => setIsMenuVisible(true)}
+            style={styles.menuButton}
+          />
+        </View>
     </View>
   );
 
@@ -164,17 +193,34 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
             const isCurrentStudent = student.studentId === rankingData.currentStudentId;
             
             return (
-              <View
+            <View
                 key={student.studentId}
-                style={[
-                  styles.rankingItem,
+              style={[
+                styles.rankingItem,
                   isCurrentStudent && styles.currentStudentItem
                 ]}
               >
+                {student.cardBanner && student.cardBanner !== 'Banner Padrão' && (
+                  <Image 
+                    source={getBannerImage(student.cardBanner)}
+                    style={styles.studentCardBackground}
+                    resizeMode="cover"
+                  />
+                )}
+                {student.cardBanner && student.cardBanner !== 'Banner Padrão' && (
+                  <View style={[
+                    styles.studentCardOverlay,
+                    { backgroundColor: getBannerThemeColors(student.cardBanner).overlay }
+                  ]} />
+                )}
+                
                 <View style={styles.rankingPosition}>
                   <Text style={[
                     styles.positionText,
-                    { color: getPositionColor(student.position) }
+                    { color: getPositionColor(student.position) },
+                    student.cardBanner && {
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                    }
                   ]}>
                     {getPositionIcon(student.position)}
                   </Text>
@@ -183,20 +229,72 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
                 <View style={styles.studentInfo}>
                   <Text style={[
                     styles.studentName,
-                    isCurrentStudent && styles.currentStudentName
+                    isCurrentStudent && styles.currentStudentName,
+                    student.cardBanner && student.cardBanner !== 'Banner Padrão' && {
+                      color: getBannerThemeColors(student.cardBanner).text,
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                    },
+                    student.cardBanner === 'Banner Padrão' && {
+                      color: '#1F2937',
+                      fontWeight: 'bold'
+                    }
                   ]}>
                     {student.studentName}
                     {isCurrentStudent && ' (Você)'}
                   </Text>
-                  <Text style={styles.studentEmail}>{student.studentEmail}</Text>
+                  <Text style={[
+                    styles.studentEmail,
+                    student.cardBanner && student.cardBanner !== 'Banner Padrão' && {
+                      color: getBannerThemeColors(student.cardBanner).text,
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                    },
+                    student.cardBanner === 'Banner Padrão' && {
+                      color: '#374151',
+                      fontWeight: '600'
+                    }
+                  ]}>{student.studentEmail}</Text>
                 </View>
                 
                 <View style={styles.scoreInfo}>
-                  <Text style={styles.totalScore}>{student.totalScore}</Text>
-                  <Text style={styles.scoreLabel}>pontos</Text>
-                  <Text style={styles.classesCount}>{student.totalClasses} aulas</Text>
+                  <Text style={[
+                    styles.totalScore,
+                    student.cardBanner && student.cardBanner !== 'Banner Padrão' && {
+                  color: (student.cardBanner === 'Banner Void' || 
+                          student.cardBanner === 'Banner Ouro' || 
+                          student.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(student.cardBanner).numbers || getBannerThemeColors(student.cardBanner).text
+                    : getBannerThemeColors(student.cardBanner).secondary,
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                    },
+                    student.cardBanner === 'Banner Padrão' && {
+                      color: '#1F2937',
+                      fontWeight: 'bold'
+                    }
+                  ]}>{student.totalScore}</Text>
+                  <Text style={[
+                    styles.scoreLabel,
+                    student.cardBanner && student.cardBanner !== 'Banner Padrão' && {
+                      color: getBannerThemeColors(student.cardBanner).text,
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                    },
+                    student.cardBanner === 'Banner Padrão' && {
+                      color: '#374151',
+                      fontWeight: '600'
+                    }
+                  ]}>pontos</Text>
+                  <Text style={[
+                    styles.classesCount,
+                    student.cardBanner && student.cardBanner !== 'Banner Padrão' && {
+                      color: getBannerThemeColors(student.cardBanner).text,
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                    },
+                    student.cardBanner === 'Banner Padrão' && {
+                      color: '#374151',
+                      fontWeight: '600'
+                    }
+                  ]}>{student.totalClasses} aulas</Text>
                 </View>
-              </View>
+            </View>
             );
           })}
         </View>
@@ -221,8 +319,8 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <SideMenu
-        isVisible={isMenuVisible}
+      <SideMenu 
+        isVisible={isMenuVisible} 
         onClose={() => setIsMenuVisible(false)}
         onNavigate={onNavigate}
         currentUser={currentUser}
@@ -440,8 +538,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 15,
-    boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
     elevation: 2,
+    position: 'relative',
+    overflow: 'hidden',
   },
   currentStudentItem: {
     borderWidth: 2,
@@ -461,12 +564,43 @@ const styles = StyleSheet.create({
   studentInfo: {
     flex: 1,
   },
+  studentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
   studentName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 2,
     fontFamily: 'Poppins',
+    flex: 1,
+  },
+  studentBanner: {
+    width: 40,
+    height: 25,
+    marginLeft: 10,
+  },
+  studentCardBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  studentCardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
   currentStudentName: {
     color: '#D9493C',

@@ -31,6 +31,7 @@ model User {
   level        Int      @default(1)
   cardBackground String? @default("default")
   cardAnimation  String? @default("none")
+  cardBanner     String? @default("Banner Padrão")
 
   // Relacionamentos
   institution    Institution? @relation(fields: [institutionId], references: [id])

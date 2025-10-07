@@ -260,10 +260,14 @@ class ApiService {
   }
 
   // Atualizar personalização do card
-  async updateCardCustomization(background, animation) {
+  async updateCardCustomization(background, animation, banner) {
     return this.request('/customization/student/card', {
       method: 'PUT',
-      body: JSON.stringify({ background, animation })
+      body: JSON.stringify({ 
+        background: banner, // Usar banner como background
+        animation, 
+        banner 
+      })
     });
   }
 

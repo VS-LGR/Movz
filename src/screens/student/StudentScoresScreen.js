@@ -16,6 +16,7 @@ import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
@@ -86,59 +87,40 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     return 'Precisa Melhorar';
   };
 
+  const getBannerThemeColors = (bannerName) => {
+    // Cores temáticas baseadas no banner para melhor legibilidade
+    const themes = {
+      'Banner Padrão': { primary: '#F8F9FA', secondary: '#E9ECEF', text: '#1F2937', overlay: 'rgba(255,255,255,0.1)' },
+      'Banner Ouro': { primary: '#FFD700', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.6)', numbers: '#FFE55C' },
+      'Banner Fogo': { primary: '#FF6B35', secondary: '#FF8E53', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner NBA': { primary: '#1D428A', secondary: '#C8102E', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Futebol': { primary: '#228B22', secondary: '#32CD32', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Vôlei': { primary: '#FF4500', secondary: '#FF6347', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Basquete': { primary: '#FF8C00', secondary: '#FFA500', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Cap 2': { primary: '#2F4F4F', secondary: '#708090', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Gato': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
+      'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
+      'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+    };
+    return themes[bannerName] || themes['Banner Padrão'];
+  };
+
   const getCardStyle = () => {
     if (!profileData) return styles.sportCard;
 
-    const background = profileData.student.cardBackground;
-    const animation = profileData.student.cardAnimation;
-
+    const banner = profileData.student.cardBanner;
     let cardStyle = { ...styles.sportCard };
 
-    // Aplicar fundo personalizado baseado nos nomes corretos
-    switch (background) {
-      case 'default':
-        cardStyle.backgroundColor = '#E8EDED';
-        cardStyle.borderColor = '#D0D0D0';
-        break;
-      case 'champion':
-        cardStyle.backgroundColor = '#FFD700';
-        cardStyle.borderColor = '#FFA500';
-        break;
-      case 'legend':
-        cardStyle.backgroundColor = '#8B5CF6';
-        cardStyle.borderColor = '#7C3AED';
-        break;
-      case 'golden':
-        cardStyle.backgroundColor = '#F59E0B';
-        cardStyle.borderColor = '#D97706';
-        break;
-      case 'starry':
-        cardStyle.backgroundColor = '#1E3A8A';
-        cardStyle.borderColor = '#1E40AF';
-        break;
-      case 'ocean':
-        cardStyle.backgroundColor = '#0EA5E9';
-        cardStyle.borderColor = '#0284C7';
-        break;
-      case 'forest':
-        cardStyle.backgroundColor = '#10B981';
-        cardStyle.borderColor = '#059669';
-        break;
-      case 'fire':
-        cardStyle.backgroundColor = '#EF4444';
-        cardStyle.borderColor = '#DC2626';
-        break;
-      case 'ice':
-        cardStyle.backgroundColor = '#06B6D4';
-        cardStyle.borderColor = '#0891B2';
-        break;
-      case 'rainbow':
-        cardStyle.backgroundColor = '#EC4899';
-        cardStyle.borderColor = '#DB2777';
-        break;
-      default:
-        cardStyle.backgroundColor = '#FFFFFF';
-        cardStyle.borderColor = '#E0E0E0';
+    // Usar cores temáticas baseadas no banner (sem imagem de fundo)
+    if (banner && banner !== 'Banner Padrão') {
+      const theme = getBannerThemeColors(banner);
+      cardStyle.backgroundColor = theme.primary;
+      cardStyle.borderColor = theme.secondary;
+    } else {
+      cardStyle.backgroundColor = '#E8EDED';
+      cardStyle.borderColor = '#D0D0D0';
     }
 
     return cardStyle;
@@ -206,7 +188,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       <TouchableOpacity 
         key={sportData.sport.id} 
         style={[
-          getCardStyle(),
+          styles.sportCard,
           getCardAnimationStyle(),
           { 
             opacity: hasScores ? 1 : 0.7,
@@ -230,7 +212,10 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
           </View>
           
           <View style={styles.sportInfo}>
-            <Text style={[styles.sportName, { color: hasScores ? '#364859' : '#9CA3AF' }]}>
+            <Text style={[
+              styles.sportName, 
+              { color: hasScores ? '#364859' : '#9CA3AF' }
+            ]}>
               {sportData.sport.name}
             </Text>
             <Text style={styles.achievementLevel}>
@@ -313,31 +298,147 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     return (
       <View style={styles.statsContainer}>
         {/* Card Principal de Conquistas */}
-        <View style={styles.achievementCard}>
+        <View style={[styles.achievementCard, getCardStyle()]}>
+          {profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && (
+            <Image 
+              source={getCachedImage(profileData.student.cardBanner, 'banner')}
+              style={styles.achievementCardBackground}
+              resizeMode="cover"
+            />
+          )}
+          {profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && (
+            <View style={[
+              styles.achievementCardOverlay,
+              { backgroundColor: getBannerThemeColors(profileData.student.cardBanner).overlay }
+            ]} />
+          )}
+          
           <View style={styles.achievementHeader}>
-            <Text style={styles.achievementTitle}>🏆 Suas Pontuações</Text>
+            <Text style={[
+              styles.achievementTitle,
+              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                color: getBannerThemeColors(profileData.student.cardBanner).text,
+                textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+              },
+              profileData?.student.cardBanner === 'Banner Padrão' && {
+                color: '#1F2937',
+                fontWeight: 'bold'
+              }
+            ]}>🏆 Suas Pontuações</Text>
             <View style={[styles.levelBadge, { backgroundColor: overallLevel.color }]}>
               <Text style={styles.levelIcon}>{overallLevel.icon}</Text>
             </View>
           </View>
           
           <View style={styles.achievementContent}>
-            <Text style={styles.levelText}>{overallLevel.level}</Text>
-            <Text style={styles.levelSubtext}>Nível Geral</Text>
+            <Text style={[
+              styles.levelText,
+              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                color: getBannerThemeColors(profileData.student.cardBanner).text,
+                textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+              },
+              profileData?.student.cardBanner === 'Banner Padrão' && {
+                color: '#1F2937',
+                fontWeight: 'bold'
+              }
+            ]}>{overallLevel.level}</Text>
+            <Text style={[
+              styles.levelSubtext,
+              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                color: getBannerThemeColors(profileData.student.cardBanner).text,
+                textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+              },
+              profileData?.student.cardBanner === 'Banner Padrão' && {
+                color: '#374151',
+                fontWeight: '600'
+              }
+            ]}>Nível Geral</Text>
           </View>
 
           <View style={styles.achievementStats}>
             <View style={styles.achievementStat}>
-              <Text style={styles.achievementStatNumber}>{sportsWithScores}</Text>
-              <Text style={styles.achievementStatLabel}>Esportes Ativos</Text>
+              <Text style={[
+                styles.achievementStatNumber,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.student.cardBanner === 'Banner Void' || 
+                          profileData.student.cardBanner === 'Banner Ouro' || 
+                          profileData.student.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
+                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#1F2937',
+                  fontWeight: 'bold'
+                }
+              ]}>{sportsWithScores}</Text>
+              <Text style={[
+                styles.achievementStatLabel,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#374151',
+                  fontWeight: '600'
+                }
+              ]}>Esportes Ativos</Text>
             </View>
             <View style={styles.achievementStat}>
-              <Text style={styles.achievementStatNumber}>{totalClasses}</Text>
-              <Text style={styles.achievementStatLabel}>Aulas Completas</Text>
+              <Text style={[
+                styles.achievementStatNumber,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.student.cardBanner === 'Banner Void' || 
+                          profileData.student.cardBanner === 'Banner Ouro' || 
+                          profileData.student.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
+                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#1F2937',
+                  fontWeight: 'bold'
+                }
+              ]}>{totalClasses}</Text>
+              <Text style={[
+                styles.achievementStatLabel,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#374151',
+                  fontWeight: '600'
+                }
+              ]}>Aulas Completas</Text>
             </View>
             <View style={styles.achievementStat}>
-              <Text style={styles.achievementStatNumber}>{totalScore}</Text>
-              <Text style={styles.achievementStatLabel}>Pontos Totais</Text>
+              <Text style={[
+                styles.achievementStatNumber,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.student.cardBanner === 'Banner Void' || 
+                          profileData.student.cardBanner === 'Banner Ouro' || 
+                          profileData.student.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
+                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#1F2937',
+                  fontWeight: 'bold'
+                }
+              ]}>{totalScore}</Text>
+              <Text style={[
+                styles.achievementStatLabel,
+                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
+                },
+                profileData?.student.cardBanner === 'Banner Padrão' && {
+                  color: '#374151',
+                  fontWeight: '600'
+                }
+              ]}>Pontos Totais</Text>
             </View>
           </View>
 
@@ -562,6 +663,26 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 2,
     borderColor: '#F9BB55',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  achievementCardBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  achievementCardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   achievementHeader: {
     flexDirection: 'row',

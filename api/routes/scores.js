@@ -513,7 +513,8 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
             id: true,
             name: true,
             email: true,
-            avatar: true
+            avatar: true,
+            cardBanner: true
           }
         }
       }
@@ -548,6 +549,7 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
           studentName: classStudentItem.student.name,
           studentEmail: classStudentItem.student.email,
           studentAvatar: classStudentItem.student.avatar,
+          cardBanner: classStudentItem.student.cardBanner,
           totalScore,
           totalClasses,
           scores: allScores.map(score => ({
