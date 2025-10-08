@@ -17,6 +17,7 @@ import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
 import { getCachedImage } from '../../utils/imageCache';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,7 +39,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     setError(null);
     try {
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {

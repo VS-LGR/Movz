@@ -14,6 +14,7 @@ import {
 import SideMenu from '../../components/SideMenu';
 import apiService from '../../services/apiService';
 import { getCachedImage } from '../../utils/imageCache';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,7 +33,7 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
     setError(null);
     try {
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {
@@ -43,7 +44,7 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
       
       const response = await apiService.getStudentProfile();
       if (response.success) {
-        setProfileData(response.data);
+        setProfileData(response.data.user);
       } else {
         setError(response.message || 'Erro ao carregar conquistas');
       }
@@ -63,7 +64,7 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
 
   const isAchievementObtained = (achievement) => {
     if (!profileData) return false;
-    return profileData.achievements.unlocked.some(unlockedAchievement => unlockedAchievement.id === achievement.id);
+    return getUnlockedAchievements.some(unlockedAchievement => unlockedAchievement.id === achievement.id);
   };
 
   const getRarityColor = (rarity) => {
@@ -79,9 +80,71 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
 
   // Usar useMemo para otimizar o cálculo das conquistas
   const achievementsData = useMemo(() => {
-    if (!profileData?.achievements?.all) return [];
-    return profileData.achievements.all;
-  }, [profileData?.achievements?.all]);
+    // 16 conquistas originais com objetivos reais
+    const mockAchievements = [
+      // Conquistas de Participação
+      { id: '1', name: 'Primeiro Passo', description: 'Complete sua primeira aula', rarity: 'common', requirement: '1 aula', xpReward: 50, icon: 'aiAtivo 5medals.svg' },
+      { id: '2', name: 'Iniciante', description: 'Complete 5 aulas', rarity: 'common', requirement: '5 aulas', xpReward: 100, icon: 'aiAtivo 9medals.svg' },
+      { id: '3', name: 'Dedicado', description: 'Complete 10 aulas', rarity: 'rare', requirement: '10 aulas', xpReward: 200, icon: 'aiAtivo 10medals.svg' },
+      { id: '4', name: 'Esforçado', description: 'Complete 25 aulas', rarity: 'rare', requirement: '25 aulas', xpReward: 300, icon: 'aiAtivo 11medals.svg' },
+      { id: '5', name: 'Determinado', description: 'Complete 50 aulas', rarity: 'epic', requirement: '50 aulas', xpReward: 500, icon: 'aiAtivo 12medals.svg' },
+      { id: '6', name: 'Mestre', description: 'Complete 100 aulas', rarity: 'legendary', requirement: '100 aulas', xpReward: 1000, icon: 'aiAtivo 13medals.svg' },
+      
+      // Conquistas de Frequência
+      { id: '7', name: 'Presença Perfeita', description: 'Tenha 100% de presença em uma semana', rarity: 'rare', requirement: '7 dias com 100% presença', xpReward: 150, icon: 'aiAtivo 14medals.svg' },
+      { id: '8', name: 'Consistente', description: 'Tenha 90% de presença por 30 dias', rarity: 'epic', requirement: '30 dias com 90% presença', xpReward: 400, icon: 'aiAtivo 15medals.svg' },
+      { id: '9', name: 'Ponto de Honra', description: 'Tenha 95% de presença por 60 dias', rarity: 'legendary', requirement: '60 dias com 95% presença', xpReward: 800, icon: 'aiAtivo 19medals.svg' },
+      
+      // Conquistas de Esportes
+      { id: '10', name: 'Atleta Completo', description: 'Participe de 5 esportes diferentes', rarity: 'rare', requirement: '5 esportes diferentes', xpReward: 250, icon: 'aiAtivo 20medals.svg' },
+      { id: '11', name: 'Multiesportista', description: 'Participe de 8 esportes diferentes', rarity: 'epic', requirement: '8 esportes diferentes', xpReward: 500, icon: 'aiAtivo 21medals.svg' },
+      { id: '12', name: 'Campeão Universal', description: 'Participe de todos os esportes', rarity: 'legendary', requirement: 'Todos os esportes', xpReward: 1000, icon: 'aiAtivo 22medals.svg' },
+      
+      // Conquistas de Pontuação
+      { id: '13', name: 'Primeira Estrela', description: 'Alcance 100 pontos em um esporte', rarity: 'common', requirement: '100 pontos em 1 esporte', xpReward: 100, icon: 'aiAtivo 23medals.svg' },
+      { id: '14', name: 'Estrela Brilhante', description: 'Alcance 500 pontos em um esporte', rarity: 'rare', requirement: '500 pontos em 1 esporte', xpReward: 300, icon: 'aiAtivo 24medals.svg' },
+      { id: '15', name: 'Super Estrela', description: 'Alcance 1000 pontos em um esporte', rarity: 'epic', requirement: '1000 pontos em 1 esporte', xpReward: 600, icon: 'aiAtivo 25medals.svg' },
+      { id: '16', name: 'Lenda Viva', description: 'Alcance 2000 pontos em um esporte', rarity: 'mythic', requirement: '2000 pontos em 1 esporte', xpReward: 1200, icon: 'aiAtivo 26medals.svg' }
+    ];
+    return mockAchievements;
+  }, []);
+
+  // Calcular conquistas desbloqueadas baseado no perfil do usuário
+  const getUnlockedAchievements = useMemo(() => {
+    if (!profileData) return [];
+    
+    const unlocked = [];
+    const totalClasses = profileData?.totalClasses || 0;
+    const attendanceRate = profileData?.attendanceRate || 0;
+    const sportsCount = profileData?.sportsCount || 0;
+    const maxScore = profileData?.maxScore || 0;
+    
+    // Conquistas de Participação
+    if (totalClasses >= 1) unlocked.push({ id: '1', name: 'Primeiro Passo' });
+    if (totalClasses >= 5) unlocked.push({ id: '2', name: 'Iniciante' });
+    if (totalClasses >= 10) unlocked.push({ id: '3', name: 'Dedicado' });
+    if (totalClasses >= 25) unlocked.push({ id: '4', name: 'Esforçado' });
+    if (totalClasses >= 50) unlocked.push({ id: '5', name: 'Determinado' });
+    if (totalClasses >= 100) unlocked.push({ id: '6', name: 'Mestre' });
+    
+    // Conquistas de Frequência
+    if (attendanceRate >= 100) unlocked.push({ id: '7', name: 'Presença Perfeita' });
+    if (attendanceRate >= 90) unlocked.push({ id: '8', name: 'Consistente' });
+    if (attendanceRate >= 95) unlocked.push({ id: '9', name: 'Ponto de Honra' });
+    
+    // Conquistas de Esportes
+    if (sportsCount >= 5) unlocked.push({ id: '10', name: 'Atleta Completo' });
+    if (sportsCount >= 8) unlocked.push({ id: '11', name: 'Multiesportista' });
+    if (sportsCount >= 9) unlocked.push({ id: '12', name: 'Campeão Universal' });
+    
+    // Conquistas de Pontuação
+    if (maxScore >= 100) unlocked.push({ id: '13', name: 'Primeira Estrela' });
+    if (maxScore >= 500) unlocked.push({ id: '14', name: 'Estrela Brilhante' });
+    if (maxScore >= 1000) unlocked.push({ id: '15', name: 'Super Estrela' });
+    if (maxScore >= 2000) unlocked.push({ id: '16', name: 'Lenda Viva' });
+    
+    return unlocked;
+  }, [profileData]);
 
   const renderAchievementCard = (achievement) => {
     const obtained = isAchievementObtained(achievement);
@@ -90,7 +153,7 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
       <View key={achievement.id} style={[styles.achievementCard, obtained && styles.achievementCardObtained]}>
         <View style={styles.achievementIconContainer}>
           <Image 
-            source={getCachedImage(achievement.name, 'achievement')} 
+            source={{ uri: `/src/assets/images/${achievement.icon}` }} 
             style={[styles.achievementIcon, !obtained && styles.achievementIconLocked]} 
             resizeMode="contain"
           />
@@ -149,8 +212,8 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
     );
   }
 
-  const obtainedCount = profileData?.achievements?.stats?.unlocked || 0;
-  const totalCount = profileData?.achievements?.stats?.total || 0;
+  const obtainedCount = getUnlockedAchievements.length;
+  const totalCount = achievementsData.length;
 
   return (
     <SafeAreaView style={styles.container}>

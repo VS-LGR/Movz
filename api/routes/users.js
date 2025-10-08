@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const prisma = require('../prisma');
+const { supabase } = require('../supabase');
 // Importar authenticateToken do arquivo auth.js
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -31,43 +31,105 @@ const router = express.Router();
 // Buscar perfil do usuário
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        age: true,
-        school: true,
-        class: true,
-        avatar: true,
-        createdAt: true,
-        updatedAt: true,
-        userSports: {
-          include: {
-            sport: {
-              select: {
-                id: true,
-                name: true,
-                icon: true,
-                color: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const userId = req.user.userId;
 
-    if (!user) {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        name,
+        email,
+        age,
+        school,
+        class,
+        avatar,
+        createdAt,
+        updatedAt,
+        userType,
+        totalXP,
+        level,
+        cardBanner,
+        cardBackground
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
       return res.status(404).json({
         success: false,
         message: 'Usuário não encontrado'
       });
     }
 
+    // Buscar esportes do usuário
+    const { data: userSports, error: sportsError } = await supabase
+      .from('user_sports')
+      .select(`
+        *,
+        sports:sport_id (
+          id,
+          name,
+          icon,
+          color
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (sportsError) {
+      console.error('Erro ao buscar esportes do usuário:', sportsError);
+    }
+
+    // Calcular dados de XP
+    const totalXP = user.totalXP || 0;
+    const level = user.level || 1;
+    const xpForCurrentLevel = (level - 1) * 1000;
+    const xpForNextLevel = level * 1000;
+    const progress = totalXP - xpForCurrentLevel;
+    const needed = xpForNextLevel - totalXP;
+
+    // Buscar dados para conquistas e medalhas
+    const { data: classScores } = await supabase
+      .from('class_scores')
+      .select('score')
+      .eq('student_id', userId);
+
+    const { data: attendances } = await supabase
+      .from('attendances')
+      .select('isPresent')
+      .eq('student_id', userId);
+
+    // Calcular estatísticas
+    const totalClasses = classScores?.length || 0;
+    const maxScore = classScores?.length > 0 ? Math.max(...classScores.map(cs => cs.score)) : 0;
+    const presentClasses = attendances?.filter(a => a.isPresent).length || 0;
+    const attendanceRate = attendances?.length > 0 ? Math.round((presentClasses / attendances.length) * 100) : 0;
+    const sportsCount = userSports?.length || 0;
+
+    const userWithSports = {
+      ...user,
+      userSports: userSports?.map(us => ({
+        ...us,
+        sport: us.sports
+      })) || [],
+      student: {
+        totalXP,
+        level
+      },
+      xp: {
+        progress,
+        needed
+      },
+      // Dados para conquistas e medalhas
+      totalClasses,
+      maxScore,
+      attendanceRate,
+      sportsCount
+    };
+
     res.json({
       success: true,
-      data: { user }
+      data: { user: userWithSports }
     });
 
   } catch (error) {
@@ -82,6 +144,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 // Atualizar perfil do usuário
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { name, age, school, class: userClass, avatar } = req.body;
 
     const updateData = {};
@@ -90,21 +153,31 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (school !== undefined) updateData.school = school;
     if (userClass !== undefined) updateData.class = userClass;
     if (avatar !== undefined) updateData.avatar = avatar;
+    updateData.updatedAt = new Date().toISOString();
 
-    const user = await prisma.user.update({
-      where: { id: req.user.userId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        age: true,
-        school: true,
-        class: true,
-        avatar: true,
-        updatedAt: true
-      }
-    });
+    const { data: user, error: updateError } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+      .select(`
+        id,
+        name,
+        email,
+        age,
+        school,
+        class,
+        avatar,
+        updatedAt
+      `)
+      .single();
+
+    if (updateError) {
+      console.error('Erro ao atualizar perfil:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao atualizar perfil'
+      });
+    }
 
     res.json({
       success: true,
@@ -124,6 +197,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 // Alterar senha
 router.put('/password', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -141,11 +215,13 @@ router.put('/password', authenticateToken, async (req, res) => {
     }
 
     // Buscar usuário com senha
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, password')
+      .eq('id', userId)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       return res.status(404).json({
         success: false,
         message: 'Usuário não encontrado'
@@ -166,10 +242,21 @@ router.put('/password', authenticateToken, async (req, res) => {
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
     // Atualizar senha
-    await prisma.user.update({
-      where: { id: req.user.userId },
-      data: { password: hashedNewPassword }
-    });
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        password: hashedNewPassword,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Erro ao atualizar senha:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao atualizar senha'
+      });
+    }
 
     res.json({
       success: true,
@@ -190,57 +277,67 @@ router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const [
-      totalScores,
-      totalProgress,
-      userScores,
-      userProgress
-    ] = await Promise.all([
-      prisma.userScore.count({
-        where: { userId }
-      }),
-      prisma.userProgress.count({
-        where: { userId }
-      }),
-      prisma.userScore.findMany({
-        where: { userId },
-        include: {
-          sport: {
-            select: {
-              name: true,
-              icon: true,
-              color: true
-            }
-          }
-        },
-        orderBy: { score: 'desc' },
-        take: 5
-      }),
-      prisma.userProgress.findMany({
-        where: { 
-          userId,
-          progress: 100
-        },
-        include: {
-          content: {
-            select: {
-              title: true,
-              type: true
-            }
-          }
-        },
-        orderBy: { completedAt: 'desc' },
-        take: 5
-      })
-    ]);
+    // Buscar pontuações do usuário
+    const { data: userScores, error: scoresError } = await supabase
+      .from('user_scores')
+      .select(`
+        *,
+        sports:sport_id (
+          name,
+          icon,
+          color
+        )
+      `)
+      .eq('user_id', userId)
+      .order('score', { ascending: false })
+      .limit(5);
+
+    // Buscar progresso do usuário
+    const { data: userProgress, error: progressError } = await supabase
+      .from('user_progress')
+      .select(`
+        *,
+        contents:content_id (
+          title,
+          type
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('progress', 100)
+      .order('completed_at', { ascending: false })
+      .limit(5);
+
+    // Contar totais
+    const { count: totalScores } = await supabase
+      .from('user_scores')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    const { count: totalProgress } = await supabase
+      .from('user_progress')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (scoresError) {
+      console.error('Erro ao buscar pontuações:', scoresError);
+    }
+    if (progressError) {
+      console.error('Erro ao buscar progresso:', progressError);
+    }
 
     res.json({
       success: true,
       data: {
-        totalScores,
-        totalProgress,
-        recentScores: userScores,
-        recentProgress: userProgress
+        totalScores: totalScores || 0,
+        totalProgress: totalProgress || 0,
+        recentScores: userScores?.map(score => ({
+          ...score,
+          sport: score.sports
+        })) || [],
+        recentProgress: userProgress?.map(progress => ({
+          ...progress,
+          content: progress.contents
+        })) || []
       }
     });
 
@@ -256,6 +353,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
 // Deletar conta
 router.delete('/account', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { password } = req.body;
 
     if (!password) {
@@ -266,11 +364,13 @@ router.delete('/account', authenticateToken, async (req, res) => {
     }
 
     // Buscar usuário com senha
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, password')
+      .eq('id', userId)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       return res.status(404).json({
         success: false,
         message: 'Usuário não encontrado'
@@ -288,9 +388,18 @@ router.delete('/account', authenticateToken, async (req, res) => {
     }
 
     // Deletar usuário (cascade vai deletar dados relacionados)
-    await prisma.user.delete({
-      where: { id: req.user.userId }
-    });
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (deleteError) {
+      console.error('Erro ao deletar usuário:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao deletar conta'
+      });
+    }
 
     res.json({
       success: true,

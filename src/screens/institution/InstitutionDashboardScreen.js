@@ -1048,9 +1048,11 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
                   onPress={loadStudentsInInstitution}
                   disabled={isLoading || isRefreshingStudents}
                 >
-                  <Text style={styles.refreshButtonText}>
-                    {isRefreshingStudents ? '⏳ Atualizando...' : '🔄 Atualizar'}
-                  </Text>
+                  <Image 
+                    source={require('../../assets/images/Refresh.svg')}
+                    style={styles.refreshIcon}
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
               </View>
               <ScrollView style={[
@@ -1934,16 +1936,26 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
     marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 52,
+    minHeight: 52,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  refreshButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Poppins',
+  refreshIcon: {
+    width: 24,
+    height: 24,
   },
   refreshButtonDisabled: {
     backgroundColor: '#ccc',

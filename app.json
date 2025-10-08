@@ -24,7 +24,8 @@
       }
     },
     "web": {
-      "favicon": "./src/assets/images/aiAtivo 1logo.png"
+      "favicon": "./src/assets/images/aiAtivo 1logo.png",
+      "bundler": "metro"
     }
   }
 }

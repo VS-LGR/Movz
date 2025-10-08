@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
+import HamburgerButton from '../../components/HamburgerButton';
 import { getCachedImage } from '../../utils/imageCache';
 import apiService from '../../services/apiService';
 import ImagePlaceholder from '../../components/ImagePlaceholder';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,7 +34,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
       setIsLoading(true);
       
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {
@@ -64,7 +66,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
       // Buscar dados do perfil (XP, medalhas, conquistas)
       const profileResponse = await apiService.getStudentProfile();
       if (profileResponse.success) {
-        setProfileData(profileResponse.data);
+        setProfileData(profileResponse.data.user);
       }
     } catch (error) {
       console.error('Erro ao carregar dados do aluno:', error);
@@ -81,8 +83,8 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
   };
 
   // Usar dados reais da API em vez de dados hardcoded
-  const medals = profileData?.medals?.unlocked || [];
-  const achievements = profileData?.achievements?.unlocked || [];
+  const medals = [];
+  const achievements = [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,14 +96,10 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
             {currentUser && (
               <Text style={styles.welcomeText}>Olá, {currentUser.name}!</Text>
             )}
-            <TouchableOpacity 
-              style={styles.menuIcon} 
+            <HamburgerButton 
               onPress={() => setIsMenuVisible(true)}
-            >
-              <View style={styles.menuLine} />
-              <View style={styles.menuLine} />
-              <View style={styles.menuLine} />
-            </TouchableOpacity>
+              style={styles.menuButton}
+            />
           </View>
         </View>
 
@@ -110,7 +108,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
           <View style={styles.xpHeader}>
             <Text style={styles.xpTitle}>Seu XP até agora</Text>
             <Text style={styles.xpValue}>
-              {profileData ? profileData.student.totalXP.toLocaleString() : '0'}
+              {profileData?.student?.totalXP?.toLocaleString() || '0'}
             </Text>
           </View>
           <View style={styles.progressBarContainer}>
@@ -118,7 +116,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
             <View style={[
               styles.progressBarFill,
               { 
-                width: profileData 
+                width: profileData?.xp?.progress 
                   ? `${(profileData.xp.progress / 1000) * 100}%`
                   : '0%'
               }
@@ -127,10 +125,10 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
           {profileData && (
             <View style={styles.xpInfo}>
               <Text style={styles.xpLevelText}>
-                Nível {profileData.student.level} • {profileData.xp.progress}/1000 XP
+                Nível {profileData?.student?.level || 1} • {profileData?.xp?.progress || 0}/1000 XP
               </Text>
               <Text style={styles.xpNextLevelText}>
-                Próximo nível: {profileData.xp.needed} XP
+                Próximo nível: {profileData?.xp?.needed || 1000} XP
               </Text>
             </View>
           )}
@@ -215,11 +213,11 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         {/* Medals Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Suas medalhas</Text>
-          {profileData && profileData.medals.unlocked.length > 0 ? (
+          {profileData && (profileData.medals?.unlocked?.length || 0) > 0 ? (
             <View style={styles.medalBannerContainer}>
               <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
               <View style={styles.medalBanner}>
-                {profileData.medals.unlocked.slice(0, 3).map((medal, index) => (
+                {(profileData.medals?.unlocked || []).slice(0, 3).map((medal, index) => (
                   <View key={medal.id} style={styles.medalContainer}>
                     <View style={styles.medalIcon}>
                       <Image 
@@ -255,11 +253,11 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         {/* Achievements Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Suas conquistas</Text>
-          {profileData && profileData.achievements.unlocked.length > 0 ? (
+          {profileData && (profileData.achievements?.unlocked?.length || 0) > 0 ? (
             <View style={styles.medalBannerContainer}>
               <Image source={require('../../assets/images/FundoMedalhas.svg')} style={styles.medalBannerBackground} resizeMode="cover" />
               <View style={styles.medalBanner}>
-                {profileData.achievements.unlocked.slice(0, 3).map((achievement, index) => (
+                {(profileData.achievements?.unlocked || []).slice(0, 3).map((achievement, index) => (
                   <View key={achievement.id} style={styles.medalContainer}>
                     <View style={styles.medalIcon}>
                       <Image 
@@ -337,16 +335,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontFamily: 'Poppins',
   },
-  menuIcon: {
-    width: 39,
-    height: 18,
-    justifyContent: 'space-between',
-  },
-  menuLine: {
-    width: 39,
-    height: 6,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 3,
+  menuButton: {
+    marginLeft: 10,
   },
   xpSection: {
     marginBottom: 20,

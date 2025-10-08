@@ -17,6 +17,7 @@ import HamburgerButton from '../../components/HamburgerButton';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import { getCachedImage } from '../../utils/imageCache';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,7 +41,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     setError(null);
     try {
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {
@@ -55,9 +56,9 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       
       if (response.success) {
         console.log('🔵 CardCustomizationScreen - Dados recebidos:', response.data);
-        setProfileData(response.data);
-        setSelectedBackground(response.data.student.cardBanner || 'Banner Padrão');
-        setSelectedAnimation(response.data.student.cardAnimation || 'none');
+        setProfileData(response.data.user);
+        setSelectedBackground(response.data.user.cardBanner || 'Banner Padrão');
+        setSelectedAnimation(response.data.user.cardBackground || 'none');
       } else {
         console.error('🔴 CardCustomizationScreen - Erro na resposta:', response.message);
         setError(response.message || 'Erro ao carregar perfil');
@@ -198,21 +199,21 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     if (!profileData) return false;
     
     // Para admin, liberar tudo
-    if (profileData.student.email === 'admin@aluno.com') {
+    if (profileData?.student?.email === 'admin@aluno.com') {
       return true;
     }
     
     switch (customization.unlockType) {
       case 'xp':
-        return profileData.student.totalXP >= customization.unlockValue;
+        return (profileData?.student?.totalXP || 0) >= customization.unlockValue;
       
       case 'achievement':
         if (!customization.unlockTarget) return false;
-        return profileData.achievements.unlocked.some(ach => ach.name === customization.unlockTarget);
+        return (profileData?.achievements?.unlocked || []).some(ach => ach.name === customization.unlockTarget);
       
       case 'medal':
         if (!customization.unlockTarget) return false;
-        return profileData.medals.unlocked.some(medal => medal.name === customization.unlockTarget);
+        return (profileData?.medals?.unlocked || []).some(medal => medal.name === customization.unlockTarget);
       
       default:
         return false;
@@ -226,7 +227,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         <Text style={styles.subtitle}>Customize seu card de pontuação</Text>
         {profileData && (
           <Text style={styles.xpInfo}>
-            💎 Nível {profileData.student.level} • {profileData.student.totalXP} XP
+            💎 Nível {profileData?.student?.level || 1} • {profileData?.student?.totalXP || 0} XP
           </Text>
         )}
       </View>
@@ -236,9 +237,11 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
           onPress={onRefresh}
           disabled={refreshing}
         >
-          <Text style={styles.refreshButtonText}>
-            {refreshing ? '🔄' : '🔄'}
-          </Text>
+          <Image 
+            source={require('../../assets/images/Refresh.svg')}
+            style={styles.refreshIcon}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
         <HamburgerButton
           onPress={() => setIsMenuVisible(true)}
@@ -480,26 +483,26 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         <Text style={styles.statsTitle}>📊 Suas Conquistas</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{profileData.medals.stats.unlocked}</Text>
+            <Text style={styles.statNumber}>0</Text>
             <Text style={styles.statLabel}>Medalhas</Text>
             <Text style={styles.statSubtext}>
-              {profileData.medals.stats.percentage}% desbloqueadas
+              0% desbloqueadas
             </Text>
           </View>
           
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{profileData.achievements.stats.unlocked}</Text>
+            <Text style={styles.statNumber}>0</Text>
             <Text style={styles.statLabel}>Conquistas</Text>
             <Text style={styles.statSubtext}>
-              {profileData.achievements.stats.percentage}% desbloqueadas
+              0% desbloqueadas
             </Text>
           </View>
           
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{profileData.student.level}</Text>
+            <Text style={styles.statNumber}>{profileData?.student?.level || 1}</Text>
             <Text style={styles.statLabel}>Nível</Text>
             <Text style={styles.statSubtext}>
-              {profileData.xp.progress}/1000 XP
+              {profileData?.xp?.progress || 0}/1000 XP
             </Text>
           </View>
         </View>
@@ -547,7 +550,17 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
               {renderCustomizationSection(
                 '🏆 Fundos (Banners)',
                 'BANNER',
-                profileData.customizations.filter(c => c.type === 'BANNER'),
+                [
+                  { name: 'Banner Padrão', description: 'Banner simples e elegante', rarity: 'common', unlockType: 'xp', unlockValue: 0, preview: 'default' },
+                  { name: 'Banner Ouro', description: 'Banner dourado luxuoso', rarity: 'rare', unlockType: 'xp', unlockValue: 500, preview: 'aiB_GoldBanner.svg' },
+                  { name: 'Banner Rose Gold', description: 'Banner rosa dourado', rarity: 'rare', unlockType: 'xp', unlockValue: 1000, preview: 'aiB_Rose_GoldBanner.svg' },
+                  { name: 'Banner Void', description: 'Banner espacial misterioso', rarity: 'epic', unlockType: 'xp', unlockValue: 2000, preview: 'aiB_VoidBanner.svg' },
+                  { name: 'Banner Fogo', description: 'Banner com efeito de fogo', rarity: 'epic', unlockType: 'xp', unlockValue: 3000, preview: 'aiB_FogoBanner.svg' },
+                  { name: 'Banner NBA', description: 'Banner temático da NBA', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_NBABanner.svg' },
+                  { name: 'Banner Soccer', description: 'Banner temático do futebol', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_SoccerBanner.svg' },
+                  { name: 'Banner Volley', description: 'Banner temático do vôlei', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_VolleyBanner.svg' },
+                  { name: 'Banner Space', description: 'Banner espacial futurista', rarity: 'mythic', unlockType: 'xp', unlockValue: 10000, preview: 'aiB_SpaceBanner.svg' }
+                ],
                 selectedBackground,
                 setSelectedBackground
               )}
@@ -555,7 +568,14 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
               {renderCustomizationSection(
                 '✨ Animações',
                 'animation',
-                profileData.customizations.filter(c => c.type === 'animation'),
+                [
+                  { name: 'Nenhuma', description: 'Sem animação', rarity: 'common', unlockType: 'xp', unlockValue: 0, preview: 'none' },
+                  { name: 'Pulsação', description: 'Efeito de pulsação suave', rarity: 'rare', unlockType: 'xp', unlockValue: 1000, preview: 'pulse' },
+                  { name: 'Brilho', description: 'Efeito de brilho dourado', rarity: 'rare', unlockType: 'xp', unlockValue: 1500, preview: 'glow' },
+                  { name: 'Rotação', description: 'Rotação suave do card', rarity: 'epic', unlockType: 'xp', unlockValue: 2500, preview: 'rotate' },
+                  { name: 'Flutuação', description: 'Movimento flutuante', rarity: 'epic', unlockType: 'xp', unlockValue: 3000, preview: 'float' },
+                  { name: 'Partículas', description: 'Efeito de partículas douradas', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'particles' }
+                ],
                 selectedAnimation,
                 setSelectedAnimation
               )}
@@ -606,7 +626,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   title: {
     fontSize: 28,
@@ -627,10 +647,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   refreshButton: {
-    padding: 8,
+    padding: 12,
+    backgroundColor: '#F9BB55',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 52,
+    minHeight: 52,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  refreshButtonText: {
-    fontSize: 20,
+  refreshIcon: {
+    width: 28,
+    height: 28,
   },
   menuButton: {
     marginLeft: 5,

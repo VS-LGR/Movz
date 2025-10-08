@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Alert,
   Image,
+  ScrollView,
 } from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
@@ -60,7 +61,13 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoWrapper}>
@@ -177,7 +184,7 @@ const LoginScreen = ({ onLogin, onNavigateToRegister, onNavigateToTeacherRegiste
           
         </View>
       </View>
-      
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -187,6 +194,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E9EDEE',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: height,
+  },
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -194,34 +209,40 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 30,
+    marginTop: 10,
   },
   logoWrapper: {
     backgroundColor: 'transparent',
-    borderRadius: 75,
-    padding: 10,
-    // Aplicar multiply blend mode no container
-    mixBlendMode: 'multiply',
+    borderRadius: 100,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   logoImage: {
-    width: 150,
-    height: 150,
-    opacity: 0.9,
+    width: 180,
+    height: 180,
+    opacity: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
     fontFamily: 'Poppins',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 35,
     fontFamily: 'Poppins',
   },
   formContainer: {

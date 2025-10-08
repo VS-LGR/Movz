@@ -46,8 +46,14 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
       document.body.style.overflow = 'unset';
       document.body.style.position = 'unset';
       document.body.style.width = 'unset';
+      
+      Animated.timing(slideAnim, {
+        toValue: screenWidth,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
     };
-  }, [isVisible, slideAnim]);
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
@@ -71,10 +77,9 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
         { id: 'myClass', title: 'Minha Turma', y: 269, height: 42, screen: 'myClass' },
         { id: 'scores', title: 'Pontuações', y: 339, height: 42, screen: 'studentScores' },
         { id: 'ranking', title: 'Ranking', y: 408, height: 42, screen: 'ranking' },
-        { id: 'customization', title: 'Personalizar Card', y: 477, height: 42, screen: 'card-customization' },
-        { id: 'chat', title: 'Chat', y: 546, height: 41, screen: 'chat' },
-        { id: 'tutorial', title: 'Treinos', y: 615, height: 42, screen: 'tutorial' },
-        { id: 'logout', title: 'Sair', y: 684, height: 42, screen: 'logout' },
+        { id: 'chat', title: 'Chat', y: 477, height: 41, screen: 'chat' },
+        { id: 'tutorial', title: 'Treinos', y: 546, height: 42, screen: 'tutorial' },
+        { id: 'logout', title: 'Sair', y: 615, height: 42, screen: 'logout' },
       ];
     }
   };
@@ -106,10 +111,30 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
         {/* User Avatar */}
         <View style={styles.avatarContainer}>
           <Image
-            source={require('../assets/images/aiAtivo 1logo.png')}
+            source={require('../assets/images/Logo.svg')}
             style={styles.userAvatar}
-            resizeMode="cover"
+            resizeMode="contain"
           />
+        </View>
+
+        {/* Four Small Circles Row */}
+        <View style={styles.smallCirclesRow}>
+          <TouchableOpacity 
+            style={styles.smallCircle}
+            onPress={() => {
+              onNavigate && onNavigate('card-customization');
+              onClose && onClose();
+            }}
+          >
+            <Image
+              source={require('../assets/images/Edit.svg')}
+              style={styles.editIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          <View style={styles.smallCircle} />
+          <View style={styles.smallCircle} />
+          <View style={styles.smallCircle} />
         </View>
 
         {/* Menu Items */}
@@ -206,11 +231,37 @@ const styles = StyleSheet.create({
     left: 80,
     width: 60,
     height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   userAvatar: {
     width: 60,
     height: 60,
     borderRadius: 30,
+  },
+  // Small circles row
+  smallCirclesRow: {
+    position: 'absolute',
+    top: 120,
+    left: 27,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 168,
+  },
+  smallCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  editIcon: {
+    width: 20,
+    height: 20,
   },
   // Menu items
   menuItem: {

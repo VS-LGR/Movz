@@ -1,7 +1,7 @@
 // Serviço para comunicação com a API
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-api-domain.com/api' 
-  : 'http://localhost:3001/api';
+  ? 'https://muvz-app.vercel.app/api' 
+  : 'http://192.168.0.61:3001/api'; // IP da sua rede local
 
 class ApiService {
   constructor() {
@@ -256,7 +256,7 @@ class ApiService {
 
   // Buscar perfil completo do aluno (XP, medalhas, conquistas, personalizações)
   async getStudentProfile() {
-    return this.request('/customization/student/profile');
+    return this.request('/users/profile');
   }
 
   // Atualizar personalização do card

@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../prisma');
+const { supabase, generateId } = require('../supabase');
 
 const router = express.Router();
 
@@ -32,6 +32,7 @@ const authenticateToken = (req, res, next) => {
 // Registrar usuário
 router.post('/register', async (req, res) => {
   try {
+    console.log('Register endpoint called with:', req.body);
     const { name, email, password, age, school, class: userClass, cpf, userType = 'STUDENT' } = req.body;
 
     // Validações básicas
@@ -59,17 +60,19 @@ router.post('/register', async (req, res) => {
         });
       }
       
-      // Verificar se CPF já existe
-      const existingCpf = await prisma.user.findUnique({
-        where: { cpf: cleanCpf }
+    // Verificar se CPF já existe
+    const { data: existingCpf } = await supabase
+      .from('users')
+      .select('id')
+      .eq('cpf', cleanCpf)
+      .single();
+    
+    if (existingCpf) {
+      return res.status(409).json({
+        success: false,
+        message: 'Este CPF já está cadastrado'
       });
-      
-      if (existingCpf) {
-        return res.status(409).json({
-          success: false,
-          message: 'Este CPF já está cadastrado'
-        });
-      }
+    }
     }
 
     // Validar tipo de usuário
@@ -81,9 +84,11 @@ router.post('/register', async (req, res) => {
     }
 
     // Verificar se o email já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
     if (existingUser) {
       return res.status(409).json({
@@ -95,53 +100,59 @@ router.post('/register', async (req, res) => {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Criar usuário
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        cpf: cpf ? cpf.replace(/\D/g, '') : null,
-        age: age ? parseInt(age) : null,
-        school: school || null,
-        class: userClass || null,
-        userType
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        cpf: true,
-        age: true,
-        school: true,
-        class: true,
-        avatar: true,
-        userType: true,
-        createdAt: true
-      }
-    });
+             // Criar usuário
+             const userId = generateId();
+             const now = new Date().toISOString();
+             const { data: user, error: createError } = await supabase
+               .from('users')
+               .insert({
+                 id: userId,
+                 name,
+                 email,
+                 password: hashedPassword,
+                 cpf: cpf ? cpf.replace(/\D/g, '') : null,
+                 age: age ? parseInt(age) : null,
+                 school: school || null,
+                 class: userClass || null,
+                 userType: userType,
+                 createdAt: now,
+                 updatedAt: now
+               })
+      .select('id, name, email, cpf, age, school, class, avatar, userType, createdAt')
+      .single();
 
-    // Gerar token JWT
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, userType: user.userType },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
-    );
+    if (createError) {
+      console.error('Erro ao criar usuário:', createError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao criar usuário'
+      });
+    }
 
-    res.status(201).json({
-      success: true,
-      message: 'Usuário criado com sucesso',
-      data: {
-        user,
-        token
-      }
-    });
+             // Gerar token JWT
+             const token = jwt.sign(
+               { userId: user.id, email: user.email, userType: user.userType },
+               process.env.JWT_SECRET || 'fallback-secret',
+               { expiresIn: '7d' }
+             );
+
+             res.status(201).json({
+               success: true,
+               message: 'Usuário criado com sucesso',
+               data: {
+                 user,
+                 token
+               }
+             });
 
   } catch (error) {
     console.error('Erro no registro:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -159,29 +170,31 @@ router.post('/login', async (req, res) => {
     }
 
     // Buscar usuário
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       return res.status(401).json({
         success: false,
         message: 'Credenciais inválidas'
       });
     }
 
-    // Verificar se o tipo de usuário corresponde
-    if (user.userType !== userType) {
-      const userTypeNames = {
-        'STUDENT': 'estudante',
-        'TEACHER': 'professor',
-        'INSTITUTION': 'instituição'
-      };
-      return res.status(401).json({
-        success: false,
-        message: `Credenciais inválidas para ${userTypeNames[userType] || userType.toLowerCase()}`
-      });
-    }
+             // Verificar se o tipo de usuário corresponde
+             if (user.userType !== userType) {
+               const userTypeNames = {
+                 'STUDENT': 'estudante',
+                 'TEACHER': 'professor',
+                 'INSTITUTION': 'instituição'
+               };
+               return res.status(401).json({
+                 success: false,
+                 message: `Credenciais inválidas para ${userTypeNames[userType] || userType.toLowerCase()}`
+               });
+             }
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -193,24 +206,24 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Gerar token JWT
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, userType: user.userType },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '7d' }
-    );
+             // Gerar token JWT
+             const token = jwt.sign(
+               { userId: user.id, email: user.email, userType: user.userType },
+               process.env.JWT_SECRET || 'fallback-secret',
+               { expiresIn: '7d' }
+             );
 
-    // Retornar dados do usuário (sem senha)
-    const { password: _, ...userWithoutPassword } = user;
+             // Retornar dados do usuário (sem senha)
+             const { password: _, ...userWithoutPassword } = user;
 
-    res.json({
-      success: true,
-      message: 'Login realizado com sucesso',
-      data: {
-        user: userWithoutPassword,
-        token
-      }
-    });
+             res.json({
+               success: true,
+               message: 'Login realizado com sucesso',
+               data: {
+                 user: userWithoutPassword,
+                 token
+               }
+             });
 
   } catch (error) {
     console.error('Erro no login:', error);
@@ -312,12 +325,13 @@ router.get('/student/class', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Verificar se o usuário é um aluno
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { userType: true }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('userType')
+      .eq('id', userId)
+      .single();
 
-    if (!user || user.userType !== 'STUDENT') {
+    if (userError || !user || user.userType !== 'STUDENT') {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
@@ -325,44 +339,28 @@ router.get('/student/class', authenticateToken, async (req, res) => {
     }
 
     // Buscar a turma ativa do aluno
-    const classStudent = await prisma.classStudent.findFirst({
-      where: {
-        studentId: userId,
-        isActive: true
-      },
-      include: {
-        class: {
-          include: {
-            teacher: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                avatar: true
-              }
-            },
-            students: {
-              where: {
-                isActive: true
-              },
-              include: {
-                student: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    age: true,
-                    avatar: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const { data: classStudent, error: classError } = await supabase
+      .from('class_students')
+      .select(`
+        *,
+        classes:class_id (
+          *,
+          teachers:teacher_id (
+            id, name, email, avatar
+          ),
+          students:class_students!class_id (
+            *,
+            students:student_id (
+              id, name, email, age, avatar
+            )
+          )
+        )
+      `)
+      .eq('student_id', userId)
+      .eq('is_active', true)
+      .single();
 
-    if (!classStudent) {
+    if (classError || !classStudent) {
       return res.json({
         success: true,
         data: null,
@@ -370,12 +368,15 @@ router.get('/student/class', authenticateToken, async (req, res) => {
       });
     }
 
+    // Filtrar apenas alunos ativos
+    const activeStudents = classStudent.classes.students.filter(cs => cs.is_active);
+
     res.json({
       success: true,
       data: {
-        class: classStudent.class,
-        teacher: classStudent.class.teacher,
-        classmates: classStudent.class.students.map(cs => cs.student)
+        class: classStudent.classes,
+        teacher: classStudent.classes.teachers,
+        classmates: activeStudents.map(cs => cs.students)
       }
     });
 

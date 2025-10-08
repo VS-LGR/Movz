@@ -1,5 +1,5 @@
 const express = require('express');
-const prisma = require('../prisma');
+const { supabase } = require('../supabase');
 // Middleware de autenticação
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -371,63 +371,63 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Verificar se é aluno
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { userType: true }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('userType')
+      .eq('id', userId)
+      .single();
 
-    if (!user || user.userType !== 'STUDENT') {
+    if (userError || !user || user.userType !== 'STUDENT') {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
       });
     }
 
-    // Buscar todos os esportes ativos (não apenas os inscritos)
-    const allSports = await prisma.sport.findMany({
-      where: {
-        isActive: true
-      },
-      select: {
-        id: true,
-        name: true,
-        icon: true,
-        color: true
-      },
-      orderBy: {
-        name: 'asc'
-      }
-    });
+    // Buscar todos os esportes ativos
+    const { data: allSports, error: sportsError } = await supabase
+      .from('sports')
+      .select('id, name, icon, color')
+      .eq('isActive', true)
+      .order('name', { ascending: true });
+
+    if (sportsError) {
+      console.error('Erro ao buscar esportes:', sportsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar esportes'
+      });
+    }
 
     // Para cada esporte, buscar pontuações das aulas
     const sportsWithScores = await Promise.all(
       allSports.map(async (sport) => {
         // Buscar pontuações das aulas para este esporte
-        const classScores = await prisma.classScore.findMany({
-          where: {
-            studentId: userId,
-            sportId: sport.id
-          },
-          include: {
-            class: {
-              select: {
-                id: true,
-                name: true,
-                school: true,
-                grade: true
-              }
-            },
-            teacher: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        });
+        const { data: classScores, error: scoresError } = await supabase
+          .from('class_scores')
+          .select(`
+            *,
+            classes:class_id (
+              id, name, school, grade
+            ),
+            teachers:teacher_id (
+              id, name
+            )
+          `)
+          .eq('student_id', userId)
+          .eq('sport_id', sport.id)
+          .order('created_at', { ascending: false });
+
+        if (scoresError) {
+          console.error('Erro ao buscar pontuações:', scoresError);
+          return {
+            sport: sport,
+            totalScore: 0,
+            averageScore: 0,
+            totalClasses: 0,
+            scores: []
+          };
+        }
 
         // Calcular pontuação total e média
         const totalScore = classScores.reduce((sum, score) => sum + score.score, 0);
@@ -439,7 +439,11 @@ router.get('/student/sports', authenticateToken, async (req, res) => {
           totalScore,
           averageScore,
           totalClasses,
-          scores: classScores
+          scores: classScores.map(score => ({
+            ...score,
+            class: score.classes,
+            teacher: score.teachers
+          }))
         };
       })
     );
@@ -464,12 +468,13 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Verificar se é aluno
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { userType: true }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('userType')
+      .eq('id', userId)
+      .single();
 
-    if (!user || user.userType !== 'STUDENT') {
+    if (userError || !user || user.userType !== 'STUDENT') {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
@@ -477,24 +482,19 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
     }
 
     // Buscar a turma do aluno
-    const classStudent = await prisma.classStudent.findFirst({
-      where: {
-        studentId: userId,
-        isActive: true
-      },
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            school: true,
-            grade: true
-          }
-        }
-      }
-    });
+    const { data: classStudent, error: classError } = await supabase
+      .from('class_students')
+      .select(`
+        *,
+        classes:class_id (
+          id, name, school, grade
+        )
+      `)
+      .eq('student_id', userId)
+      .eq('is_active', true)
+      .single();
 
-    if (!classStudent) {
+    if (classError || !classStudent) {
       return res.status(404).json({
         success: false,
         message: 'Aluno não está matriculado em nenhuma turma'
@@ -502,43 +502,55 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
     }
 
     // Buscar todos os alunos da turma
-    const allClassStudents = await prisma.classStudent.findMany({
-      where: {
-        classId: classStudent.classId,
-        isActive: true
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            cardBanner: true
-          }
-        }
-      }
-    });
+    const { data: allClassStudents, error: studentsError } = await supabase
+      .from('class_students')
+      .select(`
+        *,
+        students:student_id (
+          id, name, email, avatar, card_banner
+        )
+      `)
+      .eq('class_id', classStudent.class_id)
+      .eq('is_active', true);
+
+    if (studentsError) {
+      console.error('Erro ao buscar alunos da turma:', studentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar alunos da turma'
+      });
+    }
 
     // Calcular pontuação total de cada aluno
     const rankingData = await Promise.all(
       allClassStudents.map(async (classStudentItem) => {
-        const studentId = classStudentItem.student.id;
+        const studentId = classStudentItem.student_id;
         
         // Buscar todas as pontuações do aluno em todos os esportes
-        const allScores = await prisma.classScore.findMany({
-          where: {
-            studentId: studentId,
-            classId: classStudent.classId
-          },
-          include: {
-            sport: {
-              select: {
-                name: true
-              }
-            }
-          }
-        });
+        const { data: allScores, error: scoresError } = await supabase
+          .from('class_scores')
+          .select(`
+            *,
+            sports:sport_id (
+              name
+            )
+          `)
+          .eq('student_id', studentId)
+          .eq('class_id', classStudent.class_id);
+
+        if (scoresError) {
+          console.error('Erro ao buscar pontuações:', scoresError);
+          return {
+            studentId,
+            studentName: classStudentItem.students?.name || 'Aluno',
+            studentEmail: classStudentItem.students?.email || '',
+            studentAvatar: classStudentItem.students?.avatar || null,
+            cardBanner: classStudentItem.students?.card_banner || 'Banner Padrão',
+            totalScore: 0,
+            totalClasses: 0,
+            scores: []
+          };
+        }
 
         // Somar todas as pontuações
         const totalScore = allScores.reduce((sum, score) => sum + score.score, 0);
@@ -546,16 +558,16 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
 
         return {
           studentId,
-          studentName: classStudentItem.student.name,
-          studentEmail: classStudentItem.student.email,
-          studentAvatar: classStudentItem.student.avatar,
-          cardBanner: classStudentItem.student.cardBanner,
+          studentName: classStudentItem.students?.name || 'Aluno',
+          studentEmail: classStudentItem.students?.email || '',
+          studentAvatar: classStudentItem.students?.avatar || null,
+          cardBanner: classStudentItem.students?.card_banner || 'Banner Padrão',
           totalScore,
           totalClasses,
           scores: allScores.map(score => ({
-            sportName: score.sport.name,
+            sportName: score.sports?.name || 'Esporte',
             score: score.score,
-            date: score.createdAt
+            date: score.created_at
           }))
         };
       })
@@ -574,10 +586,10 @@ router.get('/student/ranking', authenticateToken, async (req, res) => {
       success: true,
       data: {
         classInfo: {
-          id: classStudent.class.id,
-          name: classStudent.class.name,
-          school: classStudent.class.school,
-          grade: classStudent.class.grade
+          id: classStudent.classes.id,
+          name: classStudent.classes.name,
+          school: classStudent.classes.school,
+          grade: classStudent.classes.grade
         },
         ranking: rankingWithPosition,
         currentStudentId: userId
@@ -599,12 +611,13 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
 
     // Verificar se é aluno
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { userType: true }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('userType')
+      .eq('id', userId)
+      .single();
 
-    if (!user || user.userType !== 'STUDENT') {
+    if (userError || !user || user.userType !== 'STUDENT') {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
@@ -612,26 +625,22 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
     }
 
     // Buscar a turma do aluno
-    const classStudent = await prisma.classStudent.findFirst({
-      where: {
-        studentId: userId,
-        isActive: true
-      },
-      include: {
-        class: {
-          include: {
-            teacher: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+    const { data: classStudent, error: classError } = await supabase
+      .from('class_students')
+      .select(`
+        *,
+        classes:class_id (
+          *,
+          teachers:teacher_id (
+            id, name
+          )
+        )
+      `)
+      .eq('student_id', userId)
+      .eq('is_active', true)
+      .single();
 
-    if (!classStudent) {
+    if (classError || !classStudent) {
       return res.json({
         success: true,
         data: {
@@ -646,158 +655,75 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
       });
     }
 
-            // Buscar aulas da turma do aluno (todas as aulas, mas filtrar apenas as que têm presenças)
-            const classClasses = await prisma.teacherClass.findMany({
-              where: {
-                classId: classStudent.classId
-                // Buscar todas as aulas da turma
-              },
-              orderBy: {
-                date: 'desc'
-              },
-              take: 100 // Últimas 100 aulas para histórico completo
-            });
+    // Buscar aulas da turma do aluno
+    const { data: classClasses, error: classesError } = await supabase
+      .from('teacher_classes')
+      .select('*')
+      .eq('class_id', classStudent.class_id)
+      .order('date', { ascending: false })
+      .limit(100);
 
-    console.log('🔵 StudentAttendance - DEBUG: Buscando todas as aulas da turma');
-    console.log('🔵 StudentAttendance - DEBUG: Filtro aplicado: todas as aulas (filtrar apenas as com presenças)');
-    console.log('🔵 StudentAttendance - DEBUG: Total de aulas encontradas:', classClasses.length);
+    if (classesError) {
+      console.error('Erro ao buscar aulas:', classesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar aulas'
+      });
+    }
 
-    console.log('🔵 StudentAttendance - DEBUG: Aluno:', userId);
-    console.log('🔵 StudentAttendance - DEBUG: Turma:', classStudent.classId);
-    console.log('🔵 StudentAttendance - DEBUG: Total de aulas encontradas:', classClasses.length);
-    console.log('🔵 StudentAttendance - DEBUG: Aulas:', classClasses.map(c => ({
-      id: c.id,
-      date: c.date,
-      subject: c.subject,
-      isCompleted: c.isCompleted
-    })));
+    // Buscar presenças do aluno
+    const { data: attendances, error: attendanceError } = await supabase
+      .from('attendances')
+      .select(`
+        *,
+        classes:class_id (
+          name
+        )
+      `)
+      .eq('student_id', userId);
 
-    // DEBUG: Verificar se há presenças salvas no banco para este aluno
-    const allAttendancesForStudent = await prisma.attendance.findMany({
-      where: {
-        studentId: userId
-      },
-      include: {
-        class: {
-          select: {
-            name: true
-          }
-        }
+    if (attendanceError) {
+      console.error('Erro ao buscar presenças:', attendanceError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar presenças'
+      });
+    }
+
+    // Processar dados de presença
+    const attendanceData = classClasses.map(classItem => {
+      const classDate = new Date(classItem.date);
+      const startOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate());
+      const endOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate() + 1);
+
+      const attendance = attendances.find(att => 
+        att.class_id === classStudent.class_id &&
+        new Date(att.lesson_date) >= startOfDay &&
+        new Date(att.lesson_date) < endOfDay
+      );
+
+      if (attendance) {
+        return {
+          date: classItem.date,
+          isPresent: attendance.isPresent,
+          classSubject: classItem.subject,
+          teacherName: classStudent.classes.teachers?.name || 'Professor',
+          notes: attendance.notes
+        };
       }
-    });
-    console.log('🔵 StudentAttendance - DEBUG: Todas as presenças do aluno no banco:', allAttendancesForStudent.length);
-    console.log('🔵 StudentAttendance - DEBUG: Detalhes das presenças:', allAttendancesForStudent.map(a => ({
-      id: a.id,
-      classId: a.classId,
-      className: a.class?.name,
-      isPresent: a.isPresent,
-      lessonDate: a.lessonDate,
-      createdAt: a.createdAt
-    })));
+      return null;
+    }).filter(item => item !== null);
 
-    // Buscar presenças do aluno usando o modelo Attendance (CORRIGIDO)
-    const attendanceData = await Promise.all(
-              classClasses.map(async (classItem) => {
-                // CORREÇÃO: Buscar presença usando o classId da turma e a data da aula (sem hora)
-                // Como classItem.date agora é string, usar diretamente
-                const classDateStr = typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString().split('T')[0];
-                const classDate = new Date(classDateStr);
-                const startOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate());
-                const endOfDay = new Date(classDate.getFullYear(), classDate.getMonth(), classDate.getDate() + 1);
-        
-        const attendance = await prisma.attendance.findFirst({
-          where: {
-            classId: classStudent.classId, // ← CORREÇÃO: Usar ID da turma
-            studentId: userId,
-            lessonDate: {
-              gte: startOfDay,
-              lt: endOfDay // Dentro do mesmo dia (00:00 até 23:59)
-            }
-          }
-        });
-
-                console.log('🔵 StudentAttendance - Aula:', {
-                  aulaId: classItem.id,
-                  aulaDate: classItem.date,
-                  aulaDateType: typeof classItem.date,
-                  aulaDateISO: typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString(),
-                  aulaDateOnly: typeof classItem.date === 'string' ? classItem.date : classItem.date.toISOString().split('T')[0],
-                  aulaSubject: classItem.subject,
-                  classId: classStudent.classId,
-                  studentId: userId,
-          searchRange: {
-            startOfDay: startOfDay,
-            endOfDay: endOfDay
-          },
-          attendance: attendance ? {
-            isPresent: attendance.isPresent,
-            notes: attendance.notes,
-            lessonDate: attendance.lessonDate,
-            lessonDateISO: attendance.lessonDate.toISOString()
-          } : 'Sem registro'
-        });
-
-        // CORREÇÃO: Retornar apenas aulas que têm presenças registradas
-        if (attendance) {
-          return {
-            date: classItem.date,
-            isPresent: attendance.isPresent,
-            classSubject: classItem.subject,
-            teacherName: classStudent.class.teacher.name,
-            notes: attendance.notes
-          };
-        }
-        return null; // Não retornar aulas sem presenças
-      })
-    );
-
-    // Filtrar apenas aulas com presenças registradas
-    const attendanceDataFiltered = attendanceData.filter(item => item !== null);
-
-    // Calcular estatísticas apenas das aulas com presenças
-    const totalClasses = attendanceDataFiltered.length;
-    const presentClasses = attendanceDataFiltered.filter(a => a.isPresent).length;
+    // Calcular estatísticas
+    const totalClasses = attendanceData.length;
+    const presentClasses = attendanceData.filter(a => a.isPresent).length;
     const absentClasses = totalClasses - presentClasses;
     const attendanceRate = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
 
-    console.log('🔵 StudentAttendance - DEBUG: Estatísticas calculadas:');
-    console.log('🔵 StudentAttendance - DEBUG: Total de aulas com presenças:', totalClasses);
-    console.log('🔵 StudentAttendance - DEBUG: Presentes:', presentClasses);
-    console.log('🔵 StudentAttendance - DEBUG: Faltas:', absentClasses);
-    console.log('🔵 StudentAttendance - DEBUG: Taxa de presença:', attendanceRate + '%');
-    console.log('🔵 StudentAttendance - DEBUG: Dados de presença:', attendanceDataFiltered.map(a => ({
-      date: a.date,
-      isPresent: a.isPresent,
-      subject: a.classSubject
-    })));
-    
-    // DEBUG: Verificar se há presenças salvas no banco
-    const allAttendances = await prisma.attendance.findMany({
-      where: {
-        studentId: userId
-      },
-      include: {
-        class: {
-          select: {
-            name: true
-          }
-        }
-      }
-    });
-    console.log('🔵 StudentAttendance - DEBUG: Todas as presenças do aluno no banco:', allAttendances.length);
-    console.log('🔵 StudentAttendance - DEBUG: Detalhes das presenças:', allAttendances.map(a => ({
-      id: a.id,
-      classId: a.classId,
-      className: a.class?.name,
-      isPresent: a.isPresent,
-      lessonDate: a.lessonDate,
-      createdAt: a.createdAt
-    })));
-
-    // Calcular sequência de presenças (usar dados filtrados)
+    // Calcular sequência de presenças
     let streak = 0;
-    for (let i = 0; i < attendanceDataFiltered.length; i++) {
-      if (attendanceDataFiltered[i].isPresent) {
+    for (let i = 0; i < attendanceData.length; i++) {
+      if (attendanceData[i].isPresent) {
         streak++;
       } else {
         break;
@@ -811,13 +737,13 @@ router.get('/student/attendance', authenticateToken, async (req, res) => {
         totalClasses,
         presentClasses,
         absentClasses,
-        recentAttendance: attendanceDataFiltered.slice(0, 7), // Últimos 7 dias com presenças
+        recentAttendance: attendanceData.slice(0, 7),
         streak,
         classInfo: {
-          name: classStudent.class.name,
-          school: classStudent.class.school,
-          grade: classStudent.class.grade,
-          teacher: classStudent.class.teacher.name
+          name: classStudent.classes.name,
+          school: classStudent.classes.school,
+          grade: classStudent.classes.grade,
+          teacher: classStudent.classes.teachers?.name || 'Professor'
         }
       }
     });

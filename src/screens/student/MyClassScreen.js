@@ -140,6 +140,11 @@ const MyClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
         style={styles.refreshButton}
         onPress={loadClassData}
       >
+        <Image 
+          source={require('../../assets/images/Refresh.svg')}
+          style={styles.refreshIcon}
+          resizeMode="contain"
+        />
         <Text style={styles.refreshButtonText}>Tentar Novamente</Text>
       </TouchableOpacity>
     </View>
@@ -416,9 +421,26 @@ const styles = StyleSheet.create({
   },
   refreshButton: {
     backgroundColor: '#F9BB55',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  refreshIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 10,
   },
   refreshButtonText: {
     fontSize: 16,

@@ -16,14 +16,16 @@ const HamburgerButton = ({ onPress, style, lineStyle }) => {
 
 const styles = StyleSheet.create({
   menuButton: {
-    width: 24,
-    height: 18,
+    width: 28,
+    height: 20,
     justifyContent: 'space-between',
+    paddingVertical: 2,
   },
   menuLine: {
-    height: 2,
-    backgroundColor: '#333',
-    borderRadius: 1,
+    height: 3,
+    backgroundColor: '#000',
+    borderRadius: 2,
+    width: '100%',
   },
 });
 
