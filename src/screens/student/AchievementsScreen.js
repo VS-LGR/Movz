@@ -153,7 +153,7 @@ const AchievementsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curre
       <View key={achievement.id} style={[styles.achievementCard, obtained && styles.achievementCardObtained]}>
         <View style={styles.achievementIconContainer}>
           <Image 
-            source={{ uri: `/src/assets/images/${achievement.icon}` }} 
+            source={getCachedImage(achievement.name, 'achievement')} 
             style={[styles.achievementIcon, !obtained && styles.achievementIconLocked]} 
             resizeMode="contain"
           />

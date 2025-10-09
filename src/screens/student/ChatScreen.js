@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
+import { getCachedImage } from '../../utils/imageCache';
 
 const { width, height } = Dimensions.get('window');
 
@@ -156,7 +157,14 @@ const ChatScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
         </View>
 
         {/* Chat Title */}
-        <Text style={styles.chatTitle}>Chat com amigos</Text>
+        <View style={styles.chatTitleContainer}>
+          <Image
+            source={getCachedImage('Chat Icon', 'icon')}
+            style={styles.chatIcon}
+            resizeMode="contain"
+          />
+          <Text style={styles.chatTitle}>Chat com amigos</Text>
+        </View>
         <Text style={styles.chatDescription}>
           Converse com seus amigos de turma, marque jogos, troque conhecimento.
         </Text>
@@ -231,12 +239,22 @@ const styles = StyleSheet.create({
   menuButton: {
     marginLeft: 15,
   },
+  chatTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  chatIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
   chatTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    marginBottom: 10,
     fontFamily: 'Poppins',
   },
   chatDescription: {

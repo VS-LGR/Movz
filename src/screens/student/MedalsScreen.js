@@ -116,7 +116,7 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
       <View key={medal.id} style={[styles.medalCard, obtained && styles.medalCardObtained]}>
         <View style={styles.medalIconContainer}>
           <Image 
-            source={{ uri: `/src/assets/images/${medal.icon}` }} 
+            source={getCachedImage(medal.name, 'medal')} 
             style={[styles.medalIcon, !obtained && styles.medalIconLocked]}
             resizeMode="contain"
           />

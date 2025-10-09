@@ -49,16 +49,21 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       }
       
       const response = await apiService.getStudentSportsScores();
+      console.log('🔵 StudentScoresScreen - Resposta da API:', response);
       if (response.success) {
         setSportsData(response.data);
       } else {
+        console.error('🔴 StudentScoresScreen - Erro na resposta:', response.message);
         setError(response.message || 'Erro ao carregar pontuações');
       }
 
       // Buscar dados do perfil para personalizações
       const profileResponse = await apiService.getStudentProfile();
-      if (profileResponse.success) {
-        setProfileData(profileResponse.data);
+      console.log('🔵 StudentScoresScreen - Resposta do perfil:', profileResponse);
+      if (profileResponse.success && profileResponse.data && profileResponse.data.user) {
+        setProfileData(profileResponse.data.user);
+      } else {
+        console.error('🔴 StudentScoresScreen - Erro no perfil:', profileResponse.message);
       }
     } catch (err) {
       console.error('Erro ao carregar pontuações:', err);
@@ -111,7 +116,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
   const getCardStyle = () => {
     if (!profileData) return styles.sportCard;
 
-    const banner = profileData.student.cardBanner;
+    const banner = profileData.cardBanner;
     let cardStyle = { ...styles.sportCard };
 
     // Usar cores temáticas baseadas no banner (sem imagem de fundo)
@@ -130,7 +135,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
   const getCardAnimationStyle = () => {
     if (!profileData) return {};
 
-    const animation = profileData.student.cardAnimation;
+    const animation = profileData.cardBackground;
 
     switch (animation) {
       case 'none':
@@ -300,32 +305,39 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       <View style={styles.statsContainer}>
         {/* Card Principal de Conquistas */}
         <View style={[styles.achievementCard, getCardStyle()]}>
-          {profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && (
+          {profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && (
             <Image 
-              source={getCachedImage(profileData.student.cardBanner, 'banner')}
+              source={getCachedImage(profileData.cardBanner, 'banner')}
               style={styles.achievementCardBackground}
               resizeMode="cover"
             />
           )}
-          {profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && (
+          {profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && (
             <View style={[
               styles.achievementCardOverlay,
-              { backgroundColor: getBannerThemeColors(profileData.student.cardBanner).overlay }
+              { backgroundColor: getBannerThemeColors(profileData.cardBanner).overlay }
             ]} />
           )}
           
           <View style={styles.achievementHeader}>
-            <Text style={[
-              styles.achievementTitle,
-              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                color: getBannerThemeColors(profileData.student.cardBanner).text,
-                textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
-              },
-              profileData?.student.cardBanner === 'Banner Padrão' && {
-                color: '#1F2937',
-                fontWeight: 'bold'
-              }
-            ]}>🏆 Suas Pontuações</Text>
+            <View style={styles.titleContainer}>
+              <Image
+                source={getCachedImage('Scores Icon', 'icon')}
+                style={styles.titleIcon}
+                resizeMode="contain"
+              />
+              <Text style={[
+                styles.achievementTitle,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.cardBanner).text,
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
+                },
+                profileData?.cardBanner === 'Banner Padrão' && {
+                  color: '#1F2937',
+                  fontWeight: 'bold'
+                }
+              ]}>Suas Pontuações</Text>
+            </View>
             <View style={[styles.levelBadge, { backgroundColor: overallLevel.color }]}>
               <Text style={styles.levelIcon}>{overallLevel.icon}</Text>
             </View>
@@ -334,22 +346,22 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
           <View style={styles.achievementContent}>
             <Text style={[
               styles.levelText,
-              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                color: getBannerThemeColors(profileData.student.cardBanner).text,
+              profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                color: getBannerThemeColors(profileData.cardBanner).text,
                 textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
               },
-              profileData?.student.cardBanner === 'Banner Padrão' && {
+              profileData?.cardBanner === 'Banner Padrão' && {
                 color: '#1F2937',
                 fontWeight: 'bold'
               }
             ]}>{overallLevel.level}</Text>
             <Text style={[
               styles.levelSubtext,
-              profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                color: getBannerThemeColors(profileData.student.cardBanner).text,
+              profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                color: getBannerThemeColors(profileData.cardBanner).text,
                 textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
               },
-              profileData?.student.cardBanner === 'Banner Padrão' && {
+              profileData?.cardBanner === 'Banner Padrão' && {
                 color: '#374151',
                 fontWeight: '600'
               }
@@ -360,26 +372,26 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
             <View style={styles.achievementStat}>
               <Text style={[
                 styles.achievementStatNumber,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: (profileData.student.cardBanner === 'Banner Void' || 
-                          profileData.student.cardBanner === 'Banner Ouro' || 
-                          profileData.student.cardBanner === 'Banner Rose Gold')
-                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
-                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.cardBanner === 'Banner Void' || 
+                          profileData.cardBanner === 'Banner Ouro' || 
+                          profileData.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.cardBanner).numbers || getBannerThemeColors(profileData.cardBanner).text
+                    : getBannerThemeColors(profileData.cardBanner).secondary,
                   textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#1F2937',
                   fontWeight: 'bold'
                 }
               ]}>{sportsWithScores}</Text>
               <Text style={[
                 styles.achievementStatLabel,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.cardBanner).text,
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#374151',
                   fontWeight: '600'
                 }
@@ -388,26 +400,26 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
             <View style={styles.achievementStat}>
               <Text style={[
                 styles.achievementStatNumber,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: (profileData.student.cardBanner === 'Banner Void' || 
-                          profileData.student.cardBanner === 'Banner Ouro' || 
-                          profileData.student.cardBanner === 'Banner Rose Gold')
-                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
-                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.cardBanner === 'Banner Void' || 
+                          profileData.cardBanner === 'Banner Ouro' || 
+                          profileData.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.cardBanner).numbers || getBannerThemeColors(profileData.cardBanner).text
+                    : getBannerThemeColors(profileData.cardBanner).secondary,
                   textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#1F2937',
                   fontWeight: 'bold'
                 }
               ]}>{totalClasses}</Text>
               <Text style={[
                 styles.achievementStatLabel,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.cardBanner).text,
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#374151',
                   fontWeight: '600'
                 }
@@ -416,26 +428,26 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
             <View style={styles.achievementStat}>
               <Text style={[
                 styles.achievementStatNumber,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: (profileData.student.cardBanner === 'Banner Void' || 
-                          profileData.student.cardBanner === 'Banner Ouro' || 
-                          profileData.student.cardBanner === 'Banner Rose Gold')
-                    ? getBannerThemeColors(profileData.student.cardBanner).numbers || getBannerThemeColors(profileData.student.cardBanner).text
-                    : getBannerThemeColors(profileData.student.cardBanner).secondary,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: (profileData.cardBanner === 'Banner Void' || 
+                          profileData.cardBanner === 'Banner Ouro' || 
+                          profileData.cardBanner === 'Banner Rose Gold')
+                    ? getBannerThemeColors(profileData.cardBanner).numbers || getBannerThemeColors(profileData.cardBanner).text
+                    : getBannerThemeColors(profileData.cardBanner).secondary,
                   textShadow: '2px 2px 4px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#1F2937',
                   fontWeight: 'bold'
                 }
               ]}>{totalScore}</Text>
               <Text style={[
                 styles.achievementStatLabel,
-                profileData?.student.cardBanner && profileData.student.cardBanner !== 'Banner Padrão' && {
-                  color: getBannerThemeColors(profileData.student.cardBanner).text,
+                profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && {
+                  color: getBannerThemeColors(profileData.cardBanner).text,
                   textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
                 },
-                profileData?.student.cardBanner === 'Banner Padrão' && {
+                profileData?.cardBanner === 'Banner Padrão' && {
                   color: '#374151',
                   fontWeight: '600'
                 }
@@ -495,7 +507,14 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>🏆 Pontuações</Text>
+            <View style={styles.titleContainer}>
+              <Image
+                source={getCachedImage('Scores Icon', 'icon')}
+                style={styles.titleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Pontuações</Text>
+            </View>
             <Text style={styles.subtitle}>Seu progresso em todos os esportes</Text>
           </View>
           <HamburgerButton
@@ -575,6 +594,15 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     marginLeft: 15,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
   },
   title: {
     fontSize: 24,

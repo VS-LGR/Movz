@@ -125,9 +125,16 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
 
   const renderHeader = () => (
         <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Text style={styles.title}>🏆 Ranking</Text>
-        <Text style={styles.subtitle}>Classificação da sua turma</Text>
+        <View style={styles.headerLeft}>
+          <View style={styles.titleContainer}>
+            <Image
+              source={getCachedImage('Ranking Icon', 'icon')}
+              style={styles.titleIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Ranking</Text>
+          </View>
+          <Text style={styles.subtitle}>Classificação da sua turma</Text>
         {rankingData && (
           <Text style={styles.classInfo}>
             📚 {rankingData.classInfo.name} - {rankingData.classInfo.grade}
@@ -187,7 +194,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
 
     return (
       <View style={styles.rankingContainer}>
-        <Text style={styles.rankingTitle}>📊 Classificação Completa</Text>
+        <Text style={styles.rankingTitle}>Classificação Completa</Text>
         <View style={styles.rankingList}>
           {rankingData.ranking.map((student, index) => {
             const isCurrentStudent = student.studentId === rankingData.currentStudentId;
@@ -304,7 +311,11 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
 
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
-      <Text style={styles.emptyStateIcon}>🏆</Text>
+      <Image
+        source={getCachedImage('Ranking Icon', 'icon')}
+        style={styles.emptyStateIcon}
+        resizeMode="contain"
+      />
       <Text style={styles.emptyStateText}>
         Ranking não disponível
       </Text>
@@ -386,6 +397,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  titleIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -448,8 +468,10 @@ const styles = StyleSheet.create({
     paddingTop: 50,
   },
   emptyStateIcon: {
-    fontSize: 60,
+    width: 48,
+    height: 48,
     marginBottom: 20,
+    opacity: 0.6,
   },
   emptyStateText: {
     fontSize: 20,

@@ -14,6 +14,7 @@ import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
+import { getCachedImage } from '../../utils/imageCache';
 
 const MyClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
   const { isMobile, isTablet, isDesktop, getPadding, getMargin, getFontSize, getSpacing } = useResponsive();
@@ -141,7 +142,7 @@ const MyClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
         onPress={loadClassData}
       >
         <Image 
-          source={require('../../assets/images/Refresh.svg')}
+          source={getCachedImage('Refresh Icon', 'icon')}
           style={styles.refreshIcon}
           resizeMode="contain"
         />

@@ -8,12 +8,48 @@ import {
   Animated,
   Image,
 } from 'react-native';
+import { getCachedImage } from '../utils/imageCache';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 
 const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userType = 'STUDENT' }) => {
   const slideAnim = React.useRef(new Animated.Value(screenWidth)).current;
+  const editButtonScale = React.useRef(new Animated.Value(1)).current;
+  const editButtonShadow = React.useRef(new Animated.Value(0)).current;
+
+  // Funções de animação do botão de edição
+  const handleEditButtonPressIn = () => {
+    Animated.parallel([
+      Animated.spring(editButtonScale, {
+        toValue: 0.95,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+      Animated.timing(editButtonShadow, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
+
+  const handleEditButtonPressOut = () => {
+    Animated.parallel([
+      Animated.spring(editButtonScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 300,
+        friction: 10,
+      }),
+      Animated.timing(editButtonShadow, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
 
   React.useEffect(() => {
     if (isVisible) {
@@ -73,13 +109,10 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
     } else {
       // STUDENT
       return [
-        { id: 'perfil', title: 'Perfil', y: 200, height: 42, screen: 'home' },
-        { id: 'myClass', title: 'Minha Turma', y: 269, height: 42, screen: 'myClass' },
-        { id: 'scores', title: 'Pontuações', y: 339, height: 42, screen: 'studentScores' },
-        { id: 'ranking', title: 'Ranking', y: 408, height: 42, screen: 'ranking' },
-        { id: 'chat', title: 'Chat', y: 477, height: 41, screen: 'chat' },
-        { id: 'tutorial', title: 'Treinos', y: 546, height: 42, screen: 'tutorial' },
-        { id: 'logout', title: 'Sair', y: 615, height: 42, screen: 'logout' },
+        { id: 'perfil', title: 'Perfil', y: 220, height: 42, screen: 'home' },
+        { id: 'myClass', title: 'Minha Turma', y: 300, height: 42, screen: 'myClass' },
+        { id: 'tutorial', title: 'Treinos', y: 380, height: 42, screen: 'tutorial' },
+        { id: 'logout', title: 'Sair', y: 460, height: 42, screen: 'logout' },
       ];
     }
   };
@@ -119,29 +152,109 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
 
         {/* Four Small Circles Row */}
         <View style={styles.smallCirclesRow}>
+          {/* Personalização */}
+          <Animated.View
+            style={[
+              styles.smallCircle,
+              {
+                transform: [{ scale: editButtonScale }],
+                shadowOpacity: editButtonShadow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.25, 0.5],
+                }),
+                shadowOffset: {
+                  width: editButtonShadow.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 4],
+                  }),
+                  height: editButtonShadow.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [2, 6],
+                  }),
+                },
+                shadowRadius: editButtonShadow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [3.84, 8],
+                }),
+                elevation: editButtonShadow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [5, 10],
+                }),
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.circleButton}
+              onPress={() => {
+                onNavigate && onNavigate('card-customization');
+                onClose && onClose();
+              }}
+              onPressIn={handleEditButtonPressIn}
+              onPressOut={handleEditButtonPressOut}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={getCachedImage('Personalization Icon', 'icon')}
+                style={styles.editIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Chat */}
           <TouchableOpacity 
             style={styles.smallCircle}
             onPress={() => {
-              onNavigate && onNavigate('card-customization');
+              onNavigate && onNavigate('chat');
               onClose && onClose();
             }}
+            activeOpacity={0.8}
           >
             <Image
-              source={require('../assets/images/Edit.svg')}
+              source={getCachedImage('Chat Icon', 'icon')}
               style={styles.editIcon}
               resizeMode="contain"
             />
           </TouchableOpacity>
-          <View style={styles.smallCircle} />
-          <View style={styles.smallCircle} />
-          <View style={styles.smallCircle} />
+
+          {/* Pontuação */}
+          <TouchableOpacity 
+            style={styles.smallCircle}
+            onPress={() => {
+              onNavigate && onNavigate('studentScores');
+              onClose && onClose();
+            }}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={getCachedImage('Scores Icon', 'icon')}
+              style={styles.editIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+
+          {/* Ranking */}
+          <TouchableOpacity 
+            style={styles.smallCircle}
+            onPress={() => {
+              onNavigate && onNavigate('ranking');
+              onClose && onClose();
+            }}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={getCachedImage('Ranking Icon', 'icon')}
+              style={styles.editIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </View>
 
         {/* Menu Items */}
         {menuItems.map((item, index) => (
           <TouchableOpacity 
             key={item.id} 
-            style={[styles.menuItem, { top: item.y - 23 }]}
+            style={[styles.menuItem, { top: item.y }]}
             onPress={() => {
               if (item.screen === 'logout') {
                 onLogout && onLogout();
@@ -227,41 +340,58 @@ const styles = StyleSheet.create({
   // Avatar container
   avatarContainer: {
     position: 'absolute',
-    top: 50,
-    left: 80,
-    width: 60,
-    height: 60,
+    top: 40,
+    left: 70,
+    width: 80,
+    height: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   // Small circles row
   smallCirclesRow: {
     position: 'absolute',
-    top: 120,
+    top: 140,
     left: 27,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     width: 168,
+    paddingHorizontal: 8,
   },
   smallCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'transparent',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 12,
+    flex: 1,
+    marginHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  circleButton: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
   },
   editIcon: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
   },
   // Menu items
   menuItem: {

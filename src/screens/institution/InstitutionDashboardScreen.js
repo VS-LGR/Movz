@@ -16,6 +16,7 @@ import CustomModal from '../../components/CustomModal';
 import CustomAlert from '../../components/CustomAlert';
 import useCustomAlert from '../../hooks/useCustomAlert';
 import { normalizeCPF } from '../../utils/cpfUtils';
+import { getCachedImage } from '../../utils/imageCache';
 import ClassDetailsScreen from './ClassDetailsScreen';
 
 const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
@@ -1049,7 +1050,7 @@ const InstitutionDashboardScreen = ({ isMenuVisible, setIsMenuVisible, onNavigat
                   disabled={isLoading || isRefreshingStudents}
                 >
                   <Image 
-                    source={require('../../assets/images/Refresh.svg')}
+                    source={getCachedImage('Refresh Icon', 'icon')}
                     style={styles.refreshIcon}
                     resizeMode="contain"
                   />

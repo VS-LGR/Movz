@@ -54,14 +54,21 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       const response = await apiService.getStudentProfile();
       console.log('🔵 CardCustomizationScreen - Resposta da API:', response);
       
-      if (response.success) {
+      if (response.success && response.data && response.data.user) {
         console.log('🔵 CardCustomizationScreen - Dados recebidos:', response.data);
+        console.log('🔵 CardCustomizationScreen - User object:', response.data.user);
+        console.log('🔵 CardCustomizationScreen - cardBanner:', response.data.user.cardBanner);
         setProfileData(response.data.user);
         setSelectedBackground(response.data.user.cardBanner || 'Banner Padrão');
         setSelectedAnimation(response.data.user.cardBackground || 'none');
       } else {
         console.error('🔴 CardCustomizationScreen - Erro na resposta:', response.message);
+        console.error('🔴 CardCustomizationScreen - Response structure:', response);
         setError(response.message || 'Erro ao carregar perfil');
+        // Dados padrão em caso de erro
+        setProfileData(null);
+        setSelectedBackground('Banner Padrão');
+        setSelectedAnimation('none');
       }
     } catch (err) {
       console.error('🔴 CardCustomizationScreen - Erro ao carregar perfil:', err);
@@ -174,10 +181,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     if (selectedBackground && selectedBackground !== 'Banner Padrão') {
       const theme = getBannerThemeColors(selectedBackground);
       return {
-        backgroundImage: `url(${getCachedImage(selectedBackground, 'banner')})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
         position: 'relative',
       };
     }
@@ -199,13 +202,13 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     if (!profileData) return false;
     
     // Para admin, liberar tudo
-    if (profileData?.student?.email === 'admin@aluno.com') {
+    if (profileData?.email === 'admin@aluno.com') {
       return true;
     }
     
     switch (customization.unlockType) {
       case 'xp':
-        return (profileData?.student?.totalXP || 0) >= customization.unlockValue;
+        return (profileData?.totalXP || 0) >= customization.unlockValue;
       
       case 'achievement':
         if (!customization.unlockTarget) return false;
@@ -227,7 +230,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         <Text style={styles.subtitle}>Customize seu card de pontuação</Text>
         {profileData && (
           <Text style={styles.xpInfo}>
-            💎 Nível {profileData?.student?.level || 1} • {profileData?.student?.totalXP || 0} XP
+            💎 Nível {profileData?.level || 1} • {profileData?.totalXP || 0} XP
           </Text>
         )}
       </View>
@@ -237,11 +240,11 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
           onPress={onRefresh}
           disabled={refreshing}
         >
-          <Image 
-            source={require('../../assets/images/Refresh.svg')}
-            style={styles.refreshIcon}
-            resizeMode="contain"
-          />
+            <Image
+              source={getCachedImage('Refresh Icon', 'icon')}
+              style={styles.refreshIcon}
+              resizeMode="contain"
+            />
         </TouchableOpacity>
         <HamburgerButton
           onPress={() => setIsMenuVisible(true)}
@@ -480,7 +483,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
 
     return (
       <View style={styles.statsSection}>
-        <Text style={styles.statsTitle}>📊 Suas Conquistas</Text>
+        <Text style={styles.statsTitle}>Suas Conquistas</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>0</Text>
@@ -499,7 +502,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
           </View>
           
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{profileData?.student?.level || 1}</Text>
+            <Text style={styles.statNumber}>{profileData?.level || 1}</Text>
             <Text style={styles.statLabel}>Nível</Text>
             <Text style={styles.statSubtext}>
               {profileData?.xp?.progress || 0}/1000 XP
@@ -548,7 +551,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
             {/* Customizações lado a lado */}
             <View style={styles.customizationsContainer}>
               {renderCustomizationSection(
-                '🏆 Fundos (Banners)',
+                'Fundos (Banners)',
                 'BANNER',
                 [
                   { name: 'Banner Padrão', description: 'Banner simples e elegante', rarity: 'common', unlockType: 'xp', unlockValue: 0, preview: 'default' },
