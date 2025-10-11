@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';

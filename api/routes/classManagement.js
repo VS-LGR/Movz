@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../prisma');
+const { supabase, generateId } = require('../supabase');
 
 const router = express.Router();
 
@@ -45,44 +45,62 @@ const requireTeacher = (req, res, next) => {
 // Obter todas as turmas do professor
 router.get('/classes', authenticateToken, requireTeacher, async (req, res) => {
   try {
-    const classes = await prisma.class.findMany({
-      where: {
-        teacherId: req.user.userId,
-        isActive: true
-      },
-      include: {
-        students: {
-          include: {
-            student: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                age: true,
-                avatar: true
-              }
-            }
-          },
-          where: {
-            isActive: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    console.log('🔵 ClassManagement GET - Recebendo requisição');
+    console.log('🔵 ClassManagement GET - User:', req.user);
+    
+    // Buscar turmas do professor usando Supabase
+    const { data: classes, error: classesError } = await supabase
+      .from('classes')
+      .select(`
+        *,
+        students:class_students(
+          id,
+          student:users(
+            id, name, email, age, avatar
+          )
+        )
+      `)
+      .eq('teacherId', req.user.userId)
+      .eq('isActive', true)
+      .order('createdAt', { ascending: false });
+
+    if (classesError) {
+      console.error('❌ ClassManagement GET - Erro ao buscar turmas:', classesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: classesError.message
+      });
+    }
+    
+    console.log('🔵 ClassManagement GET - Turmas encontradas:', classes?.length || 0);
+
+    // Processar dados para garantir estrutura correta
+    const processedClasses = (classes || []).map(classItem => ({
+      id: classItem.id,
+      name: classItem.name,
+      description: classItem.description,
+      school: classItem.school,
+      grade: classItem.grade,
+      teacherId: classItem.teacherId,
+      institutionId: classItem.institutionId,
+      isActive: classItem.isActive,
+      createdAt: classItem.createdAt,
+      updatedAt: classItem.updatedAt,
+      students: (classItem.students || []).filter(cs => cs.student).map(cs => cs.student)
+    }));
 
     res.json({
       success: true,
-      data: classes
+      data: processedClasses
     });
 
   } catch (error) {
-    console.error('Erro ao buscar turmas:', error);
+    console.error('❌ ClassManagement GET - Erro ao buscar turmas:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -250,16 +268,29 @@ router.get('/students/available', authenticateToken, requireTeacher, async (req,
   try {
     const { classId, search } = req.query;
 
+    console.log('🔵 Available Students - Recebendo requisição');
+    console.log('🔵 Available Students - Query:', req.query);
+
     // Buscar a instituição do professor
     const teacher = await prisma.user.findUnique({
       where: { id: req.user.userId },
       select: { institutionId: true }
     });
 
+    console.log('🔵 Available Students - Professor encontrado:', teacher);
+
     if (!teacher) {
       return res.status(404).json({
         success: false,
         message: 'Professor não encontrado'
+      });
+    }
+
+    if (!teacher.institutionId) {
+      console.log('⚠️ Available Students - Professor sem instituição vinculada');
+      return res.status(400).json({
+        success: false,
+        message: 'Professor deve estar vinculado a uma instituição para gerenciar alunos'
       });
     }
 
@@ -458,55 +489,77 @@ router.delete('/classes/:classId/students/:studentId', authenticateToken, requir
 // Obter alunos de uma turma específica
 router.get('/classes/:classId/students', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 GetClassStudents - Recebendo requisição');
+    console.log('🔵 GetClassStudents - ClassId:', req.params.classId);
+    console.log('🔵 GetClassStudents - User:', req.user);
+    
     const { classId } = req.params;
 
-    // Verificar se a turma existe e pertence ao professor
-    const classData = await prisma.class.findFirst({
-      where: {
-        id: classId,
-        teacherId: req.user.userId
-      }
-    });
+    // Verificar se a turma existe e pertence ao professor usando Supabase
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('id, name, teacherId')
+      .eq('id', classId)
+      .eq('teacherId', req.user.userId)
+      .eq('isActive', true)
+      .single();
 
-    if (!classData) {
+    if (classError || !classData) {
+      console.log('❌ GetClassStudents - Turma não encontrada:', classError);
       return res.status(404).json({
         success: false,
         message: 'Turma não encontrada'
       });
     }
 
-    // Buscar alunos da turma
-    const classStudents = await prisma.classStudent.findMany({
-      where: {
-        classId: classId,
-        isActive: true
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            age: true,
-            school: true,
-            class: true,
-            avatar: true,
-            userType: true
-          }
-        }
-      }
-    });
+    console.log('🔵 GetClassStudents - Turma encontrada:', classData.name);
+
+    // Buscar alunos da turma usando Supabase
+    const { data: classStudents, error: studentsError } = await supabase
+      .from('class_students')
+      .select(`
+        id,
+        classId,
+        studentId,
+        isActive,
+        student:users(
+          id, name, email, age, school, avatar, userType
+        )
+      `)
+      .eq('classId', classId)
+      .eq('isActive', true);
+
+    if (studentsError) {
+      console.error('❌ GetClassStudents - Erro ao buscar alunos:', studentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: studentsError.message
+      });
+    }
+
+    console.log('🔵 GetClassStudents - Alunos encontrados:', classStudents?.length || 0);
+
+    // Processar dados para garantir estrutura correta
+    const processedStudents = (classStudents || []).map(cs => ({
+      id: cs.id,
+      classId: cs.classId,
+      studentId: cs.studentId,
+      isActive: cs.isActive,
+      student: cs.student
+    }));
 
     res.json({
       success: true,
-      data: classStudents
+      data: processedStudents
     });
 
   } catch (error) {
-    console.error('Erro ao buscar alunos da turma:', error);
+    console.error('❌ GetClassStudents - Erro ao buscar alunos da turma:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -737,11 +790,17 @@ router.get('/classes/stats', authenticateToken, requireTeacher, async (req, res)
 // Salvar pontuação individual do aluno na aula (CORRIGIDO - permite múltiplas pontuações)
 router.post('/classes/:classId/scores', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 SaveScore - Recebendo requisição');
+    console.log('🔵 SaveScore - ClassId:', req.params.classId);
+    console.log('🔵 SaveScore - Body:', req.body);
+    console.log('🔵 SaveScore - User:', req.user);
+    
     const { classId } = req.params;
     const { studentId, sportId, score, notes, lessonDate } = req.body;
 
     // Validações
     if (!studentId || !sportId || score === undefined) {
+      console.log('❌ SaveScore - Dados obrigatórios faltando:', { studentId, sportId, score });
       return res.status(400).json({
         success: false,
         message: 'ID do aluno, ID do esporte e pontuação são obrigatórios'
@@ -749,87 +808,117 @@ router.post('/classes/:classId/scores', authenticateToken, requireTeacher, async
     }
 
     if (score < 0 || score > 100) {
+      console.log('❌ SaveScore - Pontuação inválida:', score);
       return res.status(400).json({
         success: false,
         message: 'Pontuação deve estar entre 0 e 100'
       });
     }
 
-    // Verificar se a turma pertence ao professor
-    const existingClass = await prisma.class.findFirst({
-      where: {
-        id: classId,
-        teacherId: req.user.userId,
-        isActive: true
-      }
-    });
+    // Verificar se a turma pertence ao professor usando Supabase
+    const { data: existingClass, error: classError } = await supabase
+      .from('classes')
+      .select('id, name, teacherId')
+      .eq('id', classId)
+      .eq('teacherId', req.user.userId)
+      .eq('isActive', true)
+      .single();
 
-    if (!existingClass) {
+    if (classError || !existingClass) {
+      console.log('❌ SaveScore - Turma não encontrada:', classError);
       return res.status(404).json({
         success: false,
         message: 'Turma não encontrada'
       });
     }
 
-    // Verificar se o aluno está na turma
-    const classStudent = await prisma.classStudent.findFirst({
-      where: {
-        classId,
-        studentId,
-        isActive: true
-      }
-    });
+    console.log('🔵 SaveScore - Turma encontrada:', existingClass.name);
 
-    if (!classStudent) {
+    // Verificar se o aluno está na turma usando Supabase
+    const { data: classStudent, error: studentError } = await supabase
+      .from('class_students')
+      .select('id, classId, studentId')
+      .eq('classId', classId)
+      .eq('studentId', studentId)
+      .eq('isActive', true)
+      .single();
+
+    if (studentError || !classStudent) {
+      console.log('❌ SaveScore - Aluno não está na turma:', studentError);
       return res.status(400).json({
         success: false,
         message: 'Aluno não está nesta turma'
       });
     }
 
-    // Verificar se o esporte existe
-    const sport = await prisma.sport.findFirst({
-      where: {
-        id: sportId,
-        isActive: true
-      }
-    });
+    console.log('🔵 SaveScore - Aluno encontrado na turma');
 
-    if (!sport) {
+    // Verificar se o esporte existe usando Supabase
+    const { data: sport, error: sportError } = await supabase
+      .from('sports')
+      .select('id, name')
+      .eq('id', sportId)
+      .eq('isActive', true)
+      .single();
+
+    if (sportError || !sport) {
+      console.log('❌ SaveScore - Esporte não encontrado:', sportError);
       return res.status(404).json({
         success: false,
         message: 'Esporte não encontrado'
       });
     }
 
-    // Criar nova pontuação (não mais upsert - permite múltiplas pontuações)
-    const classScore = await prisma.classScore.create({
-      data: {
+    console.log('🔵 SaveScore - Esporte encontrado:', sport.name);
+
+    // Criar nova pontuação usando Supabase
+    const scoreData = {
+      id: generateId(),
+      classId,
+      studentId,
+      sportId,
+      score,
+      notes: notes || null,
+      teacherId: req.user.userId,
+      lessonDate: lessonDate ? new Date(lessonDate).toISOString() : new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    console.log('🔵 SaveScore - Dados para criação:', scoreData);
+
+    const { data: classScore, error: createError } = await supabase
+      .from('class_scores')
+      .insert([scoreData])
+      .select(`
+        id,
         classId,
         studentId,
         sportId,
         score,
-        notes: notes || null,
-        teacherId: req.user.userId,
-        lessonDate: lessonDate ? new Date(lessonDate) : new Date()
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        sport: {
-          select: {
-            id: true,
-            name: true,
-            icon: true
-          }
-        }
-      }
-    });
+        notes,
+        teacherId,
+        lessonDate,
+        createdAt,
+        student:users!class_scores_studentId_fkey(
+          id, name, email
+        ),
+        sport:sports(
+          id, name, icon
+        )
+      `)
+      .single();
+
+    if (createError) {
+      console.error('❌ SaveScore - Erro ao criar pontuação:', createError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: createError.message
+      });
+    }
+
+    console.log('🔵 SaveScore - Pontuação criada com sucesso:', classScore.id);
 
     res.json({
       success: true,
@@ -838,10 +927,11 @@ router.post('/classes/:classId/scores', authenticateToken, requireTeacher, async
     });
 
   } catch (error) {
-    console.error('Erro ao salvar pontuação:', error);
+    console.error('❌ SaveScore - Erro ao salvar pontuação:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -1164,25 +1254,25 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
       });
     }
 
-    // Verificar se a aula pertence ao professor (CORREÇÃO: buscar teacherClass ao invés de class)
-    const existingClass = await prisma.teacherClass.findFirst({
-      where: {
-        id: classId,
-        teacherId: req.user.userId,
-        isCompleted: false // Aula ainda não foi completada
-      },
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true
-          }
-        }
-      }
-    });
+    // Verificar se a aula pertence ao professor usando Supabase
+    const { data: existingClass, error: classError } = await supabase
+      .from('teacher_classes')
+      .select(`
+        id,
+        classId,
+        teacherId,
+        isCompleted,
+        class:classes(
+          id, name, isActive
+        )
+      `)
+      .eq('id', classId)
+      .eq('teacherId', req.user.userId)
+      .eq('isCompleted', false)
+      .single();
 
-    if (!existingClass) {
+    if (classError || !existingClass) {
+      console.log('❌ BatchAttendance - Aula não encontrada:', classError);
       return res.status(404).json({
         success: false,
         message: 'Aula não encontrada'
@@ -1202,23 +1292,31 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
       }
     }
 
-    // Buscar alunos da turma para validação
-    const classStudents = await prisma.classStudent.findMany({
-      where: {
-        classId: actualClassId, // ← CORREÇÃO: Usar actualClassId
-        isActive: true
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
+    // Buscar alunos da turma para validação usando Supabase
+    const { data: classStudents, error: studentsError } = await supabase
+      .from('class_students')
+      .select(`
+        id,
+        classId,
+        studentId,
+        isActive,
+        student:users(
+          id, name
+        )
+      `)
+      .eq('classId', actualClassId)
+      .eq('isActive', true);
 
-    const validStudentIds = classStudents.map(cs => cs.student.id);
+    if (studentsError) {
+      console.error('❌ BatchAttendance - Erro ao buscar alunos:', studentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: studentsError.message
+      });
+    }
+
+    const validStudentIds = (classStudents || []).map(cs => cs.student.id);
 
     // Verificar se todos os alunos estão na turma
     for (const attendanceData of attendances) {
@@ -1251,19 +1349,21 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
               local: lessonDateObj.toLocaleDateString('pt-BR')
             });
 
-            // DEBUG: Verificar se há conflitos de data
+            // DEBUG: Verificar se há conflitos de data usando Supabase
             console.log('🔵 BatchAttendance - Verificando conflitos de data...');
-            const existingAttendances = await prisma.attendance.findMany({
-              where: {
-                classId: actualClassId,
-                studentId: { in: attendances.map(a => a.studentId) },
-                lessonDate: {
-                  gte: new Date(lessonDate),
-                  lt: new Date(new Date(lessonDate).getTime() + 24 * 60 * 60 * 1000)
-                }
-              }
-            });
-            console.log('🔵 BatchAttendance - Presenças existentes encontradas:', existingAttendances.length);
+            const { data: existingAttendances, error: existingError } = await supabase
+              .from('attendances')
+              .select('id, studentId, lessonDate')
+              .eq('classId', actualClassId)
+              .in('studentId', attendances.map(a => a.studentId))
+              .gte('lessonDate', new Date(lessonDate).toISOString())
+              .lt('lessonDate', new Date(new Date(lessonDate).getTime() + 24 * 60 * 60 * 1000).toISOString());
+            
+            if (existingError) {
+              console.error('❌ BatchAttendance - Erro ao verificar presenças existentes:', existingError);
+            } else {
+              console.log('🔵 BatchAttendance - Presenças existentes encontradas:', existingAttendances?.length || 0);
+            }
 
     // Criar todas as presenças usando upsert para evitar duplicatas
     const createdAttendances = await Promise.all(
@@ -1280,37 +1380,85 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
                   lessonDateOnly: lessonDateObj.toISOString().split('T')[0]
                 });
 
-        const result = await prisma.attendance.upsert({
-          where: {
-            attendance_teacher_class_unique: {
-              teacherClassId: classId, // ← CORREÇÃO: Usar teacherClassId (ID da aula específica)
-              studentId: attendanceData.studentId
-            }
-          },
-          update: {
-            isPresent: attendanceData.isPresent,
-            notes: attendanceData.notes || null,
-            teacherId: req.user.userId
-          },
-          create: {
-            classId: actualClassId, // ← CORREÇÃO: Usar actualClassId (ID da turma)
-            teacherClassId: classId, // ← NOVO: ID da aula específica
-            studentId: attendanceData.studentId,
-            isPresent: attendanceData.isPresent,
-            lessonDate: lessonDateObj,
-            notes: attendanceData.notes || null,
-            teacherId: req.user.userId
-          },
-          include: {
-            student: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
-            }
+        // Verificar se já existe presença para este aluno nesta aula
+        const { data: existingAttendance, error: checkError } = await supabase
+          .from('attendances')
+          .select('id')
+          .eq('teacherClassId', classId)
+          .eq('studentId', attendanceData.studentId)
+          .single();
+
+        const attendanceRecord = {
+          classId: actualClassId,
+          teacherClassId: classId,
+          studentId: attendanceData.studentId,
+          isPresent: attendanceData.isPresent,
+          lessonDate: lessonDateObj.toISOString(),
+          notes: attendanceData.notes || null,
+          teacherId: req.user.userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        let result;
+        if (existingAttendance) {
+          // Atualizar presença existente
+          const { data: updatedAttendance, error: updateError } = await supabase
+            .from('attendances')
+            .update({
+              isPresent: attendanceData.isPresent,
+              notes: attendanceData.notes || null,
+              teacherId: req.user.userId,
+              updatedAt: new Date().toISOString()
+            })
+            .eq('id', existingAttendance.id)
+            .select(`
+              id,
+              classId,
+              teacherClassId,
+              studentId,
+              isPresent,
+              notes,
+              lessonDate,
+              createdAt,
+              student:users!attendances_studentId_fkey(
+                id, name, email
+              )
+            `)
+            .single();
+
+          if (updateError) {
+            console.error('❌ BatchAttendance - Erro ao atualizar presença:', updateError);
+            throw updateError;
           }
-        });
+          result = updatedAttendance;
+        } else {
+          // Criar nova presença
+          attendanceRecord.id = generateId();
+          const { data: newAttendance, error: createError } = await supabase
+            .from('attendances')
+            .insert([attendanceRecord])
+            .select(`
+              id,
+              classId,
+              teacherClassId,
+              studentId,
+              isPresent,
+              notes,
+              lessonDate,
+              createdAt,
+              student:users!attendances_studentId_fkey(
+                id, name, email
+              )
+            `)
+            .single();
+
+          if (createError) {
+            console.error('❌ BatchAttendance - Erro ao criar presença:', createError);
+            throw createError;
+          }
+          result = newAttendance;
+        }
 
         console.log('🔵 BatchAttendance - Presença salva:', {
           studentId: result.studentId,
@@ -1351,53 +1499,54 @@ router.post('/classes/:classId/attendance/batch', authenticateToken, requireTeac
 // Obter lista de presença de uma turma (NOVA FUNCIONALIDADE)
 router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 GetAttendance - Recebendo requisição');
+    console.log('🔵 GetAttendance - ClassId:', req.params.classId);
+    console.log('🔵 GetAttendance - Query:', req.query);
+    console.log('🔵 GetAttendance - User:', req.user);
+    
     const { classId } = req.params; // Pode ser teacherClass.id ou class.id
     const { lessonDate } = req.query;
 
     console.log('🔵 GetAttendance - classId recebido:', classId);
     console.log('🔵 GetAttendance - lessonDate recebido:', lessonDate);
 
-    // Primeiro, verificar se é um teacherClass.id
+    // Primeiro, verificar se é um teacherClass.id usando Supabase
     let teacherClass = null;
     let actualClassId = null;
     let existingClass = null;
 
     // Tentar buscar como teacherClass primeiro
-    teacherClass = await prisma.teacherClass.findFirst({
-      where: {
-        id: classId,
-        teacherId: req.user.userId
-      },
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            school: true,
-            grade: true,
-            isActive: true
-          }
-        }
-      }
-    });
+    const { data: teacherClassData, error: teacherClassError } = await supabase
+      .from('teacher_classes')
+      .select(`
+        id,
+        classId,
+        class:classes(
+          id, name, school, grade, isActive
+        )
+      `)
+      .eq('id', classId)
+      .eq('teacherId', req.user.userId)
+      .single();
 
-    if (teacherClass) {
-      console.log('🔵 GetAttendance - Encontrado como teacherClass:', teacherClass.id);
-      actualClassId = teacherClass.classId;
-      existingClass = teacherClass.class;
+    if (teacherClassData) {
+      console.log('🔵 GetAttendance - Encontrado como teacherClass:', teacherClassData.id);
+      actualClassId = teacherClassData.classId;
+      existingClass = teacherClassData.class;
     } else {
       // Se não for teacherClass, tentar como class diretamente
-      existingClass = await prisma.class.findFirst({
-        where: {
-          id: classId,
-          teacherId: req.user.userId,
-          isActive: true
-        }
-      });
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('id, name, school, grade, isActive')
+        .eq('id', classId)
+        .eq('teacherId', req.user.userId)
+        .eq('isActive', true)
+        .single();
       
-      if (existingClass) {
-        console.log('🔵 GetAttendance - Encontrado como class:', existingClass.id);
+      if (classData) {
+        console.log('🔵 GetAttendance - Encontrado como class:', classData.id);
         actualClassId = classId;
+        existingClass = classData;
       }
     }
 
@@ -1411,25 +1560,31 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
 
     console.log('🔵 GetAttendance - Usando actualClassId:', actualClassId);
 
-    // Buscar alunos da turma
-    const classStudents = await prisma.classStudent.findMany({
-      where: {
-        classId: actualClassId, // ← CORREÇÃO: Usar actualClassId
-        isActive: true
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true
-          }
-        }
-      }
-    });
+    // Buscar alunos da turma usando Supabase
+    const { data: classStudents, error: studentsError } = await supabase
+      .from('class_students')
+      .select(`
+        id,
+        classId,
+        studentId,
+        isActive,
+        student:users!class_students_studentId_fkey(
+          id, name, email, avatar
+        )
+      `)
+      .eq('classId', actualClassId)
+      .eq('isActive', true);
 
-    console.log('🔵 GetAttendance - Alunos encontrados:', classStudents.length);
+    if (studentsError) {
+      console.error('❌ GetAttendance - Erro ao buscar alunos:', studentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: studentsError.message
+      });
+    }
+
+    console.log('🔵 GetAttendance - Alunos encontrados:', classStudents?.length || 0);
 
     // Se uma data específica foi fornecida, buscar presenças dessa data
     if (lessonDate) {
@@ -1446,37 +1601,46 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
         endOfDay: endOfDay.toISOString()
       });
 
-      const attendances = await prisma.attendance.findMany({
-        where: {
-          classId: actualClassId, // ← CORREÇÃO: Usar actualClassId
-          lessonDate: {
-            gte: startOfDay,
-            lt: endOfDay
-          }
-        },
-        include: {
-          student: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
-      });
+      const { data: attendances, error: attendanceError } = await supabase
+        .from('attendances')
+        .select(`
+          id,
+          classId,
+          teacherClassId,
+          studentId,
+          isPresent,
+          lessonDate,
+          notes,
+          createdAt,
+          student:users!attendances_studentId_fkey(
+            id, name, email
+          )
+        `)
+        .eq('classId', actualClassId)
+        .gte('lessonDate', startOfDay.toISOString())
+        .lte('lessonDate', endOfDay.toISOString());
 
-      console.log('🔵 GetAttendance - Presenças encontradas:', attendances.length);
+      if (attendanceError) {
+        console.error('❌ GetAttendance - Erro ao buscar presenças:', attendanceError);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro interno do servidor',
+          error: attendanceError.message
+        });
+      }
+
+      console.log('🔵 GetAttendance - Presenças encontradas:', attendances?.length || 0);
 
       // Combinar alunos com suas presenças
-      const attendanceList = classStudents.map(classStudent => {
-        const attendance = attendances.find(a => a.studentId === classStudent.student.id);
+      const attendanceList = (classStudents || []).map(classStudent => {
+        const attendance = (attendances || []).find(a => a.studentId === classStudent.student.id);
         return {
           studentId: classStudent.student.id,
           student: classStudent.student,
           isPresent: attendance ? attendance.isPresent : null, // null = não registrado
           notes: attendance ? attendance.notes : null,
           registeredAt: attendance ? attendance.createdAt : null,
-          teacherClassId: attendance ? attendance.teacherClassId : null // CORREÇÃO: Incluir teacherClassId
+          teacherClassId: attendance ? attendance.teacherClassId : null
         };
       });
 
@@ -1503,7 +1667,7 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
       });
     } else {
       // Retornar apenas a lista de alunos sem presenças específicas
-      const attendanceList = classStudents.map(classStudent => ({
+      const attendanceList = (classStudents || []).map(classStudent => ({
         studentId: classStudent.student.id,
         student: classStudent.student,
         isPresent: null,
@@ -1533,10 +1697,11 @@ router.get('/classes/:classId/attendance', authenticateToken, requireTeacher, as
     }
 
   } catch (error) {
-    console.error('Erro ao buscar lista de presença:', error);
+    console.error('❌ GetAttendance - Erro ao buscar lista de presença:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });

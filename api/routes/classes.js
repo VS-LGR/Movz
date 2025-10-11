@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../prisma');
+const { supabase, generateId } = require('../supabase');
 
 const router = express.Router();
 
@@ -58,30 +58,49 @@ const requireTeacher = (req, res, next) => {
 // Obter aulas do professor
 router.get('/', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 Classes GET - Recebendo requisição');
+    console.log('🔵 Classes GET - User:', req.user);
+    console.log('🔵 Classes GET - Query:', req.query);
+    
     const { month, year } = req.query;
     
-    let whereClause = {
-      teacherId: req.user.userId
-    };
+    let query = supabase
+      .from('teacher_classes')
+      .select('*')
+      .eq('teacherId', req.user.userId);
+    
+    console.log('🔵 Classes GET - Query inicial:', { month, year });
 
     if (month && year) {
       // CORREÇÃO: Como date agora é string, usar filtro de string
       const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDateStr = `${year}-${month.toString().padStart(2, '0')}-31`;
-      whereClause.date = {
-        gte: startDateStr,
-        lte: endDateStr
-      };
+      
+      query = query
+        .gte('date', startDateStr)
+        .lte('date', endDateStr);
     }
 
-    const classes = await prisma.teacherClass.findMany({
-      where: whereClause,
-      orderBy: { date: 'asc' }
-    });
+    query = query.order('date', { ascending: true });
+
+    console.log('🔵 Classes GET - Buscando classes...');
+    
+    const { data: classes, error: classesError } = await query;
+
+    if (classesError) {
+      console.error('❌ Classes GET - Erro ao buscar aulas:', classesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: classesError.message
+      });
+    }
+    
+    console.log('🔵 Classes GET - Classes encontradas:', classes?.length || 0);
 
     // CORREÇÃO: Retornar array de aulas ao invés de objeto agrupado por data
     // Isso permite múltiplas aulas no mesmo dia (de turmas diferentes)
-    const classesArray = classes.map(cls => {
+    const classesArray = (classes || []).map(cls => {
       // CORREÇÃO: Forçar conversão para string
       let dateStr;
       if (typeof cls.date === 'string') {
@@ -120,10 +139,11 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao buscar aulas:', error);
+    console.error('❌ Classes GET - Erro ao buscar aulas:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -131,9 +151,14 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
 // Criar ou atualizar aula
 router.post('/', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 CreateClass POST - Recebendo requisição');
+    console.log('🔵 CreateClass POST - Body:', req.body);
+    console.log('🔵 CreateClass POST - User:', req.user);
+    
     const { date, school, grade, subject, notes, classId } = req.body;
 
     if (!date || !school || !grade) {
+      console.log('❌ CreateClass POST - Dados obrigatórios faltando:', { date, school, grade });
       return res.status(400).json({
         success: false,
         message: 'Data, escola e série são obrigatórios'
@@ -147,7 +172,7 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       classDate = date; // Manter como string
       
       // DEBUG: Verificar se a data está sendo mantida corretamente
-      console.log('🔵 CreateClass - DEBUG Data:', {
+      console.log('🔵 CreateClass POST - DEBUG Data:', {
         input: date,
         type: typeof date,
         kept: classDate,
@@ -157,55 +182,80 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       classDate = new Date(date);
     }
     
-            // NOVO ESQUEMA: Permitir múltiplas aulas no mesmo dia, mas uma turma por dia
-            console.log('🔵 CreateClass - Data recebida:', date);
-            console.log('🔵 CreateClass - Data mantida:', classDate);
-            console.log('🔵 CreateClass - Tipo da data:', typeof classDate);
-            console.log('🔵 CreateClass - Professor:', req.user.userId);
-            console.log('🔵 CreateClass - Turma:', classId);
-            console.log('🔵 CreateClass - Assunto:', subject);
+    console.log('🔵 CreateClass POST - Data recebida:', date);
+    console.log('🔵 CreateClass POST - Data mantida:', classDate);
+    console.log('🔵 CreateClass POST - Tipo da data:', typeof classDate);
+    console.log('🔵 CreateClass POST - Professor:', req.user.userId);
+    console.log('🔵 CreateClass POST - Turma:', classId);
+    console.log('🔵 CreateClass POST - Assunto:', subject);
 
-            // Verificar se já existe uma aula para esta turma nesta data
-            if (classId) {
-              const existingClassOnDate = await prisma.teacherClass.findFirst({
-                where: {
-                  classId: classId,
-                  date: classDate
-                }
-              });
+    // Verificar se já existe uma aula para esta turma nesta data usando Supabase
+    if (classId) {
+      const { data: existingClassOnDate, error: checkError } = await supabase
+        .from('teacher_classes')
+        .select('id')
+        .eq('classId', classId)
+        .eq('date', classDate)
+        .single();
 
-              if (existingClassOnDate) {
-                console.log('🔴 CreateClass - Já existe uma aula para esta turma nesta data:', existingClassOnDate.id);
-                return res.status(409).json({
-                  success: false,
-                  message: `Já existe uma aula para esta turma no dia ${formatDate(classDate)}. Uma turma só pode ter uma aula por dia.`
-                });
-              }
-            }
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('❌ CreateClass POST - Erro ao verificar aula existente:', checkError);
+        return res.status(500).json({
+          success: false,
+          message: 'Erro interno do servidor'
+        });
+      }
+
+      if (existingClassOnDate) {
+        console.log('🔴 CreateClass POST - Já existe uma aula para esta turma nesta data:', existingClassOnDate.id);
+        return res.status(409).json({
+          success: false,
+          message: `Já existe uma aula para esta turma no dia ${formatDate(classDate)}. Uma turma só pode ter uma aula por dia.`
+        });
+      }
+    }
     
     // DEBUG: Verificar dados antes de criar
     const createData = {
+      id: generateId(),
       teacherId: req.user.userId,
       classId: classId || null,
       date: classDate,
       school,
       grade,
       subject: subject || null,
-      notes: notes || null
+      notes: notes || null,
+      isCompleted: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
-    console.log('🔵 CreateClass - Dados para criação:', createData);
-    console.log('🔵 CreateClass - Tipo do campo date:', typeof createData.date);
+    console.log('🔵 CreateClass POST - Dados para criação:', createData);
+    console.log('🔵 CreateClass POST - Tipo do campo date:', typeof createData.date);
     
     let classData;
     try {
-      classData = await prisma.teacherClass.create({
-        data: createData
-      });
-      console.log('🔵 CreateClass - Aula criada com ID:', classData.id);
+      const { data: newClass, error: createError } = await supabase
+        .from('teacher_classes')
+        .insert([createData])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('🔴 CreateClass POST - Erro ao criar aula:', createError);
+        console.error('🔴 CreateClass POST - Erro detalhado:', {
+          message: createError.message,
+          code: createError.code,
+          details: createError.details
+        });
+        throw createError;
+      }
+
+      classData = newClass;
+      console.log('🔵 CreateClass POST - Aula criada com ID:', classData.id);
     } catch (createError) {
-      console.error('🔴 CreateClass - Erro ao criar aula:', createError);
-      console.error('🔴 CreateClass - Erro detalhado:', {
+      console.error('🔴 CreateClass POST - Erro ao criar aula:', createError);
+      console.error('🔴 CreateClass POST - Erro detalhado:', {
         message: createError.message,
         code: createError.code,
         meta: createError.meta
@@ -213,7 +263,7 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
       throw createError;
     }
 
-    console.log('🔵 CreateClass - Aula criada com sucesso:', {
+    console.log('🔵 CreateClass POST - Aula criada com sucesso:', {
       id: classData.id,
       date: classData.date,
       dateType: typeof classData.date,
@@ -228,10 +278,11 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao criar/atualizar aula:', error);
+    console.error('❌ CreateClass POST - Erro ao criar/atualizar aula:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });

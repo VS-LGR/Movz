@@ -134,6 +134,54 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
           )}
         </View>
 
+        {/* Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => onNavigate('chat')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionIconContainer}>
+              <Image
+                source={getCachedImage('Chat Icon', 'icon')}
+                style={styles.quickActionIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Chat</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => onNavigate('card-customization')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionIconContainer}>
+              <Image
+                source={getCachedImage('Personalization Icon', 'icon')}
+                style={styles.quickActionIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Personalizar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => onNavigate('ranking')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.quickActionIconContainer}>
+              <Image
+                source={getCachedImage('Ranking Icon', 'icon')}
+                style={styles.quickActionIcon}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.quickActionLabel}>Ranking</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Sports Score Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sua pontuação nos Esportes</Text>
@@ -307,6 +355,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E9EEEE',
+  },
+  quickActionsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  quickActionButton: {
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionIconContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionIcon: {
+    width: 28,
+    height: 28,
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'center',
+    fontFamily: 'Poppins',
   },
   scrollView: {
     flex: 1,

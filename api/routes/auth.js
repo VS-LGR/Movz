@@ -322,6 +322,9 @@ router.get('/verify', authenticateToken, async (req, res) => {
 // Buscar turma do aluno
 router.get('/student/class', authenticateToken, async (req, res) => {
   try {
+    console.log('🔵 Student Class - Recebendo requisição');
+    console.log('🔵 Student Class - UserId:', req.user.userId);
+    
     const userId = req.user.userId;
 
     // Verificar se o usuário é um aluno
@@ -332,35 +335,35 @@ router.get('/student/class', authenticateToken, async (req, res) => {
       .single();
 
     if (userError || !user || user.userType !== 'STUDENT') {
+      console.log('❌ Student Class - Usuário não é aluno:', userError);
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas alunos podem acessar esta funcionalidade'
       });
     }
 
-    // Buscar a turma ativa do aluno
+    console.log('🔵 Student Class - Buscando turma do aluno...');
+
+    // Buscar a turma ativa do aluno usando camelCase
     const { data: classStudent, error: classError } = await supabase
       .from('class_students')
       .select(`
         *,
-        classes:class_id (
+        class:classes(
           *,
-          teachers:teacher_id (
+          teacher:users(
             id, name, email, avatar
-          ),
-          students:class_students!class_id (
-            *,
-            students:student_id (
-              id, name, email, age, avatar
-            )
           )
         )
       `)
-      .eq('student_id', userId)
-      .eq('is_active', true)
+      .eq('studentId', userId)
+      .eq('isActive', true)
       .single();
 
+    console.log('🔵 Student Class - Resultado da busca:', { classStudent, classError });
+
     if (classError || !classStudent) {
+      console.log('❌ Student Class - Aluno não está em nenhuma turma:', classError);
       return res.json({
         success: true,
         data: null,
@@ -368,20 +371,32 @@ router.get('/student/class', authenticateToken, async (req, res) => {
       });
     }
 
-    // Filtrar apenas alunos ativos
-    const activeStudents = classStudent.classes.students.filter(cs => cs.is_active);
+    // Buscar colegas de turma separadamente
+    const { data: classmates, error: classmatesError } = await supabase
+      .from('class_students')
+      .select(`
+        *,
+        student:users(
+          id, name, email, age, avatar
+        )
+      `)
+      .eq('classId', classStudent.classId)
+      .eq('isActive', true)
+      .neq('studentId', userId); // Excluir o próprio aluno
+
+    console.log('🔵 Student Class - Colegas encontrados:', classmates?.length || 0);
 
     res.json({
       success: true,
       data: {
-        class: classStudent.classes,
-        teacher: classStudent.classes.teachers,
-        classmates: activeStudents.map(cs => cs.students)
+        class: classStudent.class,
+        teacher: classStudent.class.teacher,
+        classmates: (classmates || []).map(cs => cs.student)
       }
     });
 
   } catch (error) {
-    console.error('Erro ao buscar turma do aluno:', error);
+    console.error('❌ Student Class - Erro ao buscar turma do aluno:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'
