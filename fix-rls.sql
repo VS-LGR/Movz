@@ -90,3 +90,4 @@ CREATE POLICY "Allow all operations for service_role" ON public.contents
 -- Política para tabela card_customizations - permitir todas as operações para service_role
 CREATE POLICY "Allow all operations for service_role" ON public.card_customizations
     FOR ALL USING (true);
+

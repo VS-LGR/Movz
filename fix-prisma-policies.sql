@@ -46,3 +46,4 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO prisma;
 
 -- Garantir que o usuário Prisma possa criar novas tabelas se necessário
 GRANT CREATE ON SCHEMA public TO prisma;
+

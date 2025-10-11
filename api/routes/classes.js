@@ -218,12 +218,12 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
     // DEBUG: Verificar dados antes de criar
     const createData = {
       id: generateId(),
-      teacherId: req.user.userId,
-      classId: classId || null,
-      date: classDate,
-      school,
-      grade,
-      subject: subject || null,
+          teacherId: req.user.userId,
+          classId: classId || null,
+          date: classDate,
+          school,
+          grade,
+          subject: subject || null,
       notes: notes || null,
       isCompleted: false,
       createdAt: new Date().toISOString(),
@@ -290,26 +290,46 @@ router.post('/', authenticateToken, requireTeacher, async (req, res) => {
 // Remover aula
 router.delete('/:id', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 DeleteClass - Recebendo requisição');
+    console.log('🔵 DeleteClass - ID:', req.params.id);
+    console.log('🔵 DeleteClass - User:', req.user);
+    
     const { id } = req.params;
 
-    // Verificar se a aula pertence ao professor
-    const existingClass = await prisma.teacherClass.findFirst({
-      where: {
-        id,
-        teacherId: req.user.userId
-      }
-    });
+    // Verificar se a aula pertence ao professor usando Supabase
+    const { data: existingClass, error: classError } = await supabase
+      .from('teacher_classes')
+      .select('id, teacherId')
+      .eq('id', id)
+      .eq('teacherId', req.user.userId)
+      .single();
 
-    if (!existingClass) {
+    if (classError || !existingClass) {
+      console.log('❌ DeleteClass - Aula não encontrada:', classError);
       return res.status(404).json({
         success: false,
         message: 'Aula não encontrada'
       });
     }
 
-    await prisma.teacherClass.delete({
-      where: { id }
-    });
+    console.log('🔵 DeleteClass - Aula encontrada:', existingClass.id);
+
+    // Deletar aula usando Supabase
+    const { error: deleteError } = await supabase
+      .from('teacher_classes')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('❌ DeleteClass - Erro ao deletar aula:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: deleteError.message
+      });
+    }
+
+    console.log('🔵 DeleteClass - Aula deletada com sucesso:', id);
 
     res.json({
       success: true,
@@ -317,10 +337,11 @@ router.delete('/:id', authenticateToken, requireTeacher, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao remover aula:', error);
+    console.error('❌ DeleteClass - Erro ao remover aula:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -328,28 +349,53 @@ router.delete('/:id', authenticateToken, requireTeacher, async (req, res) => {
 // Marcar aula como concluída
 router.put('/:id/complete', authenticateToken, requireTeacher, async (req, res) => {
   try {
+    console.log('🔵 CompleteClass - Recebendo requisição');
+    console.log('🔵 CompleteClass - ID:', req.params.id);
+    console.log('🔵 CompleteClass - Body:', req.body);
+    console.log('🔵 CompleteClass - User:', req.user);
+    
     const { id } = req.params;
     const { isCompleted } = req.body;
 
-    // Verificar se a aula pertence ao professor
-    const existingClass = await prisma.teacherClass.findFirst({
-      where: {
-        id,
-        teacherId: req.user.userId
-      }
-    });
+    // Verificar se a aula pertence ao professor usando Supabase
+    const { data: existingClass, error: classError } = await supabase
+      .from('teacher_classes')
+      .select('id, teacherId, isCompleted')
+      .eq('id', id)
+      .eq('teacherId', req.user.userId)
+      .single();
 
-    if (!existingClass) {
+    if (classError || !existingClass) {
+      console.log('❌ CompleteClass - Aula não encontrada:', classError);
       return res.status(404).json({
         success: false,
         message: 'Aula não encontrada'
       });
     }
 
-    const updatedClass = await prisma.teacherClass.update({
-      where: { id },
-      data: { isCompleted: Boolean(isCompleted) }
-    });
+    console.log('🔵 CompleteClass - Aula encontrada:', existingClass.id);
+
+    // Atualizar status da aula usando Supabase
+    const { data: updatedClass, error: updateError } = await supabase
+      .from('teacher_classes')
+      .update({ 
+        isCompleted: Boolean(isCompleted),
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('❌ CompleteClass - Erro ao atualizar aula:', updateError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: updateError.message
+      });
+    }
+
+    console.log('🔵 CompleteClass - Aula atualizada com sucesso:', updatedClass.id);
 
     res.json({
       success: true,
@@ -358,10 +404,11 @@ router.put('/:id/complete', authenticateToken, requireTeacher, async (req, res) 
     });
 
   } catch (error) {
-    console.error('Erro ao atualizar status da aula:', error);
+    console.error('❌ CompleteClass - Erro ao atualizar status da aula:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });
@@ -369,41 +416,51 @@ router.put('/:id/complete', authenticateToken, requireTeacher, async (req, res) 
 // Obter estatísticas das aulas
 router.get('/stats', authenticateToken, requireTeacher, async (req, res) => {
   try {
-    const { month, year } = req.query;
+    console.log('🔵 ClassStats - Recebendo requisição');
+    console.log('🔵 ClassStats - Query:', req.query);
+    console.log('🔵 ClassStats - User:', req.user);
     
-    let whereClause = {
-      teacherId: req.user.userId
-    };
+    const { month, year } = req.query;
+
+    // Construir filtros usando Supabase
+    let whereClause = supabase
+      .from('teacher_classes')
+      .select('id, isCompleted, date')
+      .eq('teacherId', req.user.userId);
 
     if (month && year) {
-      // CORREÇÃO: Como date agora é string, usar filtro de string
       const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`;
       const endDateStr = `${year}-${month.toString().padStart(2, '0')}-31`;
-      whereClause.date = {
-        gte: startDateStr,
-        lte: endDateStr
-      };
+      whereClause = whereClause
+        .gte('date', startDateStr)
+        .lte('date', endDateStr);
     }
 
-    const totalClasses = await prisma.teacherClass.count({
-      where: whereClause
-    });
+    console.log('🔵 ClassStats - Buscando aulas com filtros');
 
-    const completedClasses = await prisma.teacherClass.count({
-      where: {
-        ...whereClause,
-        isCompleted: true
-      }
-    });
+    // Buscar todas as aulas usando Supabase
+    const { data: classes, error: classesError } = await whereClause;
 
-    const upcomingClasses = await prisma.teacherClass.count({
-      where: {
-        ...whereClause,
-        isCompleted: false,
-        date: {
-          gte: new Date()
-        }
-      }
+    if (classesError) {
+      console.error('❌ ClassStats - Erro ao buscar aulas:', classesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: classesError.message
+      });
+    }
+
+    console.log('🔵 ClassStats - Aulas encontradas:', classes?.length || 0);
+
+    // Calcular estatísticas
+    const totalClasses = classes?.length || 0;
+    const completedClasses = classes?.filter(c => c.isCompleted).length || 0;
+    const upcomingClasses = classes?.filter(c => !c.isCompleted).length || 0;
+
+    console.log('🔵 ClassStats - Estatísticas calculadas:', {
+      total: totalClasses,
+      completed: completedClasses,
+      upcoming: upcomingClasses
     });
 
     res.json({
@@ -417,10 +474,11 @@ router.get('/stats', authenticateToken, requireTeacher, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao buscar estatísticas:', error);
+    console.error('❌ ClassStats - Erro ao obter estatísticas das aulas:', error);
     res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor'
+      message: 'Erro interno do servidor',
+      error: error.message
     });
   }
 });

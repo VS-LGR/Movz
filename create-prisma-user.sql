@@ -45,3 +45,4 @@ CREATE POLICY "prisma_access_user_sports" ON public.user_sports FOR ALL TO prism
 CREATE POLICY "prisma_access_sports" ON public.sports FOR ALL TO prisma USING (true);
 CREATE POLICY "prisma_access_contents" ON public.contents FOR ALL TO prisma USING (true);
 CREATE POLICY "prisma_access_card_customizations" ON public.card_customizations FOR ALL TO prisma USING (true);
+
