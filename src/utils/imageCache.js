@@ -2,31 +2,31 @@ import { Image } from 'react-native';
 
 // Mapeamento de URLs diretas para as imagens
 const imageMap = {
-  // 16 Conquistas
-  'Primeiro Passo': 'https://i.imgur.com/XvzycPI.png',
-  'Iniciante': 'https://i.imgur.com/In9vsyK.png',
+  // 16 Conquistas (nomes corretos do banco)
+  'Assíduo': 'https://i.imgur.com/aQdtNvs.png',
+  'Atleta': 'https://i.imgur.com/m45wJmX.png',
+  'Campeão': 'https://i.imgur.com/3FWY8G9.png',
+  'Comunidade': 'https://i.imgur.com/Gttb9Uk.png',
   'Dedicado': 'https://i.imgur.com/4UVgZbK.png',
-  'Esforçado': 'https://i.imgur.com/0kIL4mu.png',
   'Determinado': 'https://i.imgur.com/aQdtNvs.png',
+  'Esforçado': 'https://i.imgur.com/0kIL4mu.png',
+  'Especialista': 'https://i.imgur.com/DrG1ft2.png',
+  'Iniciante': 'https://i.imgur.com/In9vsyK.png',
+  'Lenda': 'https://i.imgur.com/v2f1Dnt.png',
   'Mestre': 'https://i.imgur.com/DrG1ft2.png',
+  'Multiesportivo': 'https://i.imgur.com/ujsiSYt.png',
+  'Pontual': 'https://i.imgur.com/7Q8jPdH.png',
   'Presença Perfeita': 'https://i.imgur.com/v2f1Dnt.png',
-  'Consistente': 'https://i.imgur.com/7Q8jPdH.png',
-  'Ponto de Honra': 'https://i.imgur.com/OMOsgqm.png',
-  'Atleta Completo': 'https://i.imgur.com/m45wJmX.png',
-  'Multiesportista': 'https://i.imgur.com/ujsiSYt.png',
-  'Campeão Universal': 'https://i.imgur.com/3FWY8G9.png',
-  'Primeira Estrela': 'https://i.imgur.com/e3MMK06.png',
-  'Estrela Brilhante': 'https://i.imgur.com/RYHCY6Y.png',
-  'Super Estrela': 'https://i.imgur.com/Tlzzrxc.png',
-  'Lenda Viva': 'https://i.imgur.com/Gttb9Uk.png',
+  'Primeira Pontuação': 'https://i.imgur.com/OMOsgqm.png',
+  'Social': 'https://i.imgur.com/XvzycPI.png',
 
-  // 6 Medalhas
-  'Primeira Aula': 'https://i.imgur.com/a6nOjas.png',
-  'Dedicado': 'https://i.imgur.com/EqAwauN.png',
-  'Esforçado': 'https://i.imgur.com/8gXgmcZ.png',
-  'Determinado': 'https://i.imgur.com/KwywQdQ.png',
-  'Mestre': 'https://i.imgur.com/bXHvbtf.png',
-  'Lenda Viva': 'https://i.imgur.com/8CxBWeg.png',
+  // 6 Medalhas (nomes corretos do banco) - URLs atualizadas
+  'Medalha de Bronze': 'https://i.imgur.com/a6nOjas.png',
+  'Medalha de Ouro': 'https://i.imgur.com/EqAwauN.png',
+  'Medalha de Platina': 'https://i.imgur.com/8gXgmcZ.png',
+  'Medalha de Prata': 'https://i.imgur.com/KwywQdQ.png',
+  'Medalha Diamante': 'https://i.imgur.com/bXHvbtf.png',
+  'Medalha Suprema': 'https://i.imgur.com/8CxBWeg.png',
 
   // Banners
   'Banner Ouro': 'https://i.imgur.com/mB3rJlz.png',
@@ -38,9 +38,9 @@ const imageMap = {
   'Banner Volley': 'https://i.imgur.com/plpK80A.png',
   'Banner Space': 'https://i.imgur.com/ZFw6Q8v.png',
   'Banner Aim': 'https://i.imgur.com/haLT7Bu.png',
-  'Banner Capybara': 'https://i.imgur.com/t4QrkU4.png',
-  'Banner FatCapy': 'https://i.imgur.com/zCHMJKk.png',
-  'Banner Cats': 'https://i.imgur.com/wBbTyxf.png',
+  'Banner Capivara': 'https://i.imgur.com/t4QrkU4.png',
+  'Banner Capivara Gorda': 'https://i.imgur.com/zCHMJKk.png',
+  'Banner Gatinhos': 'https://i.imgur.com/wBbTyxf.png',
 
   // Esportes
   'Basquete': 'https://i.imgur.com/65B2M18.png',

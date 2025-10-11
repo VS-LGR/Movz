@@ -51,16 +51,15 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       }
       
       console.log('🔵 CardCustomizationScreen - Carregando dados do perfil...');
-      const response = await apiService.getStudentProfile();
+      const response = await apiService.getCardCustomization();
       console.log('🔵 CardCustomizationScreen - Resposta da API:', response);
       
-      if (response.success && response.data && response.data.user) {
+      if (response.success && response.data) {
         console.log('🔵 CardCustomizationScreen - Dados recebidos:', response.data);
-        console.log('🔵 CardCustomizationScreen - User object:', response.data.user);
-        console.log('🔵 CardCustomizationScreen - cardBanner:', response.data.user.cardBanner);
-        setProfileData(response.data.user);
-        setSelectedBackground(response.data.user.cardBanner || 'Banner Padrão');
-        setSelectedAnimation(response.data.user.cardBackground || 'none');
+        console.log('🔵 CardCustomizationScreen - cardBanner:', response.data.cardBanner);
+        setProfileData(response.data);
+        setSelectedBackground(response.data.cardBanner || 'Banner Padrão');
+        setSelectedAnimation(response.data.cardTheme || 'none');
       } else {
         console.error('🔴 CardCustomizationScreen - Erro na resposta:', response.message);
         console.error('🔴 CardCustomizationScreen - Response structure:', response);
@@ -101,11 +100,8 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         // Atualizar dados locais
         setProfileData(prev => ({
           ...prev,
-          student: {
-            ...prev.student,
-            cardBackground: selectedBackground,
-            cardAnimation: selectedAnimation
-          }
+          cardBanner: selectedBackground,
+          cardTheme: selectedAnimation
         }));
       } else {
         Alert.alert('Erro', response.message || 'Erro ao atualizar personalização');
@@ -170,6 +166,10 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
       'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
       'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+      'Banner Aim': { primary: '#FF4444', secondary: '#FF6666', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFAAAA' },
+      'Banner Capivara': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#D2B48C' },
+      'Banner Capivara Gorda': { primary: '#654321', secondary: '#8B4513', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#DEB887' },
+      'Banner Gatinhos': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFC0CB' },
     };
     return themes[bannerName] || themes['Banner Padrão'];
   };
@@ -562,7 +562,11 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
                   { name: 'Banner NBA', description: 'Banner temático da NBA', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_NBABanner.svg' },
                   { name: 'Banner Soccer', description: 'Banner temático do futebol', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_SoccerBanner.svg' },
                   { name: 'Banner Volley', description: 'Banner temático do vôlei', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'aiB_VolleyBanner.svg' },
-                  { name: 'Banner Space', description: 'Banner espacial futurista', rarity: 'mythic', unlockType: 'xp', unlockValue: 10000, preview: 'aiB_SpaceBanner.svg' }
+                  { name: 'Banner Space', description: 'Banner espacial futurista', rarity: 'mythic', unlockType: 'xp', unlockValue: 10000, preview: 'aiB_SpaceBanner.svg' },
+                  { name: 'Banner Aim', description: 'Banner com tema de mira/precisão', rarity: 'rare', unlockType: 'xp', unlockValue: 1500, preview: 'aiB_AimBanner.svg' },
+                  { name: 'Banner Capivara', description: 'Banner com tema de capivara', rarity: 'common', unlockType: 'xp', unlockValue: 1000, preview: 'aiB_CapivaraBanner.svg' },
+                  { name: 'Banner Capivara Gorda', description: 'Banner com tema de capivara gorda', rarity: 'epic', unlockType: 'xp', unlockValue: 2500, preview: 'aiB_CapivaraGordaBanner.svg' },
+                  { name: 'Banner Gatinhos', description: 'Banner com tema de gatinhos', rarity: 'rare', unlockType: 'xp', unlockValue: 2000, preview: 'aiB_GatinhosBanner.svg' }
                 ],
                 selectedBackground,
                 setSelectedBackground

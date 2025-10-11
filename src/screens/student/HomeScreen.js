@@ -83,8 +83,58 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
   };
 
   // Usar dados reais da API em vez de dados hardcoded
-  const medals = [];
-  const achievements = [];
+  const medals = useMemo(() => {
+    if (!profileData) return [];
+    
+    const unlocked = [];
+    const totalClasses = profileData?.totalClasses || 0;
+    
+    // Medalhas de Participação (6 medalhas)
+    if (totalClasses >= 1) unlocked.push({ id: '1', name: 'Primeira Aula' });
+    if (totalClasses >= 10) unlocked.push({ id: '2', name: 'Dedicado' });
+    if (totalClasses >= 25) unlocked.push({ id: '3', name: 'Esforçado' });
+    if (totalClasses >= 50) unlocked.push({ id: '4', name: 'Determinado' });
+    if (totalClasses >= 100) unlocked.push({ id: '5', name: 'Mestre' });
+    if (totalClasses >= 200) unlocked.push({ id: '6', name: 'Lenda Viva' });
+    
+    return unlocked;
+  }, [profileData]);
+
+  const achievements = useMemo(() => {
+    if (!profileData) return [];
+    
+    const unlocked = [];
+    const totalClasses = profileData?.totalClasses || 0;
+    const attendanceRate = profileData?.attendanceRate || 0;
+    const sportsCount = profileData?.sportsCount || 0;
+    const maxScore = profileData?.maxScore || 0;
+    
+    // Conquistas de Participação
+    if (totalClasses >= 1) unlocked.push({ id: '1', name: 'Primeiro Passo' });
+    if (totalClasses >= 5) unlocked.push({ id: '2', name: 'Iniciante' });
+    if (totalClasses >= 10) unlocked.push({ id: '3', name: 'Dedicado' });
+    if (totalClasses >= 25) unlocked.push({ id: '4', name: 'Esforçado' });
+    if (totalClasses >= 50) unlocked.push({ id: '5', name: 'Determinado' });
+    if (totalClasses >= 100) unlocked.push({ id: '6', name: 'Mestre' });
+    
+    // Conquistas de Frequência
+    if (attendanceRate >= 100) unlocked.push({ id: '7', name: 'Presença Perfeita' });
+    if (attendanceRate >= 90) unlocked.push({ id: '8', name: 'Consistente' });
+    if (attendanceRate >= 95) unlocked.push({ id: '9', name: 'Ponto de Honra' });
+    
+    // Conquistas de Esportes
+    if (sportsCount >= 5) unlocked.push({ id: '10', name: 'Atleta Completo' });
+    if (sportsCount >= 8) unlocked.push({ id: '11', name: 'Multiesportista' });
+    if (sportsCount >= 9) unlocked.push({ id: '12', name: 'Campeão Universal' });
+    
+    // Conquistas de Pontuação
+    if (maxScore >= 100) unlocked.push({ id: '13', name: 'Primeira Estrela' });
+    if (maxScore >= 500) unlocked.push({ id: '14', name: 'Estrela Brilhante' });
+    if (maxScore >= 1000) unlocked.push({ id: '15', name: 'Super Estrela' });
+    if (maxScore >= 2000) unlocked.push({ id: '16', name: 'Lenda Viva' });
+    
+    return unlocked;
+  }, [profileData]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -271,7 +321,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
                       <Image 
                         source={getCachedImage(medal.name, 'medal')} 
                         style={styles.medalSvg}
-                        resizeMode="contain"
+                        resizeMode="cover"
                         onError={() => console.log('Erro ao carregar medalha:', medal.name)}
                       />
                     </View>
@@ -311,7 +361,7 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
                       <Image 
                         source={getCachedImage(achievement.name, 'achievement')} 
                         style={styles.medalSvg}
-                        resizeMode="contain"
+                        resizeMode="cover"
                       />
                     </View>
                     <Text style={styles.medalMonth}>{achievement.name}</Text>
@@ -681,8 +731,9 @@ const styles = StyleSheet.create({
     height: 82.18, // Altura exata do Figma
     marginTop: -10, // Sobe a faixa para centralizar as medalhas
     marginBottom: 15,
-    marginHorizontal: -48, // Margin negativo para abraçar o card branco
+    marginHorizontal: -20, // Margin negativo menor para expandir dentro do card
     overflow: 'hidden',
+    borderRadius: 8, // Bordas arredondadas para combinar com o card
   },
   medalBannerBackground: {
     position: 'absolute',
@@ -692,10 +743,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%', // 100% para cobrir toda a largura
     height: '100%', // 100% para cobrir toda a altura
-    resizeMode: 'stretch', // Estica para cobrir toda a largura
+    resizeMode: 'cover', // Cover para manter proporção e cobrir toda a área
     // Configurações exatas do Figma
     opacity: 1, // 100% opacity
-    borderRadius: 0, // Corner radius 0
+    borderRadius: 8, // Corner radius para combinar com o container
   },
   medalBanner: {
     position: 'absolute',
@@ -707,12 +758,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around', // Distribui as medalhas com espaçamento igual
     alignItems: 'center',
     paddingVertical: 30, // Aumentado para centralizar melhor as medalhas na faixa
-    paddingHorizontal: 68, // Padding ajustado para compensar o margin negativo de -48
+    paddingHorizontal: 20, // Padding ajustado para o novo margin de -20
   },
   medalContainer: {
     alignItems: 'center',
-    width: 39, // Largura exata do container (Group 4)
-    height: 59, // Altura exata do container (Group 4)
+    width: 60, // Largura aumentada para acomodar textos completos
+    height: 70, // Altura aumentada para acomodar textos completos
   },
   medalIcon: {
     width: 39, // Tamanho exato do Figma (Ellipse 23)
@@ -725,6 +776,7 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 8px rgba(0, 0, 0, 0.4)',
     elevation: 8, // Para Android
     backgroundColor: 'transparent', // Remove background to show SVG
+    overflow: 'hidden', // Corta qualquer fundo branco da imagem
   },
   medalIconPlaceholder: {
     width: 39,
@@ -740,6 +792,7 @@ const styles = StyleSheet.create({
   medalSvg: {
     width: 39,
     height: 39,
+    borderRadius: 19.5, // Círculo perfeito para cortar fundo branco
   },
   emptyMedalsContainer: {
     padding: 20,
@@ -760,13 +813,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins',
   },
   medalMonth: {
-    width: 32, // Largura exata do Figma (texto "Março")
-    height: 15, // Altura exata do Figma (texto "Março")
+    width: 60, // Largura aumentada para acomodar textos completos
+    height: 20, // Altura aumentada para acomodar textos completos
     fontSize: 10, // Reduzido para evitar quebra de linha
     color: '#000000', // Cor exata do Figma (r: 0, g: 0, b: 0)
     fontWeight: '500',
     textAlign: 'center',
-    numberOfLines: 1, // Força uma linha apenas
+    numberOfLines: 2, // Permitir até 2 linhas
     fontFamily: 'Poppins',
   },
 });

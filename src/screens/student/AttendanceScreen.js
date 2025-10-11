@@ -14,7 +14,7 @@ import {
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
-import useResponsive from '../../hooks/useResponsive';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -52,7 +52,7 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
     setError(null);
     try {
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {

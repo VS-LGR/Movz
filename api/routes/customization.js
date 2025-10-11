@@ -36,7 +36,7 @@ router.get('/student/profile', authenticateToken, async (req, res) => {
     // Verificar se é aluno
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('userType, cardBanner, cardBackground')
+      .select('userType, cardBanner, cardBackground, totalXP, level')
       .eq('id', userId)
       .single();
 
@@ -72,7 +72,9 @@ router.get('/student/profile', authenticateToken, async (req, res) => {
       success: true,
       data: {
         cardBanner: user.cardBanner || 'Banner Padrão',
-        cardTheme: user.cardBackground || 'default'
+        cardTheme: user.cardBackground || 'default',
+        totalXP: user.totalXP || 0,
+        level: user.level || 1
       }
     });
 

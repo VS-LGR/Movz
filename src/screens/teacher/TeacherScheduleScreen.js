@@ -38,27 +38,45 @@ const TeacherScheduleScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
 
   const loadClasses = async () => {
     try {
+      console.log('🔵 TeacherSchedule - Carregando aulas para:', currentDate);
       const month = currentDate.getMonth() + 1;
       const year = currentDate.getFullYear();
+      console.log('🔵 TeacherSchedule - Mês/Ano:', month, year);
+      
       const response = await apiService.getTeacherClasses(month, year);
+      console.log('🔵 TeacherSchedule - Resposta da API:', response);
       
       if (response.success) {
-        // The API already returns data organized by date
-        // Convert each date's data to an array format for multiple classes support
+        // A API agora retorna um array de aulas, não um objeto agrupado por data
+        const classesArray = response.data || [];
+        console.log('🔵 TeacherSchedule - Array de aulas:', classesArray.length);
+        
+        // Agrupar aulas por data
         const classesMap = {};
-        Object.keys(response.data).forEach(dateKey => {
-          const classData = response.data[dateKey];
-          if (Array.isArray(classData)) {
-            classesMap[dateKey] = classData;
-          } else {
-            // Convert single class to array format
-            classesMap[dateKey] = [classData];
+        classesArray.forEach(classItem => {
+          const dateStr = classItem.date; // Já vem como string YYYY-MM-DD
+          console.log('🔵 TeacherSchedule - Processando aula:', {
+            id: classItem.id,
+            date: dateStr,
+            subject: classItem.subject,
+            school: classItem.school
+          });
+          
+          if (!classesMap[dateStr]) {
+            classesMap[dateStr] = [];
           }
+          classesMap[dateStr].push(classItem);
         });
+        
+        console.log('🔵 TeacherSchedule - Classes agrupadas:', Object.keys(classesMap));
         setClasses(classesMap);
+      } else {
+        console.log('❌ TeacherSchedule - Erro na resposta:', response.message);
+        setClasses({});
       }
     } catch (error) {
-      console.error('Erro ao carregar aulas:', error);
+      console.error('❌ TeacherSchedule - Erro ao carregar aulas:', error);
+      setClasses({});
     }
   };
 
@@ -259,39 +277,52 @@ const TeacherScheduleScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
     }
   };
 
-  // Obter ações importantes (aulas não preparadas)
+  // Obter ações importantes (aulas próximas não concluídas)
   const getImportantActions = () => {
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
+    const todayStr = today.toISOString().split('T')[0];
     const actions = [];
     
-    // Verificar se tem aula amanhã
-    if (hasClass(tomorrow)) {
-      actions.push({
-        id: 'tomorrow',
-        message: 'Você ainda não montou sua aula de amanhã. Começar agora.',
-        date: tomorrow
-      });
-    }
-
-    // Verificar aulas da próxima semana
-    for (let i = 2; i <= 7; i++) {
+    console.log('🔵 TeacherSchedule - Verificando ações importantes...');
+    console.log('🔵 TeacherSchedule - Classes disponíveis:', Object.keys(classes));
+    
+    // Verificar aulas dos próximos 7 dias que não foram concluídas
+    for (let i = 0; i <= 7; i++) {
       const futureDate = new Date(today);
       futureDate.setDate(futureDate.getDate() + i);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
       
-      if (hasClass(futureDate)) {
-        const day = futureDate.getDate();
-        actions.push({
-          id: `day-${day}`,
-          message: `Você ainda não montou sua aula do dia ${day}. Começar agora.`,
-          date: futureDate
-        });
+      console.log('🔵 TeacherSchedule - Verificando data:', futureDateStr);
+      
+      if (classes[futureDateStr]) {
+        const classesOnDate = classes[futureDateStr];
+        console.log('🔵 TeacherSchedule - Aulas encontradas:', classesOnDate.length);
+        
+        // Verificar se há aulas não concluídas nesta data
+        const incompleteClasses = classesOnDate.filter(classItem => !classItem.isCompleted);
+        console.log('🔵 TeacherSchedule - Aulas não concluídas:', incompleteClasses.length);
+        
+        if (incompleteClasses.length > 0) {
+          const dayName = i === 0 ? 'hoje' : i === 1 ? 'amanhã' : `dia ${futureDate.getDate()}`;
+          const classCount = incompleteClasses.length;
+          const classText = classCount === 1 ? 'aula' : 'aulas';
+          
+          // Pegar informações da primeira aula não concluída
+          const firstClass = incompleteClasses[0];
+          const subject = firstClass.subject ? ` - ${firstClass.subject}` : '';
+          
+          actions.push({
+            id: `day-${i}`,
+            message: `Você tem ${classCount} ${classText} não concluída(s) ${dayName}${subject}. Preparar agora.`,
+            date: futureDate,
+            classes: incompleteClasses
+          });
+        }
       }
     }
 
-    return actions.slice(0, 2); // Máximo 2 ações
+    console.log('🔵 TeacherSchedule - Ações encontradas:', actions.length);
+    return actions.slice(0, 3); // Máximo 3 ações
   };
 
   const importantActions = getImportantActions();
@@ -309,7 +340,10 @@ const TeacherScheduleScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>Movz</Text>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>Muvz</Text>
+            <View style={styles.logoAccent} />
+          </View>
           <TouchableOpacity 
             style={styles.menuButton}
             onPress={() => setIsMenuVisible(!isMenuVisible)}
@@ -327,6 +361,30 @@ const TeacherScheduleScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
         <Text style={styles.subtitle}>
           Veja quais dias você tem aulas para você se organizar melhor.
         </Text>
+
+        {/* Important Actions - Moved up */}
+        <Text style={styles.actionsTitle}>Ações importantes</Text>
+        {importantActions.map((action) => (
+          <TouchableOpacity 
+            key={action.id} 
+            style={styles.actionCard}
+            onPress={() => {
+              // Navegar para a aula específica quando clicado
+              console.log('🔵 TeacherSchedule - Clicou na ação:', action);
+              // Aqui você pode implementar navegação para a aula específica
+            }}
+          >
+            <Text style={styles.actionText}>{action.message}</Text>
+          </TouchableOpacity>
+        ))}
+
+        {importantActions.length === 0 && (
+          <View style={styles.noActionsCard}>
+            <Text style={styles.noActionsText}>
+              Todas as suas aulas estão organizadas! 🎉
+            </Text>
+          </View>
+        )}
 
         {/* Calendar Navigation */}
         <View style={styles.calendarHeader}>
@@ -411,21 +469,6 @@ const TeacherScheduleScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, cu
           </View>
         </View>
 
-        {/* Important Actions */}
-        <Text style={styles.actionsTitle}>Ações importantes</Text>
-        {importantActions.map((action) => (
-          <TouchableOpacity key={action.id} style={styles.actionCard}>
-            <Text style={styles.actionText}>{action.message}</Text>
-          </TouchableOpacity>
-        ))}
-
-        {importantActions.length === 0 && (
-          <View style={styles.noActionsCard}>
-            <Text style={styles.noActionsText}>
-              Todas as suas aulas estão organizadas! 🎉
-            </Text>
-          </View>
-        )}
 
                 {/* Modal de Edição de Aula */}
                 <Modal
@@ -588,24 +631,36 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
   logo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
     fontFamily: 'Poppins',
   },
+  logoAccent: {
+    width: 4,
+    height: 28,
+    backgroundColor: '#F9BB55',
+    marginLeft: 8,
+    borderRadius: 2,
+  },
   menuButton: {
-    padding: 10,
+    padding: 8,
   },
   menuIcon: {
-    width: 20,
-    height: 15,
+    width: 24,
+    height: 18,
     justifyContent: 'space-between',
   },
   menuLine: {
-    height: 2,
+    height: 3,
     backgroundColor: '#D9D9D9',
-    borderRadius: 1,
+    borderRadius: 2,
   },
   title: {
     fontSize: 24,
@@ -715,23 +770,35 @@ const styles = StyleSheet.create({
     lineHeight: 10,
   },
   actionsTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#000',
     marginBottom: 15,
+    marginTop: 10,
     fontFamily: 'Poppins',
   },
   actionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 15,
+    backgroundColor: '#FFF3CD',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F9BB55',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionText: {
-    fontSize: 16,
-    color: '#000',
+    fontSize: 15,
+    color: '#856404',
     fontFamily: 'Poppins',
-    lineHeight: 22,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   noActionsCard: {
     backgroundColor: '#E8F5E8',

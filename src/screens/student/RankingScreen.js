@@ -16,6 +16,7 @@ import HamburgerButton from '../../components/HamburgerButton';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import { getCachedImage } from '../../utils/imageCache';
+import Storage from '../../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,7 +37,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
     setError(null);
     try {
       // Configurar token de autenticação
-      const token = localStorage.getItem('authToken');
+      const token = await Storage.getItem('authToken');
       if (token) {
         apiService.setToken(token);
       } else {
@@ -119,6 +120,10 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
       'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
       'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
       'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+      'Banner Aim': { primary: '#FF4444', secondary: '#FF6666', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFAAAA' },
+      'Banner Capivara': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#D2B48C' },
+      'Banner Capivara Gorda': { primary: '#654321', secondary: '#8B4513', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#DEB887' },
+      'Banner Gatinhos': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFC0CB' },
     };
     return themes[bannerName] || themes['Banner Padrão'];
   };
@@ -137,7 +142,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
           <Text style={styles.subtitle}>Classificação da sua turma</Text>
         {rankingData && (
           <Text style={styles.classInfo}>
-            📚 {rankingData.classInfo.name} - {rankingData.classInfo.grade}
+            📚 {rankingData.class.name} - {rankingData.class.grade}
           </Text>
         )}
       </View>
@@ -179,7 +184,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
                 </Text>
               </View>
               <View style={styles.topThreeInfo}>
-                <Text style={styles.topThreeName}>{student.studentName}</Text>
+                <Text style={styles.topThreeName}>{student.name}</Text>
                 <Text style={styles.topThreeScore}>{student.totalScore} pontos</Text>
               </View>
             </View>
@@ -197,11 +202,11 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
         <Text style={styles.rankingTitle}>Classificação Completa</Text>
         <View style={styles.rankingList}>
           {rankingData.ranking.map((student, index) => {
-            const isCurrentStudent = student.studentId === rankingData.currentStudentId;
+            const isCurrentStudent = student.isCurrentUser;
             
             return (
             <View
-                key={student.studentId}
+                key={student.id}
               style={[
                 styles.rankingItem,
                   isCurrentStudent && styles.currentStudentItem
@@ -246,7 +251,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
                       fontWeight: 'bold'
                     }
                   ]}>
-                    {student.studentName}
+                    {student.name}
                     {isCurrentStudent && ' (Você)'}
                   </Text>
                   <Text style={[
@@ -259,7 +264,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
                       color: '#374151',
                       fontWeight: '600'
                     }
-                  ]}>{student.studentEmail}</Text>
+                  ]}>{student.email}</Text>
                 </View>
                 
                 <View style={styles.scoreInfo}>

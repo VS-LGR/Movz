@@ -245,41 +245,138 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
     }
   };
 
-  // Dados de exemplo dos exercícios (em produção viria da API)
-  const workoutSections = [
-    {
-      id: 'aquecimento',
-      title: 'Aquecimento',
-      duration: '7min',
-      exercises: [
-        { name: 'Corrida Leve', repetitions: '5 minutos' },
-        { name: 'Alongamento Dinâmico', repetitions: '2 minutos' },
-        { name: 'Aquecimento Articular', repetitions: '1 série' },
-      ],
-    },
-    {
-      id: 'treino',
-      title: 'Treino',
-      duration: '30min',
-      exercises: [
-        { name: 'Saque', repetitions: '20 repetições' },
-        { name: 'Recepção', repetitions: '20 repetições' },
-        { name: 'Levantamento', repetitions: '20 repetições' },
-        { name: 'Ataque', repetitions: '20 repetições' },
-        { name: 'Bloqueio', repetitions: '20 repetições' },
-        { name: 'Defesa', repetitions: '20 repetições' },
-      ],
-    },
-    {
-      id: 'desaquecimento',
-      title: 'Desaquecimento',
-      duration: '8min',
-      exercises: [
-        { name: 'Alongamento Final', repetitions: '5 minutos' },
-        { name: 'Relaxamento', repetitions: '3 minutos' },
-      ],
-    },
-  ];
+  // Dados dinâmicos dos exercícios baseados no esporte atual
+  const getWorkoutSections = () => {
+    if (!currentSport) {
+      return [
+        {
+          id: 'aquecimento',
+          title: 'Aquecimento',
+          duration: '7min',
+          icon: '🔥',
+          color: '#FF6B6B',
+          exercises: [
+            { name: 'Corrida Leve', repetitions: '5 minutos', icon: '🏃‍♂️' },
+            { name: 'Alongamento Dinâmico', repetitions: '2 minutos', icon: '🤸‍♀️' },
+            { name: 'Aquecimento Articular', repetitions: '1 série', icon: '🦴' },
+          ],
+        },
+        {
+          id: 'treino',
+          title: 'Treino Principal',
+          duration: '30min',
+          icon: '⚡',
+          color: '#F9BB55',
+          exercises: [
+            { name: 'Exercícios Básicos', repetitions: '20 repetições', icon: '💪' },
+            { name: 'Técnicas Fundamentais', repetitions: '15 minutos', icon: '🎯' },
+            { name: 'Prática Dirigida', repetitions: '10 minutos', icon: '🏆' },
+          ],
+        },
+        {
+          id: 'desaquecimento',
+          title: 'Desaquecimento',
+          duration: '8min',
+          icon: '🧘‍♀️',
+          color: '#4ECDC4',
+          exercises: [
+            { name: 'Alongamento Final', repetitions: '5 minutos', icon: '🤸‍♂️' },
+            { name: 'Relaxamento', repetitions: '3 minutos', icon: '😌' },
+          ],
+        },
+      ];
+    }
+
+    // Exercícios específicos por esporte
+    const sportExercises = {
+      'Vôlei': {
+        aquecimento: [
+          { name: 'Corrida Leve', repetitions: '5 minutos', icon: '🏃‍♂️' },
+          { name: 'Alongamento Dinâmico', repetitions: '2 minutos', icon: '🤸‍♀️' },
+          { name: 'Aquecimento Articular', repetitions: '1 série', icon: '🦴' },
+        ],
+        treino: [
+          { name: 'Saque', repetitions: '20 repetições', icon: '🎾' },
+          { name: 'Recepção', repetitions: '20 repetições', icon: '🤲' },
+          { name: 'Levantamento', repetitions: '20 repetições', icon: '✋' },
+          { name: 'Ataque', repetitions: '20 repetições', icon: '💥' },
+          { name: 'Bloqueio', repetitions: '20 repetições', icon: '🛡️' },
+          { name: 'Defesa', repetitions: '20 repetições', icon: '🏐' },
+        ],
+        desaquecimento: [
+          { name: 'Alongamento Final', repetitions: '5 minutos', icon: '🤸‍♂️' },
+          { name: 'Relaxamento', repetitions: '3 minutos', icon: '😌' },
+        ],
+      },
+      'Futebol': {
+        aquecimento: [
+          { name: 'Corrida Leve', repetitions: '5 minutos', icon: '🏃‍♂️' },
+          { name: 'Alongamento Dinâmico', repetitions: '2 minutos', icon: '🤸‍♀️' },
+          { name: 'Aquecimento Articular', repetitions: '1 série', icon: '🦴' },
+        ],
+        treino: [
+          { name: 'Controle de Bola', repetitions: '15 minutos', icon: '⚽' },
+          { name: 'Passe', repetitions: '20 repetições', icon: '👟' },
+          { name: 'Chute', repetitions: '20 repetições', icon: '🥅' },
+          { name: 'Drible', repetitions: '15 minutos', icon: '🏃‍♂️' },
+          { name: 'Jogo Reduzido', repetitions: '10 minutos', icon: '⚽' },
+        ],
+        desaquecimento: [
+          { name: 'Alongamento Final', repetitions: '5 minutos', icon: '🤸‍♂️' },
+          { name: 'Relaxamento', repetitions: '3 minutos', icon: '😌' },
+        ],
+      },
+      'Basquete': {
+        aquecimento: [
+          { name: 'Corrida Leve', repetitions: '5 minutos', icon: '🏃‍♂️' },
+          { name: 'Alongamento Dinâmico', repetitions: '2 minutos', icon: '🤸‍♀️' },
+          { name: 'Aquecimento Articular', repetitions: '1 série', icon: '🦴' },
+        ],
+        treino: [
+          { name: 'Drible', repetitions: '15 minutos', icon: '🏀' },
+          { name: 'Arremesso', repetitions: '20 repetições', icon: '🎯' },
+          { name: 'Passe', repetitions: '20 repetições', icon: '🤲' },
+          { name: 'Rebote', repetitions: '15 minutos', icon: '⬆️' },
+          { name: 'Jogo Reduzido', repetitions: '10 minutos', icon: '🏀' },
+        ],
+        desaquecimento: [
+          { name: 'Alongamento Final', repetitions: '5 minutos', icon: '🤸‍♂️' },
+          { name: 'Relaxamento', repetitions: '3 minutos', icon: '😌' },
+        ],
+      },
+    };
+
+    const exercises = sportExercises[currentSport.name] || sportExercises['Vôlei'];
+
+    return [
+      {
+        id: 'aquecimento',
+        title: 'Aquecimento',
+        duration: '7min',
+        icon: '🔥',
+        color: '#FF6B6B',
+        exercises: exercises.aquecimento,
+      },
+      {
+        id: 'treino',
+        title: 'Treino Principal',
+        duration: '30min',
+        icon: '⚡',
+        color: '#F9BB55',
+        exercises: exercises.treino,
+      },
+      {
+        id: 'desaquecimento',
+        title: 'Desaquecimento',
+        duration: '8min',
+        icon: '🧘‍♀️',
+        color: '#4ECDC4',
+        exercises: exercises.desaquecimento,
+      },
+    ];
+  };
+
+  const workoutSections = getWorkoutSections();
 
   const handleTakeAttendance = async () => {
     try {
@@ -582,13 +679,17 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
           key={section.id}
           style={[
             styles.workoutCard,
-            isExpanded && styles.expandedCard
+            isExpanded && styles.expandedCard,
+            { borderLeftColor: section.color, borderLeftWidth: 4 }
           ]}
           onPress={() => setExpandedCard(isExpanded ? null : section.id)}
         >
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleContainer}>
-              <Text style={styles.cardTitle}>{section.title}</Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.cardIcon}>{section.icon}</Text>
+                <Text style={styles.cardTitle}>{section.title}</Text>
+              </View>
               <Text style={styles.cardDuration}>{section.duration}</Text>
             </View>
             <View style={styles.expandIcon}>
@@ -602,6 +703,7 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
             <View style={styles.exercisesList}>
               {section.exercises.map((exercise, index) => (
                 <View key={index} style={styles.exerciseItem}>
+                  <Text style={styles.exerciseIcon}>{exercise.icon}</Text>
                   <View style={styles.exerciseInfo}>
                     <Text style={styles.exerciseName}>{exercise.name}</Text>
                     <Text style={styles.exerciseReps}>{exercise.repetitions}</Text>
@@ -619,7 +721,8 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
         key={section.id}
         style={[
           styles.workoutCard,
-          isExpanded && styles.expandedCard
+          isExpanded && styles.expandedCard,
+          { borderLeftColor: section.color, borderLeftWidth: 4 }
         ]}
         onPress={() => {
           const newExpandedCard = isExpanded ? null : section.id;
@@ -629,7 +732,10 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       >
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleContainer}>
-            <Text style={styles.cardTitle}>{section.title}</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardIcon}>{section.icon}</Text>
+              <Text style={styles.cardTitle}>{section.title}</Text>
+            </View>
             <Text style={styles.cardDuration}>{section.duration}</Text>
           </View>
           <View style={styles.expandIcon}>
@@ -658,13 +764,14 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
               opacity: animation,
               maxHeight: animation.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0, 200]
+                outputRange: [0, 300]
               })
             }
           ]}
         >
           {section.exercises.map((exercise, index) => (
             <View key={index} style={styles.exerciseItem}>
+              <Text style={styles.exerciseIcon}>{exercise.icon}</Text>
               <View style={styles.exerciseInfo}>
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <Text style={styles.exerciseReps}>{exercise.repetitions}</Text>
@@ -693,38 +800,59 @@ const ClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser,
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.logo}>Muvz</Text>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>Muvz</Text>
+            <View style={styles.logoAccent} />
+          </View>
           <TouchableOpacity 
-            style={styles.menuLines}
+            style={styles.menuButton}
             onPress={() => setIsMenuVisible(true)}
           >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
+            <View style={styles.menuLines}>
+              <View style={styles.menuLine} />
+              <View style={styles.menuLine} />
+              <View style={styles.menuLine} />
+            </View>
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.title}>Início da Aula</Text>
-        <Text style={styles.subtitle}>
-          Vamos começar a aula da {classData?.grade || 'turma'}?
-        </Text>
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>Início da Aula</Text>
+          <Text style={styles.subtitle}>
+            Vamos começar a aula da {classData?.grade || 'turma'}?
+          </Text>
+        </View>
         
         <View style={styles.divider} />
         
-        <View style={styles.classTitleContainer}>
-          {currentSport?.icon && (
-            <Image 
-              source={{ uri: currentSport.icon }} 
-            style={styles.classTitleIcon}
-            tintColor={currentSport.color || '#F9BB55'}
-              resizeMode="contain"
-            />
-          )}
-          <Text style={styles.classTitle}>{getDynamicClassTitle()}</Text>
+        <View style={styles.classInfoCard}>
+          <View style={styles.classTitleContainer}>
+            {currentSport?.icon && (
+              <Image 
+                source={{ uri: currentSport.icon }} 
+                style={styles.classTitleIcon}
+                tintColor={currentSport.color || '#F9BB55'}
+                resizeMode="contain"
+              />
+            )}
+            <Text style={styles.classTitle}>{getDynamicClassTitle()}</Text>
+          </View>
+          
+          <View style={styles.classDetailsRow}>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>⏱️</Text>
+              <Text style={styles.detailText}>{getDynamicDuration()}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>⭐</Text>
+              <Text style={styles.detailText}>{getDynamicXP()}xp</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Text style={styles.detailIcon}>👥</Text>
+              <Text style={styles.detailText}>{students.length} alunos</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.classInfo}>
-          Duração: {getDynamicDuration()} • Esse treino vale <Text style={styles.xpNumber}>{getDynamicXP()}xp</Text> para seus alunos
-        </Text>
       </View>
 
       {/* Status da Chamada */}
@@ -1024,67 +1152,117 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
   },
   logo: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
+    fontFamily: 'Poppins',
+  },
+  logoAccent: {
+    width: 4,
+    height: 28,
+    backgroundColor: '#F9BB55',
+    marginLeft: 8,
+    borderRadius: 2,
+  },
+  menuButton: {
+    padding: 8,
   },
   menuLines: {
     flexDirection: 'column',
     gap: 3,
   },
   menuLine: {
-    width: 39,
-    height: 6,
+    width: 24,
+    height: 3,
     backgroundColor: '#D9D9D9',
+    borderRadius: 2,
+  },
+  titleSection: {
+    marginBottom: 20,
   },
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 10,
+    marginBottom: 8,
+    fontFamily: 'Poppins',
   },
   subtitle: {
-    fontSize: 18,
-    color: '#000',
-    marginBottom: 20,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Poppins',
+    lineHeight: 22,
   },
   divider: {
-    height: 1,
-    backgroundColor: '#000',
+    height: 2,
+    backgroundColor: '#F9BB55',
+    marginBottom: 25,
+    borderRadius: 1,
+  },
+  classInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   classTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   classTitleIcon: {
-    width: width > 768 ? 48 : 40, // Responsivo
+    width: width > 768 ? 48 : 40,
     height: width > 768 ? 48 : 40,
     marginRight: 12,
   },
   classTitle: {
-    fontSize: width > 768 ? 36 : 32, // Responsivo
+    fontSize: width > 768 ? 28 : 24,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    textShadow: '1px 1px 2px rgba(0, 0, 0, 0.1)',
+    fontFamily: 'Poppins',
   },
-  classInfo: {
-    fontSize: 18,
+  classDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  detailIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  detailText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontWeight: '500',
-    lineHeight: 24,
-  },
-  xpNumber: {
-    color: '#2FD4CD',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins',
   },
   attendanceButton: {
     backgroundColor: '#B5B5B5',
@@ -1108,15 +1286,27 @@ const styles = StyleSheet.create({
   },
   workoutCard: {
     backgroundColor: '#fff',
-    borderRadius: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     padding: 20,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   expandedCard: {
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
-    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1126,16 +1316,26 @@ const styles = StyleSheet.create({
   cardTitleContainer: {
     flex: 1,
   },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  cardIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 5,
+    fontFamily: 'Poppins',
   },
   cardDuration: {
     fontSize: 14,
     color: '#666',
     fontFamily: 'Poppins',
+    fontWeight: '500',
   },
   expandIcon: {
     justifyContent: 'center',
@@ -1143,17 +1343,19 @@ const styles = StyleSheet.create({
     padding: 12,
     minWidth: 40,
     minHeight: 40,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
   },
   expandIconText: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#F9BB55',
     textAlign: 'center',
-    lineHeight: 32,
+    lineHeight: 20,
   },
   exercisesList: {
-    marginTop: 15,
-    paddingTop: 15,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
     overflow: 'hidden',
@@ -1161,11 +1363,19 @@ const styles = StyleSheet.create({
   exerciseItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#F8F9FA',
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E0E0E0',
+  },
+  exerciseIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
   },
   exerciseInfo: {
     flex: 1,
@@ -1175,11 +1385,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     marginBottom: 4,
+    fontFamily: 'Poppins',
   },
   exerciseReps: {
     fontSize: 14,
     color: '#666',
     fontFamily: 'Poppins',
+    fontWeight: '500',
   },
   completeButton: {
     backgroundColor: '#B5B5B5',

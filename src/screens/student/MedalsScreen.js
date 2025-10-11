@@ -79,14 +79,14 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
 
   // Usar useMemo para otimizar o cálculo das medalhas
   const medalsData = useMemo(() => {
-    // 6 medalhas originais com objetivos reais
+    // 6 medalhas com nomes corretos do banco
     const mockMedals = [
-      { id: '1', name: 'Primeira Aula', description: 'Complete sua primeira aula', rarity: 'common', requirement: '1 aula', xpReward: 25, icon: 'Medalha_1.svg' },
-      { id: '2', name: 'Dedicado', description: 'Complete 10 aulas', rarity: 'rare', requirement: '10 aulas', xpReward: 100, icon: 'Medalha_2.svg' },
-      { id: '3', name: 'Esforçado', description: 'Complete 25 aulas', rarity: 'rare', requirement: '25 aulas', xpReward: 200, icon: 'Medalha_3.svg' },
-      { id: '4', name: 'Determinado', description: 'Complete 50 aulas', rarity: 'epic', requirement: '50 aulas', xpReward: 400, icon: 'Medalha_4.svg' },
-      { id: '5', name: 'Mestre', description: 'Complete 100 aulas', rarity: 'legendary', requirement: '100 aulas', xpReward: 800, icon: 'Medalha_5.svg' },
-      { id: '6', name: 'Lenda Viva', description: 'Complete 200 aulas', rarity: 'mythic', requirement: '200 aulas', xpReward: 1500, icon: 'Medalha_6.svg' }
+      { id: '1', name: 'Medalha de Bronze', description: 'Complete sua primeira aula', rarity: 'common', requirement: '1 aula', xpReward: 25, icon: 'Medalha_1.svg' },
+      { id: '2', name: 'Medalha de Prata', description: 'Complete 10 aulas', rarity: 'rare', requirement: '10 aulas', xpReward: 100, icon: 'Medalha_2.svg' },
+      { id: '3', name: 'Medalha de Ouro', description: 'Complete 25 aulas', rarity: 'rare', requirement: '25 aulas', xpReward: 200, icon: 'Medalha_3.svg' },
+      { id: '4', name: 'Medalha de Platina', description: 'Complete 50 aulas', rarity: 'epic', requirement: '50 aulas', xpReward: 400, icon: 'Medalha_4.svg' },
+      { id: '5', name: 'Medalha Diamante', description: 'Complete 100 aulas', rarity: 'legendary', requirement: '100 aulas', xpReward: 800, icon: 'Medalha_5.svg' },
+      { id: '6', name: 'Medalha Suprema', description: 'Complete 200 aulas', rarity: 'mythic', requirement: '200 aulas', xpReward: 1500, icon: 'Medalha_6.svg' }
     ];
     return mockMedals;
   }, []);
@@ -98,13 +98,13 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
     const unlocked = [];
     const totalClasses = profileData?.totalClasses || 0;
     
-    // Medalhas de Participação (6 medalhas)
-    if (totalClasses >= 1) unlocked.push({ id: '1', name: 'Primeira Aula' });
-    if (totalClasses >= 10) unlocked.push({ id: '2', name: 'Dedicado' });
-    if (totalClasses >= 25) unlocked.push({ id: '3', name: 'Esforçado' });
-    if (totalClasses >= 50) unlocked.push({ id: '4', name: 'Determinado' });
-    if (totalClasses >= 100) unlocked.push({ id: '5', name: 'Mestre' });
-    if (totalClasses >= 200) unlocked.push({ id: '6', name: 'Lenda Viva' });
+    // Medalhas de Participação (6 medalhas) - nomes corretos do banco
+    if (totalClasses >= 1) unlocked.push({ id: '1', name: 'Medalha de Bronze' });
+    if (totalClasses >= 10) unlocked.push({ id: '2', name: 'Medalha de Prata' });
+    if (totalClasses >= 25) unlocked.push({ id: '3', name: 'Medalha de Ouro' });
+    if (totalClasses >= 50) unlocked.push({ id: '4', name: 'Medalha de Platina' });
+    if (totalClasses >= 100) unlocked.push({ id: '5', name: 'Medalha Diamante' });
+    if (totalClasses >= 200) unlocked.push({ id: '6', name: 'Medalha Suprema' });
     
     return unlocked;
   }, [profileData]);
@@ -118,7 +118,7 @@ const MedalsScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser
           <Image 
             source={getCachedImage(medal.name, 'medal')} 
             style={[styles.medalIcon, !obtained && styles.medalIconLocked]}
-            resizeMode="contain"
+            resizeMode="cover"
           />
           {obtained && (
             <View style={styles.obtainedBadge}>
@@ -379,6 +379,8 @@ const styles = StyleSheet.create({
   medalIcon: {
     width: 60,
     height: 60,
+    borderRadius: 30, // Círculo perfeito
+    overflow: 'hidden', // Corta fundo branco
   },
   medalIconLocked: {
     opacity: 0.3,

@@ -60,19 +60,19 @@ router.post('/register', async (req, res) => {
         });
       }
       
-    // Verificar se CPF já existe
+      // Verificar se CPF já existe
     const { data: existingCpf } = await supabase
       .from('users')
       .select('id')
       .eq('cpf', cleanCpf)
       .single();
-    
-    if (existingCpf) {
-      return res.status(409).json({
-        success: false,
-        message: 'Este CPF já está cadastrado'
-      });
-    }
+      
+      if (existingCpf) {
+        return res.status(409).json({
+          success: false,
+          message: 'Este CPF já está cadastrado'
+        });
+      }
     }
 
     // Validar tipo de usuário
@@ -100,20 +100,20 @@ router.post('/register', async (req, res) => {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 12);
 
-             // Criar usuário
+    // Criar usuário
              const userId = generateId();
              const now = new Date().toISOString();
              const { data: user, error: createError } = await supabase
                .from('users')
                .insert({
                  id: userId,
-                 name,
-                 email,
-                 password: hashedPassword,
-                 cpf: cpf ? cpf.replace(/\D/g, '') : null,
-                 age: age ? parseInt(age) : null,
-                 school: school || null,
-                 class: userClass || null,
+        name,
+        email,
+        password: hashedPassword,
+        cpf: cpf ? cpf.replace(/\D/g, '') : null,
+        age: age ? parseInt(age) : null,
+        school: school || null,
+        class: userClass || null,
                  userType: userType,
                  createdAt: now,
                  updatedAt: now
@@ -129,21 +129,21 @@ router.post('/register', async (req, res) => {
       });
     }
 
-             // Gerar token JWT
-             const token = jwt.sign(
-               { userId: user.id, email: user.email, userType: user.userType },
-               process.env.JWT_SECRET || 'fallback-secret',
-               { expiresIn: '7d' }
-             );
+    // Gerar token JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, userType: user.userType },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    );
 
-             res.status(201).json({
-               success: true,
-               message: 'Usuário criado com sucesso',
-               data: {
-                 user,
-                 token
-               }
-             });
+    res.status(201).json({
+      success: true,
+      message: 'Usuário criado com sucesso',
+      data: {
+        user,
+        token
+      }
+    });
 
   } catch (error) {
     console.error('Erro no registro:', error);
@@ -183,18 +183,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-             // Verificar se o tipo de usuário corresponde
-             if (user.userType !== userType) {
-               const userTypeNames = {
-                 'STUDENT': 'estudante',
-                 'TEACHER': 'professor',
-                 'INSTITUTION': 'instituição'
-               };
-               return res.status(401).json({
-                 success: false,
-                 message: `Credenciais inválidas para ${userTypeNames[userType] || userType.toLowerCase()}`
-               });
-             }
+    // Verificar se o tipo de usuário corresponde
+    if (user.userType !== userType) {
+      const userTypeNames = {
+        'STUDENT': 'estudante',
+        'TEACHER': 'professor',
+        'INSTITUTION': 'instituição'
+      };
+      return res.status(401).json({
+        success: false,
+        message: `Credenciais inválidas para ${userTypeNames[userType] || userType.toLowerCase()}`
+      });
+    }
 
     // Verificar senha
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -206,24 +206,24 @@ router.post('/login', async (req, res) => {
       });
     }
 
-             // Gerar token JWT
-             const token = jwt.sign(
-               { userId: user.id, email: user.email, userType: user.userType },
-               process.env.JWT_SECRET || 'fallback-secret',
-               { expiresIn: '7d' }
-             );
+    // Gerar token JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, userType: user.userType },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    );
 
-             // Retornar dados do usuário (sem senha)
-             const { password: _, ...userWithoutPassword } = user;
+    // Retornar dados do usuário (sem senha)
+    const { password: _, ...userWithoutPassword } = user;
 
-             res.json({
-               success: true,
-               message: 'Login realizado com sucesso',
-               data: {
-                 user: userWithoutPassword,
-                 token
-               }
-             });
+    res.json({
+      success: true,
+      message: 'Login realizado com sucesso',
+      data: {
+        user: userWithoutPassword,
+        token
+      }
+    });
 
   } catch (error) {
     console.error('Erro no login:', error);
@@ -397,6 +397,489 @@ router.get('/student/class', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Student Class - Erro ao buscar turma do aluno:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar pontuações do aluno por esporte
+router.get('/student/sports-scores', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔵 StudentSportsScores - Recebendo requisição');
+    console.log('🔵 StudentSportsScores - User:', req.user);
+    
+    const userId = req.user.userId;
+    
+    // 1. Buscar TODOS os esportes ativos primeiro
+    const { data: allSports, error: sportsError } = await supabase
+      .from('sports')
+      .select('id, name, color, icon')
+      .eq('isActive', true)
+      .order('name', { ascending: true });
+
+    if (sportsError) {
+      console.log('❌ StudentSportsScores - Erro ao buscar esportes:', sportsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar esportes'
+      });
+    }
+
+    console.log('🔵 StudentSportsScores - Esportes encontrados:', allSports.length);
+
+    // 2. Buscar pontuações do aluno
+    const { data: scores, error: scoresError } = await supabase
+      .from('class_scores')
+      .select(`
+        id,
+        score,
+        notes,
+        lessonDate,
+        createdAt,
+        sportId,
+        class:classes!class_scores_classId_fkey(
+          id, name
+        )
+      `)
+      .eq('studentId', userId)
+      .order('createdAt', { ascending: false });
+
+    if (scoresError) {
+      console.log('❌ StudentSportsScores - Erro ao buscar pontuações:', scoresError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar pontuações'
+      });
+    }
+
+    console.log('🔵 StudentSportsScores - Pontuações encontradas:', scores.length);
+
+    // 3. Agrupar pontuações por esporte
+    const scoresBySport = {};
+    scores.forEach(score => {
+      const sportId = score.sportId;
+      
+      if (!scoresBySport[sportId]) {
+        scoresBySport[sportId] = [];
+      }
+      
+      scoresBySport[sportId].push({
+        id: score.id,
+        score: score.score,
+        notes: score.notes,
+        lessonDate: score.lessonDate,
+        createdAt: score.createdAt,
+        className: score.class.name
+      });
+    });
+
+    // 4. Criar dados completos para todos os esportes
+    const sportsData = allSports.map(sport => {
+      const sportScores = scoresBySport[sport.id] || [];
+      const totalScore = sportScores.reduce((sum, score) => sum + score.score, 0);
+      const totalClasses = sportScores.length;
+      const averageScore = totalClasses > 0 ? Math.round(totalScore / totalClasses) : 0;
+
+      return {
+        sport: {
+          id: sport.id,
+          name: sport.name,
+          color: sport.color || '#F9BB55',
+          icon: sport.icon || '🏅'
+        },
+        scores: sportScores,
+        totalScore,
+        totalClasses,
+        averageScore
+      };
+    });
+
+    console.log('🔵 StudentSportsScores - Esportes processados:', sportsData.length);
+    console.log('🔵 StudentSportsScores - Esportes com pontuação:', sportsData.filter(s => s.totalClasses > 0).length);
+    console.log('🔵 StudentSportsScores - Esportes sem pontuação:', sportsData.filter(s => s.totalClasses === 0).length);
+
+    res.json({
+      success: true,
+      data: sportsData
+    });
+
+  } catch (error) {
+    console.error('❌ StudentSportsScores - Erro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar dados de presença do aluno
+router.get('/student/attendance', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔵 StudentAttendance - Recebendo requisição');
+    console.log('🔵 StudentAttendance - User:', req.user);
+    
+    const userId = req.user.userId;
+    
+    // Buscar todas as presenças do aluno usando Supabase
+    const { data: attendances, error: attendancesError } = await supabase
+      .from('attendances')
+      .select(`
+        id,
+        isPresent,
+        lessonDate,
+        notes,
+        createdAt,
+        class:classes!attendances_classId_fkey(
+          id, name
+        ),
+        teacherClass:teacher_classes!attendances_teacherClassId_fkey(
+          id, subject, date
+        ),
+        teacher:users!attendances_teacherId_fkey(
+          id, name
+        )
+      `)
+      .eq('studentId', userId)
+      .order('lessonDate', { ascending: false });
+
+    if (attendancesError) {
+      console.log('❌ StudentAttendance - Erro ao buscar presenças:', attendancesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar presenças'
+      });
+    }
+
+    console.log('🔵 StudentAttendance - Presenças encontradas:', attendances.length);
+
+    // Calcular estatísticas
+    const totalClasses = attendances.length;
+    const presentClasses = attendances.filter(a => a.isPresent).length;
+    const absentClasses = totalClasses - presentClasses;
+    const attendanceRate = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
+
+    // Calcular sequência atual (streak)
+    let currentStreak = 0;
+    for (let i = 0; i < attendances.length; i++) {
+      if (attendances[i].isPresent) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+
+    // Buscar informações da turma do aluno
+    const { data: classStudent, error: classError } = await supabase
+      .from('class_students')
+      .select(`
+        class:classes!class_students_classId_fkey(
+          id, name, school, grade,
+          teacher:users!classes_teacherId_fkey(
+            id, name
+          )
+        )
+      `)
+      .eq('studentId', userId)
+      .eq('isActive', true)
+      .single();
+
+    let classInfo = null;
+    if (classStudent && classStudent.class) {
+      classInfo = {
+        name: classStudent.class.name,
+        school: classStudent.class.school || 'N/A',
+        grade: classStudent.class.grade || 'N/A',
+        teacher: classStudent.class.teacher.name
+      };
+    }
+
+    // Preparar histórico recente (últimas 10 presenças)
+    const recentAttendance = attendances.slice(0, 10).map(attendance => ({
+      id: attendance.id,
+      date: attendance.lessonDate,
+      isPresent: attendance.isPresent,
+      classSubject: attendance.teacherClass?.subject || 'N/A',
+      teacherName: attendance.teacher?.name || 'N/A',
+      notes: attendance.notes
+    }));
+
+    const responseData = {
+      totalClasses,
+      presentClasses,
+      absentClasses,
+      attendanceRate,
+      streak: currentStreak,
+      classInfo,
+      recentAttendance
+    };
+
+    console.log('🔵 StudentAttendance - Dados processados:', responseData);
+
+    res.json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ StudentAttendance - Erro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar conquistas e medalhas do aluno
+router.get('/student/achievements', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔵 StudentAchievements - Recebendo requisição');
+    console.log('🔵 StudentAchievements - User:', req.user);
+    
+    const userId = req.user.userId;
+    
+    // Buscar conquistas desbloqueadas do aluno
+    const { data: userAchievements, error: achievementsError } = await supabase
+      .from('user_achievements')
+      .select(`
+        id,
+        unlockedAt,
+        isActive,
+        achievement:achievements!user_achievements_achievementId_fkey(
+          id, name, description, icon, category, rarity, color, requirement, xpReward
+        )
+      `)
+      .eq('userId', userId)
+      .eq('isActive', true)
+      .order('unlockedAt', { ascending: false });
+
+    if (achievementsError) {
+      console.log('❌ StudentAchievements - Erro ao buscar conquistas:', achievementsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar conquistas'
+      });
+    }
+
+    // Buscar medalhas desbloqueadas do aluno
+    const { data: userMedals, error: medalsError } = await supabase
+      .from('user_medals')
+      .select(`
+        id,
+        unlockedAt,
+        isActive,
+        medal:medals!user_medals_medalId_fkey(
+          id, name, description, icon, category, rarity, color, requirement, xpReward
+        )
+      `)
+      .eq('userId', userId)
+      .eq('isActive', true)
+      .order('unlockedAt', { ascending: false });
+
+    if (medalsError) {
+      console.log('❌ StudentAchievements - Erro ao buscar medalhas:', medalsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar medalhas'
+      });
+    }
+
+    // Buscar todas as conquistas disponíveis para calcular porcentagem
+    const { data: allAchievements, error: allAchievementsError } = await supabase
+      .from('achievements')
+      .select('id')
+      .eq('isActive', true);
+
+    // Buscar todas as medalhas disponíveis para calcular porcentagem
+    const { data: allMedals, error: allMedalsError } = await supabase
+      .from('medals')
+      .select('id')
+      .eq('isActive', true);
+
+    const achievementsCount = userAchievements?.length || 0;
+    const medalsCount = userMedals?.length || 0;
+    const totalAchievements = allAchievements?.length || 0;
+    const totalMedals = allMedals?.length || 0;
+
+    const achievementsPercentage = totalAchievements > 0 ? Math.round((achievementsCount / totalAchievements) * 100) : 0;
+    const medalsPercentage = totalMedals > 0 ? Math.round((medalsCount / totalMedals) * 100) : 0;
+
+    const responseData = {
+      achievements: {
+        unlocked: userAchievements?.map(ua => ({
+          id: ua.id,
+          unlockedAt: ua.unlockedAt,
+          ...ua.achievement
+        })) || [],
+        count: achievementsCount,
+        total: totalAchievements,
+        percentage: achievementsPercentage
+      },
+      medals: {
+        unlocked: userMedals?.map(um => ({
+          id: um.id,
+          unlockedAt: um.unlockedAt,
+          ...um.medal
+        })) || [],
+        count: medalsCount,
+        total: totalMedals,
+        percentage: medalsPercentage
+      }
+    };
+
+    console.log('🔵 StudentAchievements - Dados processados:', {
+      achievements: achievementsCount,
+      medals: medalsCount,
+      achievementsPercentage,
+      medalsPercentage
+    });
+
+    res.json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ StudentAchievements - Erro:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Buscar ranking da turma do aluno
+router.get('/student/ranking', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔵 StudentRanking - Recebendo requisição');
+    console.log('🔵 StudentRanking - User:', req.user);
+    
+    const userId = req.user.userId;
+    console.log('🔵 StudentRanking - Buscando turma do aluno...');
+    console.log('🔵 StudentRanking - UserId:', userId);
+    
+    // Buscar a turma do aluno
+    const { data: classStudent, error: classError } = await supabase
+      .from('class_students')
+      .select(`
+        classId,
+        class:classes!class_students_classId_fkey(
+          id, name, school, grade,
+          teacher:users!classes_teacherId_fkey(
+            id, name, email, avatar
+          )
+        )
+      `)
+      .eq('studentId', userId)
+      .eq('isActive', true)
+      .single();
+
+    console.log('🔵 StudentRanking - Resultado da busca de turma:', { classStudent, classError });
+
+    if (classError || !classStudent) {
+      console.log('❌ StudentRanking - Aluno não está em nenhuma turma:', classError);
+      return res.status(404).json({
+        success: false,
+        message: 'Aluno não está em nenhuma turma ativa'
+      });
+    }
+
+    console.log('✅ StudentRanking - Turma encontrada:', classStudent.class.name);
+    console.log('🔵 StudentRanking - ClassId:', classStudent.classId);
+
+    // Buscar todos os alunos da turma com suas pontuações
+    const { data: classmates, error: classmatesError } = await supabase
+      .from('class_students')
+      .select(`
+        studentId,
+        student:users!class_students_studentId_fkey(
+          id, name, email, avatar, totalXP, level, cardBanner, cardAnimation, cardBackground
+        )
+      `)
+      .eq('classId', classStudent.classId)
+      .eq('isActive', true);
+
+    if (classmatesError) {
+      console.log('❌ StudentRanking - Erro ao buscar colegas:', classmatesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar ranking da turma'
+      });
+    }
+
+    // Buscar pontuações de todos os alunos da turma
+    const studentIds = classmates.map(cs => cs.studentId);
+    const { data: allScores, error: scoresError } = await supabase
+      .from('class_scores')
+      .select('studentId, score')
+      .in('studentId', studentIds);
+
+    if (scoresError) {
+      console.log('❌ StudentRanking - Erro ao buscar pontuações:', scoresError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro ao buscar pontuações'
+      });
+    }
+
+    // Calcular pontuação total por aluno
+    const scoresByStudent = {};
+    allScores.forEach(score => {
+      if (!scoresByStudent[score.studentId]) {
+        scoresByStudent[score.studentId] = 0;
+      }
+      scoresByStudent[score.studentId] += score.score;
+    });
+
+    // Preparar ranking
+    const ranking = classmates.map(classmate => ({
+      id: classmate.student.id,
+      name: classmate.student.name,
+      email: classmate.student.email,
+      avatar: classmate.student.avatar,
+      totalXP: classmate.student.totalXP || 0,
+      level: classmate.student.level || 1,
+      cardBanner: classmate.student.cardBanner || 'Banner Padrão',
+      cardAnimation: classmate.student.cardAnimation || 'none',
+      cardBackground: classmate.student.cardBackground || 'default',
+      totalScore: scoresByStudent[classmate.studentId] || 0,
+      isCurrentUser: classmate.studentId === userId
+    }));
+
+    // Ordenar por pontuação total (decrescente)
+    ranking.sort((a, b) => b.totalScore - a.totalScore);
+
+    // Adicionar posição no ranking
+    ranking.forEach((student, index) => {
+      student.position = index + 1;
+    });
+
+    const responseData = {
+      class: {
+        id: classStudent.class.id,
+        name: classStudent.class.name,
+        school: classStudent.class.school,
+        grade: classStudent.class.grade,
+        teacher: classStudent.class.teacher
+      },
+      ranking,
+      totalStudents: ranking.length,
+      currentUserPosition: ranking.find(s => s.isCurrentUser)?.position || 0
+    };
+
+    console.log('🔵 StudentRanking - Ranking processado:', {
+      totalStudents: ranking.length,
+      currentUserPosition: responseData.currentUserPosition
+    });
+
+    res.json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ StudentRanking - Erro:', error);
     res.status(500).json({
       success: false,
       message: 'Erro interno do servidor'

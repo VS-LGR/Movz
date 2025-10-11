@@ -62,8 +62,8 @@ router.get('/', async (req, res) => {
         const { count: userSportsCount } = await supabase
           .from('user_sports')
           .select('*', { count: 'exact', head: true })
-          .eq('sport_id', sport.id)
-          .eq('is_active', true);
+          .eq('sportId', sport.id)
+          .eq('isActive', true);
 
         return {
           ...sport,
@@ -134,8 +134,8 @@ router.get('/:id', async (req, res) => {
     const { count: userSportsCount } = await supabase
       .from('user_sports')
       .select('*', { count: 'exact', head: true })
-      .eq('sport_id', id)
-      .eq('is_active', true);
+      .eq('sportId', id)
+      .eq('isActive', true);
 
     const { count: contentsCount } = await supabase
       .from('contents')

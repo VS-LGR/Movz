@@ -109,6 +109,10 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       'Banner Rose Gold': { primary: '#E8B4B8', secondary: '#F5C6CB', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#FFF' },
       'Banner Espaço': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)' },
       'Banner Void': { primary: '#2C2C2C', secondary: '#404040', text: '#FFF', overlay: 'rgba(0,0,0,0.3)', numbers: '#F0F0F0' },
+      'Banner Aim': { primary: '#FF4444', secondary: '#FF6666', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFAAAA' },
+      'Banner Capivara': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#D2B48C' },
+      'Banner Capivara Gorda': { primary: '#654321', secondary: '#8B4513', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#DEB887' },
+      'Banner Gatinhos': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFC0CB' },
     };
     return themes[bannerName] || themes['Banner Padrão'];
   };

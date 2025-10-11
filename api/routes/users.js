@@ -66,15 +66,15 @@ router.get('/profile', authenticateToken, async (req, res) => {
       .from('user_sports')
       .select(`
         *,
-        sports:sport_id (
+        sports:sportId (
           id,
           name,
           icon,
           color
         )
       `)
-      .eq('user_id', userId)
-      .eq('is_active', true);
+      .eq('userId', userId)
+      .eq('isActive', true);
 
     if (sportsError) {
       console.error('Erro ao buscar esportes do usuário:', sportsError);
@@ -92,12 +92,53 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const { data: classScores } = await supabase
       .from('class_scores')
       .select('score')
-      .eq('student_id', userId);
+      .eq('studentId', userId);
 
     const { data: attendances } = await supabase
       .from('attendances')
       .select('isPresent')
-      .eq('student_id', userId);
+      .eq('studentId', userId);
+
+    // Buscar conquistas desbloqueadas
+    const { data: userAchievements, error: achievementsError } = await supabase
+      .from('user_achievements')
+      .select(`
+        id,
+        unlockedAt,
+        isActive,
+        achievement:achievements!user_achievements_achievementId_fkey(
+          id, name, description, icon, category, rarity, color, requirement, xpReward
+        )
+      `)
+      .eq('userId', userId)
+      .eq('isActive', true)
+      .order('unlockedAt', { ascending: false });
+
+    // Buscar medalhas desbloqueadas
+    const { data: userMedals, error: medalsError } = await supabase
+      .from('user_medals')
+      .select(`
+        id,
+        unlockedAt,
+        isActive,
+        medal:medals!user_medals_medalId_fkey(
+          id, name, description, icon, category, rarity, color, requirement, xpReward
+        )
+      `)
+      .eq('userId', userId)
+      .eq('isActive', true)
+      .order('unlockedAt', { ascending: false });
+
+    // Buscar todas as conquistas e medalhas para calcular porcentagem
+    const { data: allAchievements } = await supabase
+      .from('achievements')
+      .select('id')
+      .eq('isActive', true);
+
+    const { data: allMedals } = await supabase
+      .from('medals')
+      .select('id')
+      .eq('isActive', true);
 
     // Calcular estatísticas
     const totalClasses = classScores?.length || 0;
@@ -105,6 +146,14 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const presentClasses = attendances?.filter(a => a.isPresent).length || 0;
     const attendanceRate = attendances?.length > 0 ? Math.round((presentClasses / attendances.length) * 100) : 0;
     const sportsCount = userSports?.length || 0;
+
+    const achievementsCount = userAchievements?.length || 0;
+    const medalsCount = userMedals?.length || 0;
+    const totalAchievements = allAchievements?.length || 0;
+    const totalMedals = allMedals?.length || 0;
+
+    const achievementsPercentage = totalAchievements > 0 ? Math.round((achievementsCount / totalAchievements) * 100) : 0;
+    const medalsPercentage = totalMedals > 0 ? Math.round((medalsCount / totalMedals) * 100) : 0;
 
     const userWithSports = {
       ...user,
@@ -124,7 +173,27 @@ router.get('/profile', authenticateToken, async (req, res) => {
       totalClasses,
       maxScore,
       attendanceRate,
-      sportsCount
+      sportsCount,
+      achievements: {
+        unlocked: userAchievements?.map(ua => ({
+          id: ua.id,
+          unlockedAt: ua.unlockedAt,
+          ...ua.achievement
+        })) || [],
+        count: achievementsCount,
+        total: totalAchievements,
+        percentage: achievementsPercentage
+      },
+      medals: {
+        unlocked: userMedals?.map(um => ({
+          id: um.id,
+          unlockedAt: um.unlockedAt,
+          ...um.medal
+        })) || [],
+        count: medalsCount,
+        total: totalMedals,
+        percentage: medalsPercentage
+      }
     };
 
     res.json({

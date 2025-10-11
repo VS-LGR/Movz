@@ -239,17 +239,22 @@ class ApiService {
   }
 
   async getStudentSportsScores() {
-    return this.request('/scores/student/sports');
+    return this.request('/auth/student/sports-scores');
   }
 
   // Buscar ranking da turma do aluno
   async getStudentRanking() {
-    return this.request('/scores/student/ranking');
+    return this.request('/auth/student/ranking');
+  }
+
+  // Buscar conquistas e medalhas do aluno
+  async getStudentAchievements() {
+    return this.request('/auth/student/achievements');
   }
 
   // Buscar dados de presença do aluno
   async getStudentAttendance() {
-    return this.request('/scores/student/attendance');
+    return this.request('/auth/student/attendance');
   }
 
   // ===== PERSONALIZAÇÃO E XP =====
@@ -259,14 +264,18 @@ class ApiService {
     return this.request('/users/profile');
   }
 
+  // Buscar personalização do card
+  async getCardCustomization() {
+    return this.request('/customization/student/profile');
+  }
+
   // Atualizar personalização do card
   async updateCardCustomization(background, animation, banner) {
-    return this.request('/customization/student/card', {
+    return this.request('/customization/student/profile', {
       method: 'PUT',
       body: JSON.stringify({ 
-        background: banner, // Usar banner como background
-        animation, 
-        banner 
+        cardBanner: banner,
+        cardTheme: animation
       })
     });
   }

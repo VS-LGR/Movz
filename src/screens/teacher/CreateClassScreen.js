@@ -578,7 +578,10 @@ const CreateClassScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curren
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>Movz</Text>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>Muvz</Text>
+            <View style={styles.logoAccent} />
+          </View>
           <TouchableOpacity 
             style={styles.menuButton}
             onPress={() => setIsMenuVisible(!isMenuVisible)}
@@ -670,24 +673,36 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
   logo: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
     fontFamily: 'Poppins',
   },
+  logoAccent: {
+    width: 4,
+    height: 28,
+    backgroundColor: '#F9BB55',
+    marginLeft: 8,
+    borderRadius: 2,
+  },
   menuButton: {
-    padding: 10,
+    padding: 8,
   },
   menuIcon: {
-    width: 20,
-    height: 15,
+    width: 24,
+    height: 18,
     justifyContent: 'space-between',
   },
   menuLine: {
-    height: 2,
+    height: 3,
     backgroundColor: '#D9D9D9',
-    borderRadius: 1,
+    borderRadius: 2,
   },
   stepIndicator: {
     flexDirection: 'row',
