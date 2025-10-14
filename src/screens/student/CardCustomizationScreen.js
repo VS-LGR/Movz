@@ -226,13 +226,22 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.title}>🎨 Personalizar Card</Text>
-        <Text style={styles.subtitle}>Customize seu card de pontuação</Text>
-        {profileData && (
-          <Text style={styles.xpInfo}>
-            💎 Nível {profileData?.level || 1} • {profileData?.totalXP || 0} XP
-          </Text>
-        )}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => onNavigate('home')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>🎨 Personalizar Card</Text>
+          <Text style={styles.subtitle}>Customize seu card de pontuação</Text>
+          {profileData && (
+            <Text style={styles.xpInfo}>
+              💎 Nível {profileData?.level || 1} • {profileData?.totalXP || 0} XP
+            </Text>
+          )}
+        </View>
       </View>
       <View style={styles.headerRight}>
         <TouchableOpacity
@@ -485,21 +494,29 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       <View style={styles.statsSection}>
         <Text style={styles.statsTitle}>Suas Conquistas</Text>
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => onNavigate('medals')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>0</Text>
             <Text style={styles.statLabel}>Medalhas</Text>
             <Text style={styles.statSubtext}>
               0% desbloqueadas
             </Text>
-          </View>
+          </TouchableOpacity>
           
-          <View style={styles.statCard}>
+          <TouchableOpacity 
+            style={styles.statCard}
+            onPress={() => onNavigate('achievements')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.statNumber}>0</Text>
             <Text style={styles.statLabel}>Conquistas</Text>
             <Text style={styles.statSubtext}>
               0% desbloqueadas
             </Text>
-          </View>
+          </TouchableOpacity>
           
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{profileData?.level || 1}</Text>
@@ -628,6 +645,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9BB55',
   },
   headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 40,
+    minHeight: 40,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  headerTextContainer: {
     flex: 1,
   },
   headerRight: {

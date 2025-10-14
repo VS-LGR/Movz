@@ -626,7 +626,7 @@ router.get('/classes/:classId/details', authenticateToken, requireInstitution, a
       .from('class_scores')
       .select(`
         *,
-        student:users(id, name),
+        student:users!class_scores_studentId_fkey(id, name),
         sport:sports(id, name)
       `)
       .eq('classId', classId);

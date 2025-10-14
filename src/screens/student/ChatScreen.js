@@ -150,6 +150,13 @@ const ChatScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
       >
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => onNavigate('home')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
           <Text style={styles.logo}>Movz</Text>
           <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
@@ -230,6 +237,20 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(249, 187, 85, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 40,
+    minHeight: 40,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#F9BB55',
+    fontWeight: 'bold',
   },
   logo: {
     fontSize: 24,

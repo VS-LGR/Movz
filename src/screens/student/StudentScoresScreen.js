@@ -511,6 +511,13 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => onNavigate('home')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
             <View style={styles.titleContainer}>
               <Image
                 source={getCachedImage('Scores Icon', 'icon')}
@@ -594,7 +601,23 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 40,
+    minHeight: 40,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#000',
+    fontWeight: 'bold',
   },
   menuButton: {
     marginLeft: 15,

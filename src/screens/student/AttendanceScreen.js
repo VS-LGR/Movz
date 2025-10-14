@@ -268,13 +268,22 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>📊 Presenças</Text>
-            <Text style={styles.subtitle}>Acompanhe sua frequência nas aulas</Text>
-            {attendanceData && (
-              <Text style={styles.debugInfo}>
-                🔍 Debug: {attendanceData.totalClasses} aulas | {attendanceData.recentAttendance?.length || 0} no histórico
-              </Text>
-            )}
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => onNavigate('home')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>📊 Presenças</Text>
+              <Text style={styles.subtitle}>Acompanhe sua frequência nas aulas</Text>
+              {attendanceData && (
+                <Text style={styles.debugInfo}>
+                  🔍 Debug: {attendanceData.totalClasses} aulas | {attendanceData.recentAttendance?.length || 0} no histórico
+                </Text>
+              )}
+            </View>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -370,6 +379,26 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 40,
+    minHeight: 40,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#000',
+    fontWeight: 'bold',
+  },
+  titleContainer: {
     flex: 1,
     alignItems: 'center',
   },
