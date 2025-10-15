@@ -45,19 +45,42 @@ const MyClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentU
   const loadClasses = async () => {
     try {
       setIsLoading(true);
-      console.log('🔵 Carregando turmas do professor...');
+      console.log('🔵 MyClassesScreen - Carregando turmas do professor...');
+      console.log('🔵 MyClassesScreen - CurrentUser:', currentUser);
       
       const response = await apiService.getClasses();
-      console.log('🔵 Resposta das turmas:', response);
+      console.log('🔵 MyClassesScreen - Resposta da API:', response);
       
       if (response.success) {
-        setClasses(response.data || []);
-        calculateStats(response.data || []);
+        console.log('🔵 MyClassesScreen - Dados recebidos:', response.data);
+        console.log('🔵 MyClassesScreen - Tipo dos dados:', typeof response.data);
+        console.log('🔵 MyClassesScreen - É array?', Array.isArray(response.data));
+        
+        if (response.data && Array.isArray(response.data)) {
+          console.log('🔵 MyClassesScreen - Processando cada turma:');
+          response.data.forEach((classItem, index) => {
+            console.log(`🔵 MyClassesScreen - Turma ${index}:`, {
+              id: classItem?.id,
+              name: classItem?.name,
+              school: classItem?.school,
+              grade: classItem?.grade,
+              students: classItem?.students?.length || 0
+            });
+          });
+          
+          setClasses(response.data);
+          calculateStats(response.data);
+        } else {
+          console.error('🔵 MyClassesScreen - Dados inválidos recebidos:', response.data);
+          setClasses([]);
+          calculateStats([]);
+        }
       } else {
+        console.error('🔵 MyClassesScreen - Erro na resposta:', response.message);
         Alert.alert('Erro', response.message || 'Erro ao carregar turmas');
       }
     } catch (error) {
-      console.error('Erro ao carregar turmas:', error);
+      console.error('🔵 MyClassesScreen - Erro ao carregar turmas:', error);
       Alert.alert('Erro', 'Erro ao carregar turmas');
     } finally {
       setIsLoading(false);
@@ -65,8 +88,21 @@ const MyClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentU
   };
 
   const calculateStats = (classesData) => {
+    if (!classesData || !Array.isArray(classesData)) {
+      console.warn('🔵 MyClassesScreen - calculateStats recebeu dados inválidos:', classesData);
+      setStats({
+        totalClasses: 0,
+        totalStudents: 0,
+        averageStudentsPerClass: 0
+      });
+      return;
+    }
+    
     const totalClasses = classesData.length;
-    const totalStudents = classesData.reduce((sum, classItem) => sum + (classItem.students?.length || 0), 0);
+    const totalStudents = classesData.reduce((sum, classItem) => {
+      if (!classItem) return sum;
+      return sum + (classItem.students?.length || 0);
+    }, 0);
     const averageStudentsPerClass = totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0;
     
     setStats({
@@ -82,11 +118,18 @@ const MyClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentU
       return;
     }
 
-    const filtered = classes.filter(classItem =>
-      classItem.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      classItem.school.toLowerCase().includes(searchText.toLowerCase()) ||
-      classItem.grade.toLowerCase().includes(searchText.toLowerCase())
-    );
+    const filtered = classes.filter(classItem => {
+      if (!classItem) {
+        console.warn('🔵 MyClassesScreen - classItem é undefined:', classItem);
+        return false;
+      }
+      
+      return (
+        (classItem.name && classItem.name.toLowerCase().includes(searchText.toLowerCase())) ||
+        (classItem.school && classItem.school.toLowerCase().includes(searchText.toLowerCase())) ||
+        (classItem.grade && classItem.grade.toLowerCase().includes(searchText.toLowerCase()))
+      );
+    });
     
     setFilteredClasses(filtered);
   };
@@ -101,55 +144,72 @@ const MyClassesScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentU
     onNavigate('class', { classData: classItem });
   };
 
-  const renderClassCard = (classItem) => (
-    <View key={classItem.id} style={styles.classCard}>
-      <View style={styles.classHeader}>
-        <View style={styles.classInfo}>
-          <Text style={styles.className}>{classItem.name}</Text>
-          <Text style={styles.classDetails}>
-            {classItem.school} - {classItem.grade}
+  const renderClassCard = (classItem) => {
+    if (!classItem) {
+      console.warn('🔵 MyClassesScreen - Tentando renderizar classItem undefined:', classItem);
+      return null;
+    }
+    
+    return (
+      <View key={classItem.id} style={styles.classCard}>
+        <View style={styles.classHeader}>
+          <View style={styles.classInfo}>
+            <Text style={styles.className}>{classItem.name || 'Nome não disponível'}</Text>
+            <Text style={styles.classDetails}>
+              {classItem.school || 'Escola não informada'} - {classItem.grade || 'Série não informada'}
+            </Text>
+            {classItem.description && (
+              <Text style={styles.classDescription}>{classItem.description}</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.startClassButton}
+            onPress={() => handleStartClass(classItem)}
+          >
+            <Text style={styles.startClassButtonText}>Iniciar Aula</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.studentsSection}>
+          <Text style={styles.studentsTitle}>
+            Alunos ({classItem.students?.length || 0})
           </Text>
-          {classItem.description && (
-            <Text style={styles.classDescription}>{classItem.description}</Text>
+          
+          {classItem.students && classItem.students.length > 0 ? (
+            <ScrollView 
+              style={styles.studentsList} 
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+            >
+              {classItem.students.map((student, index) => {
+                console.log(`🔵 MyClassesScreen - Processando estudante ${index}:`, student);
+                
+                // Verificar se student tem a estrutura esperada
+                if (!student) {
+                  console.warn(`🔵 MyClassesScreen - student ${index} é undefined`);
+                  return null;
+                }
+                
+                return (
+                  <View key={student.id || index} style={styles.studentCard}>
+                    <View style={styles.studentInfo}>
+                      <Text style={styles.studentName}>{student.name || 'Nome não disponível'}</Text>
+                      <Text style={styles.studentEmail}>{student.email || 'Email não disponível'}</Text>
+                      {student.age && (
+                        <Text style={styles.studentAge}>{student.age} anos</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <Text style={styles.noStudentsText}>Nenhum aluno cadastrado</Text>
           )}
         </View>
-        <TouchableOpacity
-          style={styles.startClassButton}
-          onPress={() => handleStartClass(classItem)}
-        >
-          <Text style={styles.startClassButtonText}>Iniciar Aula</Text>
-        </TouchableOpacity>
       </View>
-
-      <View style={styles.studentsSection}>
-        <Text style={styles.studentsTitle}>
-          Alunos ({classItem.students?.length || 0})
-        </Text>
-        
-        {classItem.students && classItem.students.length > 0 ? (
-          <ScrollView 
-            style={styles.studentsList} 
-            showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={true}
-          >
-            {classItem.students.map((classStudent) => (
-              <View key={classStudent.student.id} style={styles.studentCard}>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName}>{classStudent.student.name}</Text>
-                  <Text style={styles.studentEmail}>{classStudent.student.email}</Text>
-                  {classStudent.student.age && (
-                    <Text style={styles.studentAge}>{classStudent.student.age} anos</Text>
-                  )}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <Text style={styles.noStudentsText}>Nenhum aluno cadastrado</Text>
-        )}
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderStats = () => (
     <View style={styles.statsContainer}>

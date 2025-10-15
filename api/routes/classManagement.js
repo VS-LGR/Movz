@@ -49,6 +49,37 @@ router.get('/classes', authenticateToken, requireTeacher, async (req, res) => {
     console.log('🔵 ClassManagement GET - User:', req.user);
     
     // Buscar turmas do professor usando Supabase
+    console.log('🔵 ClassManagement GET - Buscando turmas para teacherId:', req.user.userId);
+    
+    // Primeiro, vamos fazer uma consulta simples para verificar se há turmas
+    const { data: simpleClasses, error: simpleError } = await supabase
+      .from('classes')
+      .select('*')
+      .eq('teacherId', req.user.userId)
+      .eq('isActive', true);
+
+    console.log('🔵 ClassManagement GET - Consulta simples - Erro:', simpleError);
+    console.log('🔵 ClassManagement GET - Consulta simples - Dados:', simpleClasses);
+    
+    if (simpleError) {
+      console.error('❌ ClassManagement GET - Erro na consulta simples:', simpleError);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        error: simpleError.message
+      });
+    }
+    
+    // Se não há turmas, retornar array vazio
+    if (!simpleClasses || simpleClasses.length === 0) {
+      console.log('🔵 ClassManagement GET - Nenhuma turma encontrada');
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+    
+    // Agora fazer a consulta completa com relacionamentos
     const { data: classes, error: classesError } = await supabase
       .from('classes')
       .select(`
@@ -64,31 +95,87 @@ router.get('/classes', authenticateToken, requireTeacher, async (req, res) => {
       .eq('isActive', true)
       .order('createdAt', { ascending: false });
 
+    console.log('🔵 ClassManagement GET - Consulta completa - Erro:', classesError);
+    console.log('🔵 ClassManagement GET - Consulta completa - Dados:', classes);
+
     if (classesError) {
-      console.error('❌ ClassManagement GET - Erro ao buscar turmas:', classesError);
-      return res.status(500).json({
-        success: false,
-        message: 'Erro interno do servidor',
-        error: classesError.message
+      console.error('❌ ClassManagement GET - Erro na consulta completa:', classesError);
+      console.log('🔵 ClassManagement GET - Usando dados da consulta simples como fallback');
+      
+      // Usar dados da consulta simples como fallback
+      const processedClasses = simpleClasses.map(classItem => ({
+        id: classItem.id,
+        name: classItem.name,
+        description: classItem.description,
+        school: classItem.school,
+        grade: classItem.grade,
+        teacherId: classItem.teacherId,
+        institutionId: classItem.institutionId,
+        isActive: classItem.isActive,
+        createdAt: classItem.createdAt,
+        updatedAt: classItem.updatedAt,
+        students: [] // Sem estudantes por enquanto
+      }));
+      
+      return res.json({
+        success: true,
+        data: processedClasses
       });
     }
     
     console.log('🔵 ClassManagement GET - Turmas encontradas:', classes?.length || 0);
 
     // Processar dados para garantir estrutura correta
-    const processedClasses = (classes || []).map(classItem => ({
-      id: classItem.id,
-      name: classItem.name,
-      description: classItem.description,
-      school: classItem.school,
-      grade: classItem.grade,
-      teacherId: classItem.teacherId,
-      institutionId: classItem.institutionId,
-      isActive: classItem.isActive,
-      createdAt: classItem.createdAt,
-      updatedAt: classItem.updatedAt,
-      students: (classItem.students || []).filter(cs => cs.student).map(cs => cs.student)
-    }));
+    console.log('🔵 ClassManagement GET - Processando dados das turmas...');
+    
+    const processedClasses = (classes || []).map(classItem => {
+      console.log('🔵 ClassManagement GET - Processando turma:', {
+        id: classItem.id,
+        name: classItem.name,
+        studentsCount: classItem.students?.length || 0,
+        studentsStructure: classItem.students
+      });
+      
+      // Processar estudantes com validação
+      let processedStudents = [];
+      if (classItem.students && Array.isArray(classItem.students)) {
+        processedStudents = classItem.students
+          .filter(cs => {
+            if (!cs) {
+              console.warn('🔵 ClassManagement GET - classStudent é undefined');
+              return false;
+            }
+            if (!cs.student) {
+              console.warn('🔵 ClassManagement GET - classStudent.student é undefined:', cs);
+              return false;
+            }
+            return true;
+          })
+          .map(cs => ({
+            id: cs.student.id,
+            name: cs.student.name,
+            email: cs.student.email,
+            age: cs.student.age,
+            avatar: cs.student.avatar
+          }));
+      }
+      
+      return {
+        id: classItem.id,
+        name: classItem.name,
+        description: classItem.description,
+        school: classItem.school,
+        grade: classItem.grade,
+        teacherId: classItem.teacherId,
+        institutionId: classItem.institutionId,
+        isActive: classItem.isActive,
+        createdAt: classItem.createdAt,
+        updatedAt: classItem.updatedAt,
+        students: processedStudents
+      };
+    });
+    
+    console.log('🔵 ClassManagement GET - Turmas processadas:', processedClasses.length);
 
     res.json({
       success: true,
