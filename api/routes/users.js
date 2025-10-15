@@ -85,8 +85,17 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const level = user.level || 1;
     const xpForCurrentLevel = (level - 1) * 1000;
     const xpForNextLevel = level * 1000;
-    const progress = totalXP - xpForCurrentLevel;
-    const needed = xpForNextLevel - totalXP;
+    const progress = Math.max(0, Math.min(1000, totalXP - xpForCurrentLevel));
+    const needed = Math.max(0, xpForNextLevel - totalXP);
+    
+    console.log('🔍 API - XP Debug:', {
+      totalXP,
+      level,
+      xpForCurrentLevel,
+      xpForNextLevel,
+      progress,
+      needed
+    });
 
     // Buscar dados para conquistas e medalhas
     const { data: classScores } = await supabase

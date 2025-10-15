@@ -99,8 +99,7 @@ const SideMenu = ({ isVisible, onClose, onNavigate, currentUser, onLogout, userT
         { id: 'agenda', title: 'Agenda de Aulas', y: 200, height: 42, screen: 'teacherSchedule' },
         { id: 'classes', title: 'Minhas Aulas', y: 269, height: 42, screen: 'teacherClasses' },
         { id: 'myClasses', title: 'Minhas Turmas', y: 339, height: 42, screen: 'myClasses' },
-        { id: 'perfil', title: 'Meus Dados', y: 408, height: 42, screen: 'teacherProfile' },
-        { id: 'logout', title: 'Sair', y: 477, height: 42, screen: 'logout' },
+        { id: 'logout', title: 'Sair', y: 408, height: 42, screen: 'logout' },
       ];
     } else if (userType === 'INSTITUTION') {
       return [

@@ -10,11 +10,14 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
 import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
+import { getCachedImage } from '../../utils/imageCache';
 import Storage from '../../utils/storage';
+import useResponsive from '../../hooks/useResponsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -276,30 +279,18 @@ const AttendanceScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, current
               <Text style={styles.backArrow}>←</Text>
             </TouchableOpacity>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>📊 Presenças</Text>
-              <Text style={styles.subtitle}>Acompanhe sua frequência nas aulas</Text>
-              {attendanceData && (
-                <Text style={styles.debugInfo}>
-                  🔍 Debug: {attendanceData.totalClasses} aulas | {attendanceData.recentAttendance?.length || 0} no histórico
-                </Text>
-              )}
+              <Image
+                source={getCachedImage('Attendance Icon', 'icon')}
+                style={styles.titleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Presenças</Text>
             </View>
           </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={onRefresh}
-              disabled={refreshing}
-            >
-              <Text style={styles.refreshButtonText}>
-                {refreshing ? '🔄' : '🔄'}
-              </Text>
-            </TouchableOpacity>
-            <HamburgerButton
-              onPress={() => setIsMenuVisible(true)}
-              style={styles.menuButton}
-            />
-          </View>
+          <HamburgerButton
+            onPress={() => setIsMenuVisible(true)}
+            style={styles.menuButton}
+          />
         </View>
 
         {isLoading ? (
@@ -400,7 +391,13 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  titleIcon: {
+    width: 32,
+    height: 32,
+    marginRight: 12,
   },
   menuButton: {
     marginLeft: 15,

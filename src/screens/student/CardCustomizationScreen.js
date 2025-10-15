@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
+import AnimatedBanner from '../../components/AnimatedBanner';
 import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import { getCachedImage } from '../../utils/imageCache';
@@ -29,7 +30,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedBackground, setSelectedBackground] = useState(null);
-  const [selectedAnimation, setSelectedAnimation] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
@@ -59,7 +59,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         console.log('🔵 CardCustomizationScreen - cardBanner:', response.data.cardBanner);
         setProfileData(response.data);
         setSelectedBackground(response.data.cardBanner || 'Banner Padrão');
-        setSelectedAnimation(response.data.cardTheme || 'none');
       } else {
         console.error('🔴 CardCustomizationScreen - Erro na resposta:', response.message);
         console.error('🔴 CardCustomizationScreen - Response structure:', response);
@@ -67,7 +66,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         // Dados padrão em caso de erro
         setProfileData(null);
         setSelectedBackground('Banner Padrão');
-        setSelectedAnimation('none');
       }
     } catch (err) {
       console.error('🔴 CardCustomizationScreen - Erro ao carregar perfil:', err);
@@ -84,15 +82,15 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
   };
 
   const handleUpdateCustomization = async () => {
-    if (!selectedBackground || !selectedAnimation) {
-      Alert.alert('Atenção', 'Selecione um fundo e uma animação para continuar.');
+    if (!selectedBackground) {
+      Alert.alert('Atenção', 'Selecione um fundo para continuar.');
       return;
     }
 
     setIsUpdating(true);
     try {
       console.log('🔵 CardCustomizationScreen - Atualizando personalização...');
-      const response = await apiService.updateCardCustomization(selectedBackground, selectedAnimation, selectedBackground);
+      const response = await apiService.updateCardCustomization(selectedBackground, 'none', selectedBackground);
       console.log('🔵 CardCustomizationScreen - Resposta da atualização:', response);
       
       if (response.success) {
@@ -101,7 +99,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
         setProfileData(prev => ({
           ...prev,
           cardBanner: selectedBackground,
-          cardTheme: selectedAnimation
+          cardTheme: 'none'
         }));
       } else {
         Alert.alert('Erro', response.message || 'Erro ao atualizar personalização');
@@ -170,6 +168,8 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
       'Banner Capivara': { primary: '#8B4513', secondary: '#A0522D', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#D2B48C' },
       'Banner Capivara Gorda': { primary: '#654321', secondary: '#8B4513', text: '#FFF', overlay: 'rgba(0,0,0,0.5)', numbers: '#DEB887' },
       'Banner Gatinhos': { primary: '#FF69B4', secondary: '#FFB6C1', text: '#FFF', overlay: 'rgba(0,0,0,0.4)', numbers: '#FFC0CB' },
+      'Banner Soccer': { primary: '#228B22', secondary: '#32CD32', text: '#FFF', overlay: 'rgba(0,0,0,0.7)', numbers: '#FFF' },
+      'Banner Space': { primary: '#191970', secondary: '#4169E1', text: '#FFF', overlay: 'rgba(0,0,0,0.7)', numbers: '#FFF' },
     };
     return themes[bannerName] || themes['Banner Padrão'];
   };
@@ -190,13 +190,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
     };
   };
 
-  const getCardAnimationStyle = () => {
-    if (!selectedAnimation) return {};
-    
-    // Aqui você pode adicionar estilos de animação baseados na seleção
-    // Por enquanto, retornamos um objeto vazio
-    return {};
-  };
 
   const isCustomizationUnlocked = (customization) => {
     if (!profileData) return false;
@@ -234,11 +227,10 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
-          <Text style={styles.title}>🎨 Personalizar Card</Text>
-          <Text style={styles.subtitle}>Customize seu card de pontuação</Text>
+          <Text style={styles.title}>Personalizar Card</Text>
           {profileData && (
             <Text style={styles.xpInfo}>
-              💎 Nível {profileData?.level || 1} • {profileData?.totalXP || 0} XP
+              Nível {profileData?.level || 1} • {profileData?.totalXP || 0} XP
             </Text>
           )}
         </View>
@@ -265,15 +257,16 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
 
   const renderPreviewCard = () => {
     const cardStyle = getCardStyle();
-    const animationStyle = getCardAnimationStyle();
-    
     return (
       <View style={styles.previewBannerContainer}>
         <View style={styles.previewBannerHeader}>
-          <Text style={styles.previewBannerTitle}>🎨 Preview do Seu Card</Text>
+          <Text style={styles.previewBannerTitle}>Preview do Seu Card</Text>
           <Text style={styles.previewBannerSubtitle}>Como outros alunos te verão no ranking</Text>
         </View>
-        <View style={[styles.previewBanner, cardStyle, animationStyle]}>
+        <AnimatedBanner 
+          bannerName={selectedBackground}
+          style={[styles.previewBanner, cardStyle]}
+        >
           {selectedBackground && selectedBackground !== 'Banner Padrão' && (
             <Image 
               source={getCachedImage(selectedBackground, 'banner')}
@@ -383,7 +376,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
               </View>
             </View>
           </View>
-        </View>
+        </AnimatedBanner>
       </View>
     );
   };
@@ -433,7 +426,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
                     </View>
                   ) : (
                     <View style={styles.bannerPreview}>
-                      <Text style={styles.previewIcon}>🎨</Text>
+                      <Text style={styles.previewIcon}>🖼️</Text>
                     </View>
                   )}
                   
@@ -589,20 +582,6 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
                 setSelectedBackground
               )}
               
-              {renderCustomizationSection(
-                '✨ Animações',
-                'animation',
-                [
-                  { name: 'Nenhuma', description: 'Sem animação', rarity: 'common', unlockType: 'xp', unlockValue: 0, preview: 'none' },
-                  { name: 'Pulsação', description: 'Efeito de pulsação suave', rarity: 'rare', unlockType: 'xp', unlockValue: 1000, preview: 'pulse' },
-                  { name: 'Brilho', description: 'Efeito de brilho dourado', rarity: 'rare', unlockType: 'xp', unlockValue: 1500, preview: 'glow' },
-                  { name: 'Rotação', description: 'Rotação suave do card', rarity: 'epic', unlockType: 'xp', unlockValue: 2500, preview: 'rotate' },
-                  { name: 'Flutuação', description: 'Movimento flutuante', rarity: 'epic', unlockType: 'xp', unlockValue: 3000, preview: 'float' },
-                  { name: 'Partículas', description: 'Efeito de partículas douradas', rarity: 'legendary', unlockType: 'xp', unlockValue: 5000, preview: 'particles' }
-                ],
-                selectedAnimation,
-                setSelectedAnimation
-              )}
             </View>
             
             <TouchableOpacity
@@ -614,7 +593,7 @@ const CardCustomizationScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, 
               disabled={isUpdating}
             >
               <Text style={styles.updateButtonText}>
-                {isUpdating ? 'Atualizando...' : '🎨 Aplicar Personalização'}
+                {isUpdating ? 'Atualizando...' : 'Aplicar Personalização'}
               </Text>
             </TouchableOpacity>
           </View>

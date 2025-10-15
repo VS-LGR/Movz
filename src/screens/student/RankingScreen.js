@@ -17,6 +17,7 @@ import apiService from '../../services/apiService';
 import useResponsive from '../../hooks/useResponsive';
 import { getCachedImage } from '../../utils/imageCache';
 import Storage from '../../utils/storage';
+import AnimatedBanner from '../../components/AnimatedBanner';
 
 const { width, height } = Dimensions.get('window');
 
@@ -130,45 +131,28 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
 
   const renderHeader = () => (
         <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => onNavigate('home')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backArrow}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.titleContainer}>
-            <Image
-              source={getCachedImage('Ranking Icon', 'icon')}
-              style={styles.titleIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.title}>Ranking</Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => onNavigate('home')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <View style={styles.titleContainer}>
+              <Image
+                source={getCachedImage('Ranking Icon', 'icon')}
+                style={styles.titleIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Ranking</Text>
+            </View>
           </View>
-          <Text style={styles.subtitle}>Classificação da sua turma</Text>
-        {rankingData && (
-          <Text style={styles.classInfo}>
-            📚 {rankingData.class.name} - {rankingData.class.grade}
-          </Text>
-        )}
-      </View>
-      <View style={styles.headerRight}>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={onRefresh}
-          disabled={refreshing}
-        >
-          <Text style={styles.refreshButtonText}>
-            {refreshing ? '🔄' : '🔄'}
-          </Text>
-        </TouchableOpacity>
           <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
             style={styles.menuButton}
           />
         </View>
-    </View>
   );
 
   const renderTopThree = () => {
@@ -212,10 +196,11 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
             const isCurrentStudent = student.isCurrentUser;
             
             return (
-            <View
+            <AnimatedBanner
                 key={student.id}
-              style={[
-                styles.rankingItem,
+                bannerName={student.cardBanner}
+                style={[
+                  styles.rankingItem,
                   isCurrentStudent && styles.currentStudentItem
                 ]}
               >
@@ -313,7 +298,7 @@ const RankingScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUse
                     }
                   ]}>{student.totalClasses} aulas</Text>
                 </View>
-            </View>
+            </AnimatedBanner>
             );
           })}
         </View>
@@ -431,9 +416,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
+    width: 32,
+    height: 32,
+    marginRight: 12,
   },
   title: {
     fontSize: 28,
@@ -596,6 +581,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     position: 'relative',
     overflow: 'hidden',
+    zIndex: 1, // Garantir que o conteúdo fique acima da animação
   },
   currentStudentItem: {
     borderWidth: 2,

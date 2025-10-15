@@ -522,16 +522,6 @@ export default function App() {
             onLogout={handleLogout}
           />
         );
-      case 'teacherProfile':
-        return (
-          <TeacherClassesScreen
-            isMenuVisible={isMenuVisible}
-            setIsMenuVisible={setIsMenuVisible}
-            onNavigate={handleNavigate}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-          />
-        );
       case 'attendanceList':
         return (
           <AttendanceListScreen

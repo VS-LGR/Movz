@@ -16,10 +16,14 @@ import { getCachedImage } from '../../utils/imageCache';
 import apiService from '../../services/apiService';
 import ImagePlaceholder from '../../components/ImagePlaceholder';
 import Storage from '../../utils/storage';
+import AnimatedXPBar from '../../components/AnimatedXPBar';
+import AnimatedBanner from '../../components/AnimatedBanner';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, onLogout }) => {
+  console.log('🏠 HomeScreen - Componente renderizado');
+  
   const [sportsScores, setSportsScores] = useState([]);
   const [attendanceData, setAttendanceData] = useState(null);
   const [profileData, setProfileData] = useState(null);
@@ -65,7 +69,11 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
 
       // Buscar dados do perfil (XP, medalhas, conquistas)
       const profileResponse = await apiService.getStudentProfile();
+      console.log('🏠 HomeScreen - Resposta do perfil:', profileResponse);
       if (profileResponse.success) {
+        console.log('🏠 HomeScreen - Dados do usuário:', profileResponse.data.user);
+        console.log('🏠 HomeScreen - XP progress:', profileResponse.data.user?.xp?.progress);
+        console.log('🏠 HomeScreen - Banner:', profileResponse.data.user?.cardBanner);
         setProfileData(profileResponse.data.user);
       }
     } catch (error) {
@@ -162,15 +170,11 @@ const HomeScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, currentUser, 
             </Text>
           </View>
           <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground} />
-            <View style={[
-              styles.progressBarFill,
-              { 
-                width: profileData?.xp?.progress 
-                  ? `${(profileData.xp.progress / 1000) * 100}%`
-                  : '0%'
-              }
-            ]} />
+            <AnimatedXPBar 
+              progress={profileData?.xp?.progress || 0}
+              maxProgress={1000}
+              height={12}
+            />
           </View>
           {profileData && (
             <View style={styles.xpInfo}>
@@ -501,25 +505,6 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     position: 'relative',
     height: 12,
-  },
-  progressBarBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 12,
-    backgroundColor: '#0B3850',
-    borderRadius: 6,
-  },
-  progressBarFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: 12,
-    backgroundColor: '#2ED4CC',
-    borderRadius: 6,
-    boxShadow: '0px 0px 12.3px 0px rgba(255, 255, 255, 0.32)',
-    elevation: 8,
   },
   xpInfo: {
     marginTop: 10,

@@ -16,8 +16,9 @@ import apiService from '../../services/apiService';
 import SideMenu from '../../components/SideMenu';
 import HamburgerButton from '../../components/HamburgerButton';
 import useResponsive from '../../hooks/useResponsive';
-import { getCachedImage } from '../../utils/imageCache';
+import { getCachedImage, getLevelIcon } from '../../utils/imageCache';
 import Storage from '../../utils/storage';
+import AnimatedBanner from '../../components/AnimatedBanner';
 
 const { width, height } = Dimensions.get('window');
 
@@ -181,11 +182,27 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
   };
 
   const getAchievementLevel = (totalClasses) => {
-    if (totalClasses >= 10) return { level: 'Mestre', icon: '👑', color: '#8B5CF6' };
-    if (totalClasses >= 5) return { level: 'Expert', icon: '⭐', color: '#F59E0B' };
-    if (totalClasses >= 3) return { level: 'Avançado', icon: '🔥', color: '#EF4444' };
-    if (totalClasses >= 1) return { level: 'Iniciante', icon: '🌱', color: '#10B981' };
-    return { level: 'Novato', icon: '🌱', color: '#6B7280' };
+    // Calcular nível baseado no número de aulas (1-10)
+    let levelNumber = 1;
+    if (totalClasses >= 20) levelNumber = 10;
+    else if (totalClasses >= 15) levelNumber = 9;
+    else if (totalClasses >= 12) levelNumber = 8;
+    else if (totalClasses >= 10) levelNumber = 7;
+    else if (totalClasses >= 8) levelNumber = 6;
+    else if (totalClasses >= 6) levelNumber = 5;
+    else if (totalClasses >= 4) levelNumber = 4;
+    else if (totalClasses >= 3) levelNumber = 3;
+    else if (totalClasses >= 2) levelNumber = 2;
+    else if (totalClasses >= 1) levelNumber = 1;
+    
+    const levelIcon = getLevelIcon(levelNumber);
+    
+    // Manter os nomes e cores originais para compatibilidade
+    if (totalClasses >= 10) return { level: 'Mestre', icon: levelIcon, color: '#8B5CF6', levelNumber };
+    if (totalClasses >= 5) return { level: 'Expert', icon: levelIcon, color: '#F59E0B', levelNumber };
+    if (totalClasses >= 3) return { level: 'Avançado', icon: levelIcon, color: '#EF4444', levelNumber };
+    if (totalClasses >= 1) return { level: 'Iniciante', icon: levelIcon, color: '#10B981', levelNumber };
+    return { level: 'Novato', icon: levelIcon, color: '#6B7280', levelNumber };
   };
 
   const renderSportCard = (sportData) => {
@@ -228,9 +245,16 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
             ]}>
               {sportData.sport.name}
             </Text>
-            <Text style={styles.achievementLevel}>
-              {achievement.icon} {achievement.level}
-            </Text>
+            <View style={styles.achievementLevelContainer}>
+              <Image 
+                source={achievement.icon} 
+                style={styles.achievementLevelIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.achievementLevel}>
+                {achievement.level}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -295,12 +319,25 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
       : 0;
 
     const getOverallLevel = () => {
-      if (totalClasses >= 20) return { level: 'Lenda', icon: '👑', color: '#8B5CF6' };
-      if (totalClasses >= 15) return { level: 'Mestre', icon: '⭐', color: '#F59E0B' };
-      if (totalClasses >= 10) return { level: 'Expert', icon: '🔥', color: '#EF4444' };
-      if (totalClasses >= 5) return { level: 'Avançado', icon: '🌱', color: '#10B981' };
-      if (totalClasses >= 1) return { level: 'Iniciante', icon: '🌱', color: '#6B7280' };
-      return { level: 'Novato', icon: '🌱', color: '#6B7280' };
+      // Calcular nível baseado no número de aulas (1-10)
+      let levelNumber = 1;
+      if (totalClasses >= 20) levelNumber = 10;
+      else if (totalClasses >= 15) levelNumber = 9;
+      else if (totalClasses >= 12) levelNumber = 8;
+      else if (totalClasses >= 10) levelNumber = 7;
+      else if (totalClasses >= 8) levelNumber = 6;
+      else if (totalClasses >= 6) levelNumber = 5;
+      else if (totalClasses >= 4) levelNumber = 4;
+      else if (totalClasses >= 3) levelNumber = 3;
+      else if (totalClasses >= 2) levelNumber = 2;
+      else if (totalClasses >= 1) levelNumber = 1;
+      
+      if (totalClasses >= 20) return { level: 'Lenda', icon: '👑', color: '#8B5CF6', levelNumber };
+      if (totalClasses >= 15) return { level: 'Mestre', icon: '⭐', color: '#F59E0B', levelNumber };
+      if (totalClasses >= 10) return { level: 'Expert', icon: '🔥', color: '#EF4444', levelNumber };
+      if (totalClasses >= 5) return { level: 'Avançado', icon: '🌱', color: '#10B981', levelNumber };
+      if (totalClasses >= 1) return { level: 'Iniciante', icon: '🌱', color: '#6B7280', levelNumber };
+      return { level: 'Novato', icon: '🌱', color: '#6B7280', levelNumber };
     };
 
     const overallLevel = getOverallLevel();
@@ -308,7 +345,10 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
     return (
       <View style={styles.statsContainer}>
         {/* Card Principal de Conquistas */}
-        <View style={[styles.achievementCard, getCardStyle()]}>
+        <AnimatedBanner 
+          bannerName={profileData?.cardBanner}
+          style={[styles.achievementCard, getCardStyle()]}
+        >
           {profileData?.cardBanner && profileData.cardBanner !== 'Banner Padrão' && (
             <Image 
               source={getCachedImage(profileData.cardBanner, 'banner')}
@@ -343,7 +383,11 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
               ]}>Suas Pontuações</Text>
             </View>
             <View style={[styles.levelBadge, { backgroundColor: overallLevel.color }]}>
-              <Text style={styles.levelIcon}>{overallLevel.icon}</Text>
+              <Image 
+                source={getLevelIcon(overallLevel.levelNumber || 1)} 
+                style={styles.levelIcon}
+                resizeMode="contain"
+              />
             </View>
           </View>
           
@@ -467,7 +511,7 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
               </View>
             </View>
           )}
-        </View>
+        </AnimatedBanner>
 
         {/* Cards de Estatísticas Detalhadas */}
         <View style={styles.detailedStats}>
@@ -526,7 +570,6 @@ const StudentScoresScreen = ({ isMenuVisible, setIsMenuVisible, onNavigate, curr
               />
               <Text style={styles.title}>Pontuações</Text>
             </View>
-            <Text style={styles.subtitle}>Seu progresso em todos os esportes</Text>
           </View>
           <HamburgerButton
             onPress={() => setIsMenuVisible(true)}
@@ -627,9 +670,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   titleIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
+    width: 32,
+    height: 32,
+    marginRight: 12,
   },
   title: {
     fontSize: 24,
@@ -721,6 +764,7 @@ const styles = StyleSheet.create({
     borderColor: '#F9BB55',
     position: 'relative',
     overflow: 'hidden',
+    zIndex: 1, // Garantir que o conteúdo fique acima da animação
   },
   achievementCardBackground: {
     position: 'absolute',
@@ -765,7 +809,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   levelIcon: {
-    fontSize: 24,
+    width: 30,
+    height: 30,
   },
   achievementContent: {
     alignItems: 'center',
@@ -933,6 +978,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontFamily: 'Poppins',
+  },
+  achievementLevelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  achievementLevelIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
   },
   sportStats: {
     flexDirection: 'row',

@@ -20,6 +20,18 @@ const imageMap = {
   'Primeira Pontuação': 'https://i.imgur.com/OMOsgqm.png',
   'Social': 'https://i.imgur.com/XvzycPI.png',
 
+  // Conquistas adicionais encontradas nos logs
+  'Primeiro Passo': 'https://i.imgur.com/In9vsyK.png', // Usando imagem do Iniciante temporariamente
+  'Consistente': 'https://i.imgur.com/aQdtNvs.png', // Usando imagem do Assíduo temporariamente
+  'Ponto de Honra': 'https://i.imgur.com/3FWY8G9.png', // Usando imagem do Campeão temporariamente
+  'Atleta Completo': 'https://i.imgur.com/m45wJmX.png', // Usando imagem do Atleta temporariamente
+  'Multiesportista': 'https://i.imgur.com/ujsiSYt.png', // Usando imagem do Multiesportivo temporariamente
+  'Campeão Universal': 'https://i.imgur.com/3FWY8G9.png', // Usando imagem do Campeão temporariamente
+  'Primeira Estrela': 'https://i.imgur.com/OMOsgqm.png', // Usando imagem da Primeira Pontuação temporariamente
+  'Estrela Brilhante': 'https://i.imgur.com/v2f1Dnt.png', // Usando imagem da Lenda temporariamente
+  'Super Estrela': 'https://i.imgur.com/v2f1Dnt.png', // Usando imagem da Lenda temporariamente
+  'Lenda Viva': 'https://i.imgur.com/v2f1Dnt.png', // Usando imagem da Lenda temporariamente
+
   // 6 Medalhas (nomes corretos do banco) - URLs atualizadas
   'Medalha de Bronze': 'https://i.imgur.com/a6nOjas.png',
   'Medalha de Ouro': 'https://i.imgur.com/EqAwauN.png',
@@ -56,13 +68,26 @@ const imageMap = {
   // Logo
   'Muvz Logo': 'https://i.imgur.com/ES1jhvE.png',
 
-  // Ícones de interface
+  // Ícones de interface (atualizados - sem fundo)
   'Edit Icon': 'https://i.imgur.com/TfO2pwA.png',
   'Refresh Icon': 'https://i.imgur.com/lyNo0mi.png',
-  'Personalization Icon': 'https://i.imgur.com/EzhrwDm.png',
-  'Chat Icon': 'https://i.imgur.com/Nlb9kaw.png',
-  'Scores Icon': 'https://i.imgur.com/Xhi39Tw.png',
-  'Ranking Icon': 'https://i.imgur.com/9F2EuG0.png',
+  'Personalization Icon': 'https://i.imgur.com/BrhuJXw.png',
+  'Chat Icon': 'https://i.imgur.com/tV3b93p.png',
+  'Scores Icon': 'https://i.imgur.com/oklZvDf.png',
+  'Ranking Icon': 'https://i.imgur.com/Drld3tL.png',
+  'Attendance Icon': 'https://i.imgur.com/XzEB4Ny.png',
+
+  // Ícones de nível por esporte (Level 1-10) - sem fundo
+  'Level 1': 'https://i.imgur.com/HcKMvKc.png',
+  'Level 2': 'https://i.imgur.com/CDPfVdr.png',
+  'Level 3': 'https://i.imgur.com/6Ti8I1R.png',
+  'Level 4': 'https://i.imgur.com/LyOVGf9.png',
+  'Level 5': 'https://i.imgur.com/0FdAw2F.png',
+  'Level 6': 'https://i.imgur.com/6FnyWPp.png',
+  'Level 7': 'https://i.imgur.com/AKTyCPc.png',
+  'Level 8': 'https://i.imgur.com/7jbGOub.png',
+  'Level 9': 'https://i.imgur.com/3Tsgw2u.png',
+  'Level 10': 'https://i.imgur.com/Fakgf0Z.png',
 };
 
 const getCachedImage = (name, type) => {
@@ -90,9 +115,17 @@ const getCachedImage = (name, type) => {
       return { uri: 'https://i.imgur.com/ES1jhvE.png' }; // Fallback para logo
     case 'icon':
       return { uri: 'https://i.imgur.com/TfO2pwA.png' }; // Fallback para ícone
+    case 'level':
+      return { uri: 'https://i.imgur.com/4prDUj6.png' }; // Fallback para nível (Level 1)
     default:
       return { uri: 'https://via.placeholder.com/150' }; // Placeholder genérico
   }
+};
+
+// Função para obter ícone de nível baseado no nível do esporte
+const getLevelIcon = (level) => {
+  const clampedLevel = Math.max(1, Math.min(10, Math.floor(level || 1)));
+  return getCachedImage(`Level ${clampedLevel}`, 'level');
 };
 
 // Função para pré-carregar imagens (opcional, mas bom para performance)
@@ -104,4 +137,4 @@ const preloadImages = () => {
   });
 };
 
-export { getCachedImage, preloadImages };
+export { getCachedImage, getLevelIcon, preloadImages };
